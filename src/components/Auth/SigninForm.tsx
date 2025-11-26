@@ -136,7 +136,7 @@ const SigninForm = () => {
         <p className="text-base font-medium text-black">
           Not registered yet?{" "}
           <Link
-            to="/?modal=signup"
+            to="/auth/signup"
             className="text-auth-text cursor-pointer font-medium text-base"
           >
             Create an Account
