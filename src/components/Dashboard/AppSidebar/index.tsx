@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/sidebar";
 import assets from "@/assets";
 import DashboardIcon from "@/assets/svgs/home.svg?react";
-import CalculatorIcon from "@/assets/svgs/calendar-plus.svg?react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NavMain from "./NavMain";
@@ -40,12 +39,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: <DashboardIcon />,
       end: false,
     },
-    {
-      title: "Calendar",
-      url: "/dashboard/calendar-management",
-      icon: <CalculatorIcon />,
-      end: true,
-    },
+    // {
+    //   title: "Calendar",
+    //   url: "/dashboard/calendar-management",
+    //   icon: <CalculatorIcon />,
+    //   end: true,
+    // },
   ];
 
   // Helper function to check if any sub-item is active

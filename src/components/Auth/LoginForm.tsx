@@ -2,7 +2,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useState } from "react";
-import GoogleIcon from "@/assets/svgs/googleicon.svg?react";
 
 import {
   Form,
@@ -140,7 +139,6 @@ export default function LoginForm({
       <div className="flex flex-col items-center gap-4 py-4">
         <div className="flex flex-col items-center gap-2">
           <p>Login with</p>
-          <GoogleIcon className="size-10" />
         </div>
 
         <p className="text-muted-foreground text-sm">
