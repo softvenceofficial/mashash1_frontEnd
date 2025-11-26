@@ -1,5 +1,5 @@
 import Icon from "@/components/common/Icon";
-import bg from "@/assets/svgs/DASHBOARD-HOME-BG.svg";
+import bg from "@/assets/svgs/dashboard-home-bg.svg";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
