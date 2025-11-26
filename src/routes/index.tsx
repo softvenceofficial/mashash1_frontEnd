@@ -7,6 +7,7 @@ import DashboardPage from "@/pages/Dashboard";
 import HomePage from "@/pages/Home";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createBrowserRouter, Navigate } from "react-router";
+import ForgotPasswordForm from "@/components/Auth/ForgotPasswordForm";
 
 const router = createBrowserRouter([
   {
@@ -59,6 +60,10 @@ const router = createBrowserRouter([
       {
         path: "/auth/signup",
         element: <SignUpForm />,
+      },
+      {
+        path: "/auth/forgot-password",
+        element: <ForgotPasswordForm />,
       }
     ],
   }

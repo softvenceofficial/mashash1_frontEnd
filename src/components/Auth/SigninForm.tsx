@@ -119,9 +119,9 @@ const SigninForm = () => {
                 </FormItem>
               )}
             />
-            <p className="text-sm md:text-base font-medium cursor-pointer text-auth-text">
+            <Link to="/auth/forgot-password" className="text-sm md:text-base font-medium cursor-pointer text-auth-text">
               Forgot password?
-            </p>
+            </Link>
           </div>
 
           <Button
