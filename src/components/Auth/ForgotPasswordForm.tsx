@@ -14,7 +14,7 @@ export default function ForgotPasswordForm() {
   const { form, onSubmit, goBack } = useForgetPassword();
 
   return (
-    <div className="w-full max-w-md mx-auto py-10">
+    <div className="w-full max-w-md mx-auto py-10 min-h-[calc(100vh-300px)] flex flex-col justify-center">
       <div className="text-center">
         <h2 className="text-[40px] font-bold mb-3">Forget Password</h2>
         <p className="text-base font-normal text-auth-foreground">

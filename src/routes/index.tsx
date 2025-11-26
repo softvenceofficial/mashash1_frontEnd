@@ -8,6 +8,7 @@ import HomePage from "@/pages/Home";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createBrowserRouter, Navigate } from "react-router";
 import ForgotPasswordForm from "@/components/Auth/ForgotPasswordForm";
+import OtpVerificationForm from "@/components/Auth/OtpVerificationForm";
 
 const router = createBrowserRouter([
   {
@@ -64,6 +65,10 @@ const router = createBrowserRouter([
       {
         path: "/auth/forgot-password",
         element: <ForgotPasswordForm />,
+      },
+      {
+        path: "/auth/verify-otp",
+        element: <OtpVerificationForm />,
       }
     ],
   }

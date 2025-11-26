@@ -1,0 +1,87 @@
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import useOtpVerify from "./hooks/use-otp-verify";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "../ui/input-otp";
+
+export default function OtpVerificationForm() {
+  const { form, onSubmit, goBack } = useOtpVerify();
+  return (
+    <div className="w-full max-w-md mx-auto py-10 min-h-[calc(100vh-300px)] flex flex-col justify-center">
+      <div className="text-center">
+        <h2 className="text-[40px] font-bold mb-3">OTP Verification</h2>
+        <p className="text-base font-normal text-auth-foreground">
+          Enter the verification code we just sent to your email address
+        </p>
+      </div>
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-4 pt-10"
+        >
+          <FormField
+            control={form.control}
+            name="otp"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-foreground dark:text-gray-300 mb-5 mt-8">
+                  OTP code
+                </FormLabel>
+                <FormControl>
+                  <InputOTP maxLength={4} {...field}>
+                    <InputOTPGroup className="justify-center gap-5 w-full">
+                      <InputOTPSlot
+                        index={0}
+                        className="border-auth-border border h-10 text-center w-1/4 rounded-xl! outline-none! ring-0! ring-offset-0! shadow-none! focus:outline-none! focus:ring-0! focus:ring-offset-0! focus:!shadow-nonefocus-visible:!outline-none focus-visible:ring-0! focus-visible:ring-offset-0! focus-visible:shadow-none!"
+                      />
+                      <InputOTPSlot
+                        index={1}
+                        className="border-auth-border border h-10 text-center w-1/4 rounded-xl! outline-none! ring-0! ring-offset-0! shadow-none! focus:outline-none! focus:ring-0! focus:ring-offset-0! focus:!shadow-nonefocus-visible:!outline-none focus-visible:ring-0! focus-visible:ring-offset-0! focus-visible:shadow-none!"
+                      />
+                      <InputOTPSlot
+                        index={2}
+                        className="border-auth-border border h-10 text-center w-1/4 rounded-xl! outline-none! ring-0! ring-offset-0! shadow-none! focus:outline-none! focus:ring-0! focus:ring-offset-0! focus:!shadow-nonefocus-visible:!outline-none focus-visible:ring-0! focus-visible:ring-offset-0! focus-visible:shadow-none!"
+                      />
+                      <InputOTPSlot
+                        index={3}
+                        className="border-auth-border border h-10 text-center w-1/4 rounded-xl! outline-none! ring-0! ring-offset-0! shadow-none! focus:outline-none! focus:ring-0! focus:ring-offset-0! focus:!shadow-nonefocus-visible:!outline-none focus-visible:ring-0! focus-visible:ring-offset-0! focus-visible:shadow-none!"
+                      />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="text-center mt-10">
+            <p className="text-auth-foreground mb-2">00:20 Sec</p>
+            <p className="text-auth-foreground">Don’t receive code?{" "}<span className="text-auth-text text-base font-medium cursor-pointer">Re-send</span></p>
+          </div>
+          {/* Send OTP */}
+          <Button
+            type="submit"
+            className="w-full bg-black h-12 hover:bg-black text-base font-medium rounded-full cursor-pointer mt-12"
+          >
+            Confirm Code
+          </Button>
+
+          {/* Back */}
+          <Button
+            type="button"
+            onClick={goBack}
+            variant="outline"
+            className="w-full h-12 rounded-full text-base font-medium border border-black bg-transparent hover:bg-transparent cursor-pointer"
+          >
+            Back
+          </Button>
+        </form>
+      </Form>
+    </div>
+  );
+}
