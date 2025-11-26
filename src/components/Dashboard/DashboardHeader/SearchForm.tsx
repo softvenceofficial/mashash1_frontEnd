@@ -13,7 +13,7 @@ export function SearchForm({ ...props }: React.ComponentProps<"form">) {
         <SidebarInput
           id="search"
           placeholder="Search Ticker..."
-          className="h-8 pl-7 bg-sidebar "
+          className="h-8 pl-7 bg-transparent! dark:border-[#454F5B]! dark:placeholder:text-foreground/50"
         />
       </div>
     </form>

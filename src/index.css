@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @custom-variant dark (&:is(.dark *));
@@ -138,7 +138,10 @@
   /* Neutral-500 */
   --font-Inter: "Inter", sans-serif;
   --font-DM_Sans: "DM Sans", sans-serif;
-  --header-height: 580px; 
+}
+
+.header-height {
+  height: var(--header-height);
 }
 
 .dark {
@@ -157,7 +160,7 @@
   /* White */
 
   /* Primary (using Primary-50 for dark foreground, and Primary-900 for dark primary) */
-  --primary: oklch(0.7005 0.1155 44.22);
+  --primary: oklab(58.541% 0.02532 -0.20258);
   /* Primary-900 */
   --primary-foreground: oklch(0.99 0.007 90);
   /* Primary-50 */
@@ -165,7 +168,7 @@
   /* Secondary (using Neutral-900 as base, and Neutral-100 for foreground) */
   --secondary: oklch(28.094% 0.00003 271.152);
   /* Neutral-900 */
-  --secondary-foreground: oklch(0.91 0 0);
+  --secondary-foreground: #919EAB;
   /* Neutral-100 */
 
   --success: oklch(0.5198 0.176858 142.4953);
@@ -209,7 +212,7 @@
   /* Neutral-800 */
 
   /* Sidebar (using Neutral-900 as base, and White for foreground) */
-  --sidebar: oklch(15% 0.00002 271.152);
+  --sidebar: oklch(14.958% 0.00002 271.152)
   /* Neutral-900 */
   --sidebar-foreground: oklch(98% 0.00011 271.152);
   /* White */

@@ -1,16 +1,17 @@
 import { SearchForm } from "./SearchForm";
 import HeaderAvatar from "./HeaderAvatar";
-import Logo from "@/assets/react.svg?react";
+import logo from "@/assets/svgs/logo.svg";
 import { ModeToggle } from "@/components/ThemeToggle";
+import Icon from "@/components/common/Icon";
 
 export function SiteHeader() {
   // const { toggleSidebar } = useSidebar();
 
   return (
-    <header className="bg-sidebar sticky top-0 z-50 flex w-full items-center">
-      <div className="flex h-(--header-height) w-full items-center gap-2 pr-4 md:pr-10">
-        <div className="w-[16rem] hidden md:block">
-          <Logo className="size-8 mx-auto text-primary" />
+    <header className="dark:bg-[#1B1B1B] bg-white sticky top-0 z-50 flex w-full items-center">
+      <div className="flex w-full items-center gap-2 pr-4 md:pr-10 h-18">
+        <div className="w-24 hidden md:block">
+          <Icon src={logo} className="size-8 text-center w-full text-primary dark:text-white ml-1" />
         </div>
         <div className="flex items-center gap-2 md:ml-5">
           {/* <Button
@@ -32,6 +33,10 @@ export function SiteHeader() {
             >
               <FullscreenIcon />
             </Button> */}
+            <div className="text-right ">
+              <p className="text-base font-medium dark:text-white">Kabir Nishat</p>
+              <p className="text-sm font-normal text-secondary-foreground">example@gmail.com</p>
+            </div>
             <HeaderAvatar />
           </div>
         </div>

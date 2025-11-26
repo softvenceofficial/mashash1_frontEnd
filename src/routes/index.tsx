@@ -30,6 +30,14 @@ const router = createBrowserRouter([
         path: "/dashboard/home",
         element: <DashboardPage />,
       },
+      {
+        path: "/dashboard/my-files",
+        element: <div>My file</div>,
+      },
+      {
+        path: "/dashboard/trash",
+        element: <div>Trash</div>,
+      },
     ],
   },
 ]);

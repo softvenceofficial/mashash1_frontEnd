@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from "react";
 import {
   Sidebar,
@@ -6,11 +5,14 @@ import {
   SidebarMenu,
 } from "@/components/ui/sidebar";
 import assets from "@/assets";
-import DashboardIcon from "@/assets/svgs/home.svg?react";
+import home from "@/assets/svgs/home.svg";
+import file from "@/assets/svgs/my-file.svg";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NavMain from "./NavMain";
 import useTheme from "@/theme";
+import Icon from "@/components/common/Icon";
+import { Trash2 } from "lucide-react";
 
 export type TNavMenu = {
   title: string;
@@ -26,55 +28,29 @@ export type TNavMenu = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  // const { state } = useSidebar();
-  const state = "collapsed";
   const isMobile = useIsMobile();
-  // const location = useLocation();
   const { theme } = useTheme();
 
   const items: TNavMenu[] = [
     {
-      title: "Dashboard",
+      title: "Home",
       url: "/dashboard/home",
-      icon: <DashboardIcon />,
+      icon: <Icon src={home} className="size-7" />,
       end: false,
     },
-    // {
-    //   title: "Calendar",
-    //   url: "/dashboard/calendar-management",
-    //   icon: <CalculatorIcon />,
-    //   end: true,
-    // },
+    {
+      title: "My Files",
+      url: "/dashboard/my-files",
+      icon: <Icon src={file} className="size-7" />,
+      end: false,
+    },
+    {
+      title: "Trash",
+      url: "/dashboard/trash",
+      icon: <Trash2 />,
+      end: false,
+    },
   ];
-
-  // Helper function to check if any sub-item is active
-  // const isSubItemActive = (subItems: any[]) => {
-  //   return subItems.some((subItem) => {
-  //     if (subItem.end) {
-  //       return location.pathname === subItem.url;
-  //     }
-  //     return location.pathname.startsWith(subItem.url);
-  //   });
-  // };
-
-  // Helper function to check if main item is active (excluding parent items with sub-items)
-  // const isItemActive = (item: any) => {
-  //   // For items with sub-items, only check direct URL match, not sub-items
-  //   if (item.subItems) {
-  //     if (item.end) {
-  //       return location.pathname === item.url;
-  //     }
-  //     return (
-  //       location.pathname.startsWith(item.url) &&
-  //       !isSubItemActive(item.subItems)
-  //     );
-  //   }
-  //   // For items without sub-items, check normally
-  //   if (item.end) {
-  //     return location.pathname === item.url;
-  //   }
-  //   return location.pathname.startsWith(item.url);
-  // };
 
   if (items.length < 0) {
     return;
@@ -82,25 +58,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <div
-      className="top-(--header-height) h-[calc(100vh-var(--header-height))]! w-28 bg-white!"
+      className="top-(--header-height) h-[calc(100vh-var(80px))] w-26! bg-white dark:bg-[#1B1B1B]"
       {...props}
     >
       <div className="md:hidden py-5">
-        <img src={assets.image.logo} alt="logo" className="w-[12rem] mx-auto" />
+        <img src={assets.image.logo} alt="logo" className=" mx-auto" />
       </div>
 
       <SidebarContent
         className={cn(
-          "h-full rounded-r-3xl py-6",
-          state === "collapsed" && !isMobile ? "px-2" : "px-4",
-          theme === "light" ? "" : "sidebar-dark border-r-2"
+          "h-full py-6",
+          !isMobile ? "px-2" : "px-4",
+          theme === "light" ? "" : "bg-[#1B1B1B]"
         )}
       >
-        <SidebarMenu>
+        <SidebarMenu className="flex flex-col gap-5 mt-8 h-[calc(100%-4rem)]">
           {items.map((item, i) => {
-            // const isActive = isItemActive(item);
             return (
-              <NavMain key={i} isMobile={isMobile} item={item} state={state} />
+              <NavMain key={i} isMobile={isMobile} item={item} />
             );
           })}
         </SidebarMenu>

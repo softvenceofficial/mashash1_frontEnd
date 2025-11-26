@@ -520,101 +520,32 @@ function SidebarMenuButton({
   size = "default",
   tooltip,
   className,
-  children,
   ...props
 }: React.ComponentProps<"button"> & {
-  asChild?: boolean;
-  isActive?: boolean;
-  tooltip?: string | React.ComponentProps<typeof TooltipContent>;
+  asChild?: boolean
+  isActive?: boolean
+  tooltip?: string | React.ComponentProps<typeof TooltipContent>
 } & VariantProps<typeof sidebarMenuButtonVariants>) {
-  const Comp = asChild ? Slot : "button";
-  const { isMobile, state } = useSidebar();
-  const buttonRef = React.useRef<HTMLButtonElement>(null);
-  const [ripples, setRipples] = React.useState<Ripple[]>([]);
-
-  const createRipple = React.useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
-      const button = buttonRef.current;
-      if (!button) return;
-
-      const rect = button.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-
-      const newRipple: Ripple = {
-        id: Date.now(),
-        x,
-        y,
-      };
-
-      setRipples((prev) => [...prev, newRipple]);
-
-      setTimeout(() => {
-        setRipples((prev) => prev.filter((r) => r.id !== newRipple.id));
-      }, 600);
-    },
-    []
-  );
-
-  const handleClick = React.useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
-      createRipple(event);
-      if (props.onClick) {
-        props.onClick(event);
-      }
-    },
-    [createRipple, props]
-  );
-
-  const buttonContent = (
-    <>
-      {children}
-      {!asChild &&
-        ripples.map((ripple) => (
-          <motion.span
-            key={ripple.id}
-            initial={{ scale: 0, opacity: 0.5 }}
-            animate={{ scale: 10, opacity: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className={cn(rippleVariants({ variant: "accent" }))}
-            style={{
-              top: ripple.y - 10,
-              left: ripple.x - 10,
-            }}
-          />
-        ))}
-    </>
-  );
-
+  const Comp = asChild ? Slot : "button"
+  const { isMobile, state } = useSidebar()
   const button = (
     <Comp
-      ref={asChild ? undefined : buttonRef}
       data-slot="sidebar-menu-button"
       data-sidebar="menu-button"
       data-size={size}
       data-active={isActive}
-      className={cn(
-        sidebarMenuButtonVariants({ variant, size }),
-        "relative overflow-hidden", // required for ripple
-        className
-      )}
-      onClick={handleClick}
+      className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
       {...props}
-    >
-      {asChild ? children : buttonContent}
-    </Comp>
-  );
-
+    />
+  )
   if (!tooltip) {
-    return button;
+    return button
   }
-
   if (typeof tooltip === "string") {
     tooltip = {
       children: tooltip,
-    };
+    }
   }
-
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
@@ -625,7 +556,7 @@ function SidebarMenuButton({
         {...tooltip}
       />
     </Tooltip>
-  );
+  )
 }
 
 function SidebarMenuAction({

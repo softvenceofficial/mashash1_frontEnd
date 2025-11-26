@@ -5,11 +5,9 @@ import type { TNavMenu } from ".";
 
 export default function NavMain({
   item,
-  state,
   isMobile,
 }: {
   item: TNavMenu;
-  state: "expanded" | "collapsed";
   isMobile: boolean;
 }) {
   return (
@@ -18,38 +16,37 @@ export default function NavMain({
         to={item.url}
         end={item.end}
         className={({ isActive }) =>
-          `w-full group/item ${isActive ? "text-primary" : "text-[#797979]"}`
+          `w-full group/item ${isActive ? "text-primary" : "text-white"}`
         }
       >
         {({ isActive }) => (
           <SidebarMenuButton
             tooltip={item.title}
             className={cn(
-              "w-full text-foreground hover:text-primary",
-              isActive ? "text-primary" : "text-foreground"
+              "w-full text-foreground flex flex-col items-center py-3 px-2 md:px-4 rounded-lg",
+              isActive ? "text-primary dark:text-white font-medium" : "text-foreground",
             )}
           >
-            <span
-              className={cn(
-                "size-8 group-hover/item:border-primary/50 rounded-full text-xl flex items-center justify-center"
-              )}
-            >
-              {item.icon}
-            </span>
+            <div className={`${isActive ? "bg-primary dark:bg-[#444648] p-4 rounded-full" : "p-4"}`}>
+              <span
+                className={cn(
+                  "size-8 rounded-full text-xl flex items-center justify-center ",
+                  isActive ? "text-white" : "text-secondary-foreground",
+                )}
+              >
+                {item.icon}
+              </span>
+            </div>
             <div
               className={
-                state === "collapsed" && !isMobile ? "hidden" : "w-full block"
+                !isMobile ? "w-full" : "w-full block"
               }
             >
-              <h4 className={cn("text-nowrap duration-300 text-base")}>
+              <h4
+                className={cn("text-nowrap duration-300 text-base text-center")}
+              >
                 {item.title}
               </h4>
-              <div
-                className={cn(
-                  "w-full h-[2px] bg-primary origin-left duration-500 scale-0 group-hover/item:scale-100",
-                  isActive ? "scale-100" : ""
-                )}
-              />
             </div>
           </SidebarMenuButton>
         )}
