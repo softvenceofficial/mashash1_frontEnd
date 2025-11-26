@@ -1,5 +1,8 @@
+import AuthLayout from "@/layouts/AuthLayout";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import HomeLayout from "@/layouts/HomeLayout";
+import SigninForm from "@/components/Auth/SigninForm";
+import SignUpForm from "@/components/Auth/SignUpForm";
 import DashboardPage from "@/pages/Dashboard";
 import HomePage from "@/pages/Home";
 import NotFoundPage from "@/pages/NotFoundPage";
@@ -40,6 +43,25 @@ const router = createBrowserRouter([
       },
     ],
   },
+  {
+    path: "/auth",
+    element: <AuthLayout />,
+    errorElement: <NotFoundPage />,
+    children: [
+      {
+        index: true,
+        element: <Navigate to="/auth/signin" replace />,
+      },
+      {
+        path: "/auth/signin",
+        element: <SigninForm />,
+      },
+      {
+        path: "/auth/signup",
+        element: <SignUpForm />,
+      }
+    ],
+  }
 ]);
 
 export default router;

@@ -1,14 +1,5 @@
 import { Button } from "@/components/ui/button";
 import Logo from "@/assets/react.svg?react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../Auth/AuthDialog";
-import SignUpLogIn from "../../Auth/SignUpLogIn";
 import { ModeToggle } from "@/components/ThemeToggle";
 import { Link } from "react-router";
 import useCurrentUser from "@/hooks/useCurrentUser";
@@ -44,53 +35,14 @@ export default function Header() {
         {user ? (
           <ul className="flex items-center gap-12 font-semibold">
             <li>
-              <Dialog>
-                <DialogTrigger>
-                  <span className="cursor-pointer select-none">
-                    Sell Your Services
-                  </span>
-                </DialogTrigger>
-                <DialogContent className="h-[80vh]">
-                  <DialogHeader className="hidden ">
-                    <DialogTitle></DialogTitle>
-                  </DialogHeader>
-                  <DialogDescription className="hidden "></DialogDescription>
-
-                  <SignUpLogIn activatedTab="signup" />
-                </DialogContent>
-              </Dialog>
+              <Link to="/auth/signin">
+                Log In
+              </Link>
             </li>
             <li>
-              <Dialog>
-                <DialogTrigger>
-                  <Button variant={"ghost"}>Log In</Button>
-                </DialogTrigger>
-                <DialogContent className="h-[80vh]">
-                  <DialogHeader className="hidden ">
-                    <DialogTitle></DialogTitle>
-                  </DialogHeader>
-                  <DialogDescription className="hidden "></DialogDescription>
-
-                  <SignUpLogIn activatedTab="login" />
-                </DialogContent>
-              </Dialog>
-            </li>
-            <li>
-              <Dialog>
-                <DialogTrigger>
-                  <Button variant={"outline"} className="border-2">
-                    Sign Up
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="h-[80vh]">
-                  <DialogHeader className="hidden ">
-                    <DialogTitle></DialogTitle>
-                  </DialogHeader>
-                  <DialogDescription className="hidden "></DialogDescription>
-
-                  <SignUpLogIn activatedTab="signup" />
-                </DialogContent>
-              </Dialog>
+              <Link to="/auth/signup">
+                Sign Up
+              </Link>
             </li>
             <li>
               <ModeToggle />
