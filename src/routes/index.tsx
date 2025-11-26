@@ -10,6 +10,7 @@ import { createBrowserRouter, Navigate } from "react-router";
 import ForgotPasswordForm from "@/components/Auth/ForgotPasswordForm";
 import OtpVerificationForm from "@/components/Auth/OtpVerificationForm";
 import ChangePasswordForm from "@/components/Auth/ChangePasswordForm";
+import Congrats from "@/components/Auth/Congrats";
 
 const router = createBrowserRouter([
   {
@@ -74,6 +75,10 @@ const router = createBrowserRouter([
       {
         path: "/auth/change-password",
         element: <ChangePasswordForm />,
+      },
+      {
+        path: "/auth/congrats",
+        element: <Congrats />,
       }
     ],
   }
