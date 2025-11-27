@@ -23,7 +23,7 @@ export default function useForgetPassword() {
   function onSubmit(values: ForgetPasswordSchema) {
     console.log("Forget Password Data:", values);
     toast.success("OTP sent to your email!");
-    navigate("/auth/verify-otp", { replace: true });
+    navigate("/auth/verify-otp");
   }
 
   const goBack = () => navigate(-1);

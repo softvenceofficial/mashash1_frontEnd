@@ -26,7 +26,7 @@ export default function useOtpVerify() {
       function onSubmit(values: z.infer<typeof formSchema>) {
         console.log("Forget Password Data:", values);
         toast.success("OTP sent to your email!");
-        navigate("/auth/change-password", { replace: true });
+        navigate("/auth/change-password");
       }
     
       const goBack = () => navigate(-1);

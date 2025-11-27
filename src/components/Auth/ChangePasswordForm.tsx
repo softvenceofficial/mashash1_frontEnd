@@ -17,9 +17,9 @@ export default function ChangePasswordForm() {
       const [showConfirm, setShowConfirm] = useState(false);
         const { form, onSubmit } = useChangePassword();
   return (
-    <div>
-      <div className="text-center">
-        <h2 className="text-[40px] font-bold mb-4">Set Password</h2>
+    <div className="w-full max-w-md mx-auto py-10 min-h-[calc(100vh-300px)] flex flex-col justify-center">
+      <div className="text-center mb-14">
+        <h2 className="text-[40px] font-bold mb-4 text-black">Set Password</h2>
         <p className="text-base font-normal text-auth-foreground">
           Your new password must be unique from those previously used
         </p>
@@ -34,7 +34,7 @@ export default function ChangePasswordForm() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <Label className="font-medium text-base">
+                <Label className="font-medium text-base text-black">
                   Password<span className="text-red-500">*</span>
                 </Label>
                 <FormControl>
@@ -43,7 +43,7 @@ export default function ChangePasswordForm() {
                       type={showPassword ? "text" : "password"}
                       placeholder="Min. 8 characters"
                       {...field}
-                      className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0"
+                      className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 dark:bg-transparent text-black"
                     />
                     <button
                       type="button"
@@ -69,16 +69,16 @@ export default function ChangePasswordForm() {
             name="confirmPassword"
             render={({ field }) => (
               <FormItem>
-                <Label className="font-medium text-base">
+                <Label className="font-medium text-base text-black">
                   Confirm Password<span className="text-red-500">*</span>
                 </Label>
                 <FormControl>
                   <div className="relative">
                     <Input
                       type={showConfirm ? "text" : "password"}
-                      placeholder="Min. 6 characters"
+                      placeholder="Min. 8 characters"
                       {...field}
-                      className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0"
+                      className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 dark:bg-transparent text-black"
                     />
                     <button
                       type="button"

@@ -15,7 +15,7 @@ export default function OtpVerificationForm() {
   return (
     <div className="w-full max-w-md mx-auto py-10 min-h-[calc(100vh-300px)] flex flex-col justify-center">
       <div className="text-center">
-        <h2 className="text-[40px] font-bold mb-3">OTP Verification</h2>
+        <h2 className="text-[40px] font-bold mb-3 text-black">OTP Verification</h2>
         <p className="text-base font-normal text-auth-foreground">
           Enter the verification code we just sent to your email address
         </p>
@@ -30,7 +30,7 @@ export default function OtpVerificationForm() {
             name="otp"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-foreground dark:text-gray-300 mb-5 mt-8">
+                <FormLabel className="text-foreground mt-8 dark:text-black">
                   OTP code
                 </FormLabel>
                 <FormControl>
@@ -38,19 +38,19 @@ export default function OtpVerificationForm() {
                     <InputOTPGroup className="justify-center gap-5 w-full">
                       <InputOTPSlot
                         index={0}
-                        className="border-auth-border border h-10 text-center w-1/4 rounded-xl! outline-none! ring-0! ring-offset-0! shadow-none! focus:outline-none! focus:ring-0! focus:ring-offset-0! focus:!shadow-nonefocus-visible:!outline-none focus-visible:ring-0! focus-visible:ring-offset-0! focus-visible:shadow-none!"
+                        className="border-auth-border border h-10 text-center w-1/4 rounded-xl! outline-none! ring-0! ring-offset-0! shadow-none! focus:outline-none! focus:ring-0! focus:ring-offset-0! focus:!shadow-nonefocus-visible:!outline-none focus-visible:ring-0! focus-visible:ring-offset-0! focus-visible:shadow-none! dark:bg-transparent text-black"
                       />
                       <InputOTPSlot
                         index={1}
-                        className="border-auth-border border h-10 text-center w-1/4 rounded-xl! outline-none! ring-0! ring-offset-0! shadow-none! focus:outline-none! focus:ring-0! focus:ring-offset-0! focus:!shadow-nonefocus-visible:!outline-none focus-visible:ring-0! focus-visible:ring-offset-0! focus-visible:shadow-none!"
+                        className="border-auth-border border h-10 text-center w-1/4 rounded-xl! outline-none! ring-0! ring-offset-0! shadow-none! focus:outline-none! focus:ring-0! focus:ring-offset-0! focus:!shadow-nonefocus-visible:!outline-none focus-visible:ring-0! focus-visible:ring-offset-0! focus-visible:shadow-none! dark:bg-transparent text-black"
                       />
                       <InputOTPSlot
                         index={2}
-                        className="border-auth-border border h-10 text-center w-1/4 rounded-xl! outline-none! ring-0! ring-offset-0! shadow-none! focus:outline-none! focus:ring-0! focus:ring-offset-0! focus:!shadow-nonefocus-visible:!outline-none focus-visible:ring-0! focus-visible:ring-offset-0! focus-visible:shadow-none!"
+                        className="border-auth-border border h-10 text-center w-1/4 rounded-xl! outline-none! ring-0! ring-offset-0! shadow-none! focus:outline-none! focus:ring-0! focus:ring-offset-0! focus:!shadow-nonefocus-visible:!outline-none focus-visible:ring-0! focus-visible:ring-offset-0! focus-visible:shadow-none! dark:bg-transparent text-black"
                       />
                       <InputOTPSlot
                         index={3}
-                        className="border-auth-border border h-10 text-center w-1/4 rounded-xl! outline-none! ring-0! ring-offset-0! shadow-none! focus:outline-none! focus:ring-0! focus:ring-offset-0! focus:!shadow-nonefocus-visible:!outline-none focus-visible:ring-0! focus-visible:ring-offset-0! focus-visible:shadow-none!"
+                        className="border-auth-border border h-10 text-center w-1/4 rounded-xl! outline-none! ring-0! ring-offset-0! shadow-none! focus:outline-none! focus:ring-0! focus:ring-offset-0! focus:!shadow-nonefocus-visible:!outline-none focus-visible:ring-0! focus-visible:ring-offset-0! focus-visible:shadow-none! dark:bg-transparent text-black caret-black"
                       />
                     </InputOTPGroup>
                   </InputOTP>
@@ -76,7 +76,7 @@ export default function OtpVerificationForm() {
             type="button"
             onClick={goBack}
             variant="outline"
-            className="w-full h-12 rounded-full text-base font-medium border border-black bg-transparent hover:bg-transparent cursor-pointer"
+            className="w-full h-12 rounded-full text-base font-medium border border-black bg-transparent! hover:bg-transparent cursor-pointer text-black!"
           >
             Back
           </Button>

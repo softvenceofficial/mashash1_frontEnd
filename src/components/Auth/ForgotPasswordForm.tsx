@@ -16,7 +16,7 @@ export default function ForgotPasswordForm() {
   return (
     <div className="w-full max-w-md mx-auto py-10 min-h-[calc(100vh-300px)] flex flex-col justify-center">
       <div className="text-center">
-        <h2 className="text-[40px] font-bold mb-3">Forget Password</h2>
+        <h2 className="text-[40px] font-bold mb-3 text-black">Forget Password</h2>
         <p className="text-base font-normal text-auth-foreground">
           Please enter your email address to reset your password
         </p>
@@ -33,7 +33,7 @@ export default function ForgotPasswordForm() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <Label className="font-medium text-base gap-0">
+                <Label className="font-medium text-base gap-0 text-black">
                   Email address<span className="text-red-500">*</span>
                 </Label>
                 <FormControl>
@@ -42,7 +42,7 @@ export default function ForgotPasswordForm() {
                     placeholder="your@email.com"
                     className="rounded-[10px] h-12 placeholder:text-auth-foreground 
                     placeholder:text-base placeholder:font-normal text-base font-normal 
-                    border-[#E5E7EB] focus:ring-0 focus:ring-offset-0 focus:border-border"
+                    border-[#E5E7EB] focus:ring-0 focus:ring-offset-0 focus:border-border dark:bg-transparent text-black"
                     {...field}
                   />
                 </FormControl>
@@ -64,7 +64,7 @@ export default function ForgotPasswordForm() {
             type="button"
             onClick={goBack}
             variant="outline"
-            className="w-full h-12 rounded-full text-base font-medium border border-black bg-transparent hover:bg-transparent cursor-pointer"
+            className="w-full h-12 rounded-full text-base font-medium border border-black bg-transparent! hover:bg-transparent! cursor-pointer text-black!"
           >
             Back
           </Button>
