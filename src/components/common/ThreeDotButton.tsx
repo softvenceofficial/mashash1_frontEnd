@@ -5,7 +5,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import share from "@/assets/svgs/share.svg";
-import bin from "@/assets/svgs/bin.svg";
+import bin from "@/assets/svgs/trash.svg";
 import { Button } from "../ui/button";
 import Icon from "./Icon";
 
