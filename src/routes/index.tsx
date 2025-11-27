@@ -12,6 +12,7 @@ import OtpVerificationForm from "@/components/Auth/OtpVerificationForm";
 import ChangePasswordForm from "@/components/Auth/ChangePasswordForm";
 import Congrats from "@/components/Auth/Congrats";
 import MyFilePage from "@/pages/Dashboard/MyFile";
+import TrashPage from "@/pages/Dashboard/Trash";
 
 const router = createBrowserRouter([
   {
@@ -44,7 +45,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/dashboard/trash",
-        element: <div>Trash</div>,
+        element: <TrashPage />,
       },
     ],
   },

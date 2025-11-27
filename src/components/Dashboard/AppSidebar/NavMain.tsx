@@ -23,7 +23,7 @@ export default function NavMain({
           <SidebarMenuButton
             tooltip={item.title}
             className={cn(
-              "w-full text-foreground flex flex-col items-center py-3 px-2 md:px-4 rounded-lg",
+              "w-full text-foreground flex flex-col items-center py-3 px-2 md:px-4 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-800" ,
               isActive ? "text-primary dark:text-white font-medium" : "text-foreground",
             )}
           >
