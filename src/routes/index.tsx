@@ -11,6 +11,7 @@ import ForgotPasswordForm from "@/components/Auth/ForgotPasswordForm";
 import OtpVerificationForm from "@/components/Auth/OtpVerificationForm";
 import ChangePasswordForm from "@/components/Auth/ChangePasswordForm";
 import Congrats from "@/components/Auth/Congrats";
+import MyFilePage from "@/pages/Dashboard/MyFile";
 
 const router = createBrowserRouter([
   {
@@ -39,7 +40,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/dashboard/my-files",
-        element: <div>My file</div>,
+        element: <MyFilePage />,
       },
       {
         path: "/dashboard/trash",
