@@ -48,7 +48,7 @@ export default function useSignup() {
 
     toast.success("Account created successfully!");
 
-    navigate("/auth/congrats", { replace: true });
+    navigate("/auth/congrats");
   }
 
   return { form, onSubmit };

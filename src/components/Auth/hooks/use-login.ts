@@ -33,11 +33,11 @@ export default function useLogin() {
   // 2. Define a submit handler.
   function onSubmit(values: z.infer<typeof formSchema>) {
     // Do something with the form values.
-    // ✅ This will be type-safe and validated.
+    // This will be type-safe and validated.
     console.log(values);
     toast.success("Login successful!");
     // Navigate to the dashboard or home page after successful login
-    navigate("/dashboard", { replace: true });
+    navigate("/dashboard");
   }
 
   return { form, onSubmit };

@@ -23,7 +23,7 @@ const SigninForm = () => {
   return (
     <div>
       <div className="text-center">
-        <h2 className="text-[40px] font-bold mb-4">Log in</h2>
+        <h2 className="text-[40px] font-bold mb-4 text-black">Log in</h2>
         <p className="text-base font-normal text-auth-foreground">
           Enter your email and password to log in
         </p>
@@ -32,7 +32,7 @@ const SigninForm = () => {
           className="w-full mt-6 bg-transparent! border-black rounded-full h-12 hover:text-foreground"
         >
           <Icon src={google} className="size-5" />
-          <span className="font-medium">Log in with Google</span>
+          <span className="font-medium text-black">Log in with Google</span>
         </Button>
       </div>
       <div className="flex w-full items-center my-5 md:my-10">
@@ -47,14 +47,14 @@ const SigninForm = () => {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <Label className="font-medium text-base gap-0">
+                <Label className="font-medium text-base gap-0 text-black">
                   Email<span className="text-red-500">*</span>
                 </Label>
                 <FormControl>
                   <Input
                     type="text"
                     placeholder="your@email.com"
-                    className="rounded-[10px] h-12 placeholder:text-auth-foreground placeholder:text-base placeholder:font-normal text-base! font-normal border-[#E5E7EB] focus:ring-0! focus:ring-offset-0! focus:border-border!"
+                    className="rounded-[10px] h-12 placeholder:text-auth-foreground placeholder:text-base placeholder:font-normal text-base! font-normal border-[#E5E7EB] focus:ring-0! focus:ring-offset-0! focus:border-border! dark:bg-transparent text-black"
                     {...field}
                   />
                 </FormControl>
@@ -68,7 +68,7 @@ const SigninForm = () => {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <Label className="font-medium text-base gap-0">
+                <Label className="font-medium text-base gap-0 text-black">
                   Password<span className="text-red-500">*</span>
                 </Label>
                 <FormControl>
@@ -77,7 +77,7 @@ const SigninForm = () => {
                       type={showPassword ? "text" : "password"}
                       placeholder="Min. 8 characters"
                       {...field}
-                      className="rounded-[10px] h-12 placeholder:text-auth-foreground placeholder:text-base placeholder:font-normal text-base! font-normal border-auth-border focus:ring-0! focus:ring-offset-0! focus:border-border!"
+                      className="rounded-[10px] h-12 placeholder:text-auth-foreground placeholder:text-base placeholder:font-normal text-base! font-normal border-auth-border focus:ring-0! focus:ring-offset-0! focus:border-border! dark:bg-transparent text-black"
                     />
                     <button
                       type="button"
@@ -110,10 +110,10 @@ const SigninForm = () => {
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      className="border-auth-border [&>svg]:h-10 [&>svg]:w-7"
+                      className="border-auth-border [&>svg]:h-10 [&>svg]:w-7 dark:bg-transparent"
                     />
                   </FormControl>
-                  <FormLabel className="text-sm md:text-base md:font-medium">
+                  <FormLabel className="text-sm md:text-base md:font-medium text-black cursor-pointer">
                     Keep me logged in
                   </FormLabel>
                 </FormItem>

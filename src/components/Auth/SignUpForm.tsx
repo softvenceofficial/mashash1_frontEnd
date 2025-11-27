@@ -24,7 +24,7 @@ export default function SignUpForm() {
   return (
     <div>
       <div className="text-center">
-        <h2 className="text-[40px] font-bold mb-4">Registration</h2>
+        <h2 className="text-[40px] font-bold mb-4 text-black">Registration</h2>
         <p className="text-base font-normal text-auth-foreground">
           Create your new account.
         </p>
@@ -33,7 +33,7 @@ export default function SignUpForm() {
           className="w-full mt-6 bg-transparent! border-black rounded-full h-12 hover:text-foreground"
         >
           <Icon src={google} className="size-5" />
-          <span className="font-medium">Register with Google</span>
+          <span className="font-medium text-black">Register with Google</span>
         </Button>
       </div>
       <div className="flex w-full items-center my-5 md:my-10">
@@ -51,13 +51,13 @@ export default function SignUpForm() {
               name="firstName"
               render={({ field }) => (
                 <FormItem>
-                  <Label className="font-medium text-base">
+                  <Label className="font-medium text-base text-black">
                     First Name<span className="text-red-500">*</span>
                   </Label>
                   <FormControl>
                     <Input
                       placeholder="Esther"
-                      className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 focus:ring-offset-0"
+                      className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 focus:ring-offset-0 dark:bg-transparent dark:text-black"
                       {...field}
                     />
                   </FormControl>
@@ -71,13 +71,13 @@ export default function SignUpForm() {
               name="lastName"
               render={({ field }) => (
                 <FormItem>
-                  <Label className="font-medium text-base">
+                  <Label className="font-medium text-base text-black">
                     Last Name<span className="text-red-500">*</span>
                   </Label>
                   <FormControl>
                     <Input
                       placeholder="Howard"
-                      className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 focus:ring-offset-0"
+                      className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 focus:ring-offset-0 dark:bg-transparent dark:text-black"
                       {...field}
                     />
                   </FormControl>
@@ -93,13 +93,13 @@ export default function SignUpForm() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <Label className="font-medium text-base">
+                <Label className="font-medium text-base text-black">
                   Email<span className="text-red-500">*</span>
                 </Label>
                 <FormControl>
                   <Input
                     placeholder="your@email.com"
-                    className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0"
+                    className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 dark:bg-transparent dark:text-black"
                     {...field}
                   />
                 </FormControl>
@@ -114,11 +114,11 @@ export default function SignUpForm() {
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <Label className="font-medium text-base">Phone Number</Label>
+                <Label className="font-medium text-base text-black">Phone Number</Label>
                 <FormControl>
                   <Input
                     placeholder="your@email.com"
-                    className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0"
+                    className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 dark:bg-transparent dark:text-black"
                     {...field}
                   />
                 </FormControl>
@@ -133,7 +133,7 @@ export default function SignUpForm() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <Label className="font-medium text-base">
+                <Label className="font-medium text-base text-black">
                   Password<span className="text-red-500">*</span>
                 </Label>
                 <FormControl>
@@ -142,7 +142,7 @@ export default function SignUpForm() {
                       type={showPassword ? "text" : "password"}
                       placeholder="Min. 8 characters"
                       {...field}
-                      className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0"
+                      className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 dark:bg-transparent dark:text-black"
                     />
                     <button
                       type="button"
@@ -168,7 +168,7 @@ export default function SignUpForm() {
             name="confirmPassword"
             render={({ field }) => (
               <FormItem>
-                <Label className="font-medium text-base">
+                <Label className="font-medium text-base text-black">
                   Confirm Password<span className="text-red-500">*</span>
                 </Label>
                 <FormControl>
@@ -177,7 +177,7 @@ export default function SignUpForm() {
                       type={showConfirm ? "text" : "password"}
                       placeholder="Min. 6 characters"
                       {...field}
-                      className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0"
+                      className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 dark:bg-transparent dark:text-black focus:ring-offset-0 focus:outline-0"
                     />
                     <button
                       type="button"
@@ -208,10 +208,10 @@ export default function SignUpForm() {
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      className="border-auth-border [&>svg]:h-10 [&>svg]:w-7"
+                      className="border-auth-border [&>svg]:h-10 [&>svg]:w-7 dark:bg-transparent cursor-pointer"
                     />
                   </FormControl>
-                  <FormLabel className="text-sm md:text-base md:font-medium">
+                  <FormLabel className="text-sm md:text-base md:font-medium text-black cursor-pointer">
                     Lorem ipsum dolor sit amet consectetur. Habitant feugiat pretium gravida fringilla phasellus.
                   </FormLabel>
                 </FormItem>

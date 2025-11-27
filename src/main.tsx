@@ -7,6 +7,6 @@ import Providers from "./providers";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Providers />
-    <Toaster />
+    <Toaster position="top-right" />
   </StrictMode>
 );
