@@ -58,7 +58,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <div
-      className="top-(--header-height) w-26! bg-white dark:bg-[#1B1B1B]"
+      className=" w-26! bg-white dark:bg-[#1B1B1B] fixed top-12 left-0 h-full z-"
       {...props}
     >
       <div className="md:hidden py-5">
