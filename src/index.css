@@ -49,6 +49,7 @@
   --color-auth-foreground: var(--auth-foreground);
   --color-auth-text: var(--auth-text);
   --color-auth-border: var(--auth-border);
+  --color-toolboxBG:var(--toolboxBG)
 }
 
 :root {
@@ -138,6 +139,7 @@
   --sidebar-border: oklch(0.9219 0 0);
   /* Neutral-300 */
   --sidebar-ring: oklch(0.71 0 0);
+  --toolboxBG: #cfcece;
   /* Neutral-500 */
   --auth-foreground: #a2a2a2; 
   --auth-text: oklch(61.695% 0.19336 260.462);
@@ -237,7 +239,7 @@
   /* Neutral-400 */
   --auth-foreground: oklch(71.224% 0.00008 271.152);
   --auth-border: oklch(89.449% 0.0001 271.152);
-
+  --toolboxBG: #2B2B2B;
 }
 
 @layer base {
