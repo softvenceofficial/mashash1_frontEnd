@@ -1,7 +1,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -13,6 +13,10 @@ const formSchema = z.object({
 
 export default function useOtpVerify() {
       const navigate = useNavigate();
+      const [searchParams] = useSearchParams();
+      const encodedEmail = searchParams.get("email");
+      const email = encodedEmail ? atob(encodedEmail) : null;
+      console.log("Encoded Email from URL:", email);
 
     // 1. Define your form.
     const form = useForm<z.infer<typeof formSchema>>({
