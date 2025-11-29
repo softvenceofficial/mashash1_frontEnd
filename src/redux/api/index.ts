@@ -5,11 +5,22 @@ export const baseApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: import.meta.env.VITE_BASE_API_URL,
     credentials: "include",
-    prepareHeaders: (headers) => {
-      const storedData = localStorage.getItem("persist:userInfo");
-      const accessToken = JSON.parse(storedData!).token;
+    prepareHeaders: (headers, { getState, endpoint }) => {
+      const skipAuthEndpoints = ["userLogin"];
 
-      if (accessToken) headers.set("authorization", JSON.parse(accessToken));
+      if (skipAuthEndpoints.includes(endpoint)) {
+        return headers;
+      }
+
+      const stored = localStorage.getItem("persist:userInfo");
+      if (!stored) return headers;
+
+      const parsed = JSON.parse(stored);
+        const accessToken = parsed.token ? JSON.parse(parsed.token) : null;
+
+      if (accessToken) {
+        headers.set("Authorization", `Bearer ${accessToken}`);
+      }
 
       return headers;
     },

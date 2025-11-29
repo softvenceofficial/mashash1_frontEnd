@@ -1,15 +1,31 @@
 import { baseApi } from "../api";
+import { storeUserInfo } from "../slices/authSlice";
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     userLogin: build.mutation({
       query: (data) => ({
-        url: "/login",
+        url: "/account/login/",
         method: "POST",
         credentials: "include",
         body: data,
       }),
       invalidatesTags: ["auth"],
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+
+          dispatch(
+            storeUserInfo({
+              token: data.tokens.access,
+              refresh: data.tokens.refresh,
+              user: data.data,
+            }),
+          );
+        } catch (error) {
+          console.log("Error storing user info:", error);
+        }
+      },
     }),
 
     forgotPassword: build.mutation({
