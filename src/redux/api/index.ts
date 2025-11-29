@@ -6,7 +6,8 @@ export const baseApi = createApi({
     baseUrl: import.meta.env.VITE_BASE_API_URL,
     credentials: "include",
     prepareHeaders: (headers, { getState, endpoint }) => {
-      const skipAuthEndpoints = ["userLogin"];
+      void getState;
+      const skipAuthEndpoints = ["userLogin", "userSignUp"];
 
       if (skipAuthEndpoints.includes(endpoint)) {
         return headers;

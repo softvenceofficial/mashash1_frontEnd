@@ -28,6 +28,15 @@ export const authApi = baseApi.injectEndpoints({
       },
     }),
 
+    userSignUp: build.mutation({
+      query: (data) => ({
+        url: "/account/signup/",
+        method: "POST",
+        credentials: "include",
+        body: data,
+      }),
+    }),
+
     forgotPassword: build.mutation({
       query: (data) => ({
         url: "/forget-password",
@@ -76,6 +85,7 @@ export const authApi = baseApi.injectEndpoints({
 
 export const {
   useUserLoginMutation,
+  useUserSignUpMutation,
   useForgotPasswordMutation,
   useVerifyOTPPasswordMutation,
   useResendOTPMutation,

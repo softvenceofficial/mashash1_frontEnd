@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 import { passwordValidation } from "./use-login";
+import { useUserSignUpMutation } from "@/redux/endpoints/authApi";
 
 // Signup form validation schema
 const signupSchema = z
@@ -29,7 +30,7 @@ export type SignupSchema = z.infer<typeof signupSchema>;
 
 export default function useSignup() {
   const navigate = useNavigate();
-
+  const [userSignUp] = useUserSignUpMutation();
   const form = useForm<SignupSchema>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -43,12 +44,27 @@ export default function useSignup() {
     },
   });
 
-  function onSubmit(values: SignupSchema) {
+  async function onSubmit(values: SignupSchema) {
     console.log("Signup Data:", values);
+    const formData = new FormData();
+    formData.append("first_name", values.firstName);
+    formData.append("last_name", values.lastName);
+    formData.append("email", values.email);
+    formData.append("phone_number", values.phone || "");
+    formData.append("password", values.password);
+    formData.append("confirm_password", values.confirmPassword);
 
-    toast.success("Account created successfully!");
-
-    navigate("/auth/congrats");
+    try {
+      const response = await userSignUp(formData).unwrap();
+      console.log("Signup Response:", response);
+      if (response.code === 201) {
+        toast.success(response.data.message || "Account created successfully!");
+        navigate("/auth/signin");
+      }
+    } catch (error) {
+      console.error("Signup error:", error);
+      toast.error("Failed to create account. Please try again.");
+    }
   }
 
   return { form, onSubmit };
