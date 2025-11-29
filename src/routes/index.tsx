@@ -14,6 +14,7 @@ import Congrats from "@/components/Auth/Congrats";
 import MyFilePage from "@/pages/Dashboard/MyFile";
 import TrashPage from "@/pages/Dashboard/Trash";
 import Creator from "@/pages/Dashboard/Creator";
+import DownloadPage from "@/pages/Dashboard/MyFile/DownloadPage";
 
 const router = createBrowserRouter([
   {
@@ -43,6 +44,10 @@ const router = createBrowserRouter([
       {
         path: "/dashboard/my-files",
         element: <MyFilePage />,
+      },
+      {
+        path: "/dashboard/my-files/downloaded",
+        element: <DownloadPage />,
       },
       {
         path: "/dashboard/trash",

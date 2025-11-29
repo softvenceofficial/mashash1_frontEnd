@@ -1,12 +1,15 @@
+import useModal from "@/components/Modal/useModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function ShareModal() {
+  const { close } = useModal();
   const shareableLink = `https/drive.com/file/example_434Dkadoijdiwdjij/view?`;
 
   const HandleCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
+      close(["modal"]);
     } catch (error) {
       console.error("Failed to copy text: ", error);
     }
@@ -21,7 +24,11 @@ export default function ShareModal() {
           value={shareableLink}
           readOnly
         />
-        <Button onClick={() => HandleCopy(shareableLink)} variant="default" className="bg-[#818CF8]! text-2xl px-7 h-12 cursor-pointer">
+        <Button
+          onClick={() => HandleCopy(shareableLink)}
+          variant="default"
+          className="bg-[#818CF8]! text-2xl px-7 h-12 cursor-pointer"
+        >
           Copy link
         </Button>
       </div>
