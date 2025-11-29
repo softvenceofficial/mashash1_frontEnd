@@ -13,6 +13,7 @@ import ChangePasswordForm from "@/components/Auth/ChangePasswordForm";
 import Congrats from "@/components/Auth/Congrats";
 import MyFilePage from "@/pages/Dashboard/MyFile";
 import TrashPage from "@/pages/Dashboard/Trash";
+import Creator from "@/pages/Dashboard/Creator";
 
 const router = createBrowserRouter([
   {
@@ -48,6 +49,11 @@ const router = createBrowserRouter([
         element: <TrashPage />,
       },
     ],
+  },
+  {
+    path: "/Creator",
+    element: <Creator />,
+    errorElement: <NotFoundPage />,
   },
   {
     path: "/auth",
