@@ -1,15 +1,20 @@
 import { Card, CardContent, CardFooter } from "../ui/card";
 import ThreeDotButton from "./ThreeDotButton";
+import TrashThreeDotButton from "./TrashThreeDotButton";
 
 export default function WorkingCard({
   work,
 }: {
   work: { id: number; title: string; date: string; imageUrl: string };
 }) {
+  const pathName = window.location.pathname;
+  console.log("Current Path:", pathName);
   return (
     <Card className="dark:bg-[#212B36] border-none p-4 mr-6 relative">
       <div className="absolute top-0 -right-8">
-        <ThreeDotButton />
+        {
+          pathName.includes("trash") ? <TrashThreeDotButton /> : <ThreeDotButton />
+        }
       </div>
       <CardContent className="px-0">
         <img src={work.imageUrl} alt={work.title} className="w-full h-auto" />

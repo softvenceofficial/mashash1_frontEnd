@@ -32,7 +32,7 @@ export default function ThreeDotButton() {
           className="flex items-center gap-2 w-full justify-start px-2 dark:hover:bg-[#212B36] hover:bg-primary/10 cursor-pointer hover:text-black dark:hover:text-white"
         >
           <Icon src={bin} className="size-5 text-black dark:text-white" />
-          <span className="text-base font-normal">move to trash</span>
+          <span className="text-base font-normal">Move to trash</span>
         </Button>
       </DropdownMenuContent>
     </DropdownMenu>
