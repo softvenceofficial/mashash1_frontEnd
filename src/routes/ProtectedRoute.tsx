@@ -12,7 +12,6 @@ export const ProtectedRoute = ({
   redirectTo = "/auth/signin",
 }: ProtectedRouteProps) => {
   const userData = useCurrentUser();
-  console.log("ProtectedRoute - Current User Data:", userData);
 
   if (!userData?.id) {
     return <Navigate to={redirectTo} replace />;

@@ -1,5 +1,5 @@
 import { baseApi } from "../api";
-import { storeUserInfo } from "../slices/authSlice";
+import { removeUserInfo, storeUserInfo } from "../slices/authSlice";
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
@@ -73,12 +73,23 @@ export const authApi = baseApi.injectEndpoints({
       }),
     }),
 
-    userLogout: build.query({
+    userLogout: build.mutation({
       query: () => ({
-        url: "/user/logout",
-        method: "GET",
+        url: "/account/logout/",
+        method: "POST",
         credentials: "include",
       }),
+      invalidatesTags: ["auth"],
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(
+            removeUserInfo(),
+          );
+        } catch (error) {
+          console.log("Error during logout:", error);
+        }
+      },
     }),
   }),
 });
@@ -90,5 +101,5 @@ export const {
   useVerifyOTPPasswordMutation,
   useResendOTPMutation,
   useResetPasswordMutation,
-  useUserLogoutQuery,
+  useUserLogoutMutation,
 } = authApi;
