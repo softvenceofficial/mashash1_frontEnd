@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Tools from "@/components/Dashboard/Tools/Tools";
 import Toolbox from "@/components/Dashboard/Toolbox/Toolbox";
 import AIImageBox from "@/components/Dashboard/AI-Image-box/AIImageBox";
@@ -6,17 +7,28 @@ import AIImageType from "@/components/Dashboard/AI-Image-TypeBox/AIImageType";
 import { SiteHeader } from "@/components/Dashboard/DashboardHeader";
 
 export default function Creator() {
+  // Lifted state to manage active tool across components
+  const [activeTool, setActiveTool] = useState("Book Size");
+  const [selectedBookSize, setSelectedBookSize] = useState("6 x 4");
+
   return (
     <div>
       <SiteHeader />
       <div className="flex min-h-screen gap-4 mt-3">
         <div className="w-[23.3%]">
-          <Tools />
+          {/* Pass state and setter to Tools */}
+          <Tools activeTool={activeTool} setActiveTool={setActiveTool} />
           <AIImageBox />
         </div>
-        <div className="w-[63.8%] bg-amber-900">
-          <Toolbox />
-          <Book />
+        <div className="w-[63.8%]">
+          {/* Pass active state to Toolbox */}
+          <Toolbox activeTool={activeTool} onBookSizeChange={setSelectedBookSize} />
+          <Book
+            activeTool={activeTool}
+            selectedBookSize={selectedBookSize}
+            strokeColor="#000000"
+            strokeWidth={5}
+          />
         </div>
         <div className="w-[10.2%] bg-white">
           <AIImageType />

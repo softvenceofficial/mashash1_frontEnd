@@ -1,13 +1,15 @@
-import { useState } from "react";
 import { HiOutlineBookOpen } from "react-icons/hi";
 import { RxText } from "react-icons/rx";
 import { IoBrushOutline, IoColorPaletteOutline } from "react-icons/io5";
 import { GiPencilBrush } from "react-icons/gi";
 import { LiaShapesSolid } from "react-icons/lia";
 
-const Tools = () => {
-  const [activeIndex, setActiveIndex] = useState(0);
+interface ToolsProps {
+  activeTool: string;
+  setActiveTool: (tool: string) => void;
+}
 
+const Tools = ({ activeTool, setActiveTool }: ToolsProps) => {
   const tools = [
     { icon: HiOutlineBookOpen, label: "Book Size" },
     { icon: RxText, label: "Text" },
@@ -21,13 +23,13 @@ const Tools = () => {
     <div className="w-full h-[107px] opacity-100 rounded-tr-lg rounded-br-lg bg-secondary flex justify-start items-center gap-1.5 py-4 px-[11px]">
       {tools.map((tool, index) => {
         const Icon = tool.icon;
-        const isActive = activeIndex === index;
+        const isActive = activeTool === tool.label;
         
         return (
           <div 
             key={index}
             className="w-[16.6%] flex justify-center items-center flex-col cursor-pointer transition-all duration-300 ease-in-out hover:scale-105"
-            onClick={() => setActiveIndex(index)}
+            onClick={() => setActiveTool(tool.label)}
           >
             <div className={`w-11 h-11 rounded-full flex justify-center items-center transition-all duration-300 ease-in-out transform ${
               isActive 
