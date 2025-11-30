@@ -27,7 +27,8 @@ export default function useCurrentUser() {
         if (!storedData) return null;
 
         const parsedData = JSON.parse(storedData);
-        return parsedData;
+        const user = parsedData.user ? JSON.parse(parsedData.user) : null;
+        return user;
     } catch (error) {
         console.error('Failed to decode JWT:', error);
         return null;

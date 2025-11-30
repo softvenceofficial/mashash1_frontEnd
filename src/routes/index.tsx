@@ -15,6 +15,7 @@ import MyFilePage from "@/pages/Dashboard/MyFile";
 import TrashPage from "@/pages/Dashboard/Trash";
 import Creator from "@/pages/Dashboard/Creator";
 import DownloadPage from "@/pages/Dashboard/MyFile/DownloadPage";
+import { ProtectedRoute } from "./ProtectedRoute";
 
 const router = createBrowserRouter([
   {
@@ -30,7 +31,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    element: <DashboardLayout />,
+    element: <ProtectedRoute> <DashboardLayout /></ProtectedRoute>,
     errorElement: <NotFoundPage />,
     children: [
       {

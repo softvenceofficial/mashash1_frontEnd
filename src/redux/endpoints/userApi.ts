@@ -2,24 +2,13 @@ import { baseApi } from "../api";
 
 export const userApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    customerCreate: build.mutation({
-      query: (data) => ({
-        url: "/customer/register",
-        method: "POST",
+    getCurrentUser: build.query({
+      query: () => ({
+        url: `/account/profile/`,
+        method: "GET",
         credentials: "include",
-        body: data,
+        invalidatesTags: ["user"],
       }),
-      invalidatesTags: ["user"],
-    }),
-
-    ownerCreate: build.mutation({
-      query: (data) => ({
-        url: "/owner/register",
-        method: "POST",
-        credentials: "include",
-        body: data,
-      }),
-      invalidatesTags: ["user"],
     }),
 
     userImageUpdate: build.mutation({
@@ -35,7 +24,6 @@ export const userApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useCustomerCreateMutation,
-  useOwnerCreateMutation,
+  useGetCurrentUserQuery,
   useUserImageUpdateMutation,
 } = userApi;

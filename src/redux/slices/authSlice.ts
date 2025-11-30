@@ -2,10 +2,12 @@ import { createSlice } from "@reduxjs/toolkit";
 
 type TInitialState = {
   token: null | string;
+  user : null | object;
 };
 
 const initialState: TInitialState = {
-  token: null
+  token: null,
+  user: null
 }
 
 export const authSlice = createSlice({
@@ -14,9 +16,11 @@ export const authSlice = createSlice({
   reducers: {
     storeUserInfo: (state, action) => {
       state.token = action.payload.token;
+      state.user = action.payload.user;
     },
     removeUserInfo: (state) => {
       state.token = null;
+      state.user = null;
     }
   }
 });
