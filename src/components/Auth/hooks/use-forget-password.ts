@@ -11,7 +11,13 @@ const forgetPasswordSchema = z.object({
 
 export type ForgetPasswordSchema = z.infer<typeof forgetPasswordSchema>;
 
-export default function useForgetPassword({ setLoading }: { setLoading: (loading: boolean) => void }) {
+const COUNTDOWN_DURATION = 120;
+
+export default function useForgetPassword({
+  setLoading,
+}: {
+  setLoading: (loading: boolean) => void;
+}) {
   const navigate = useNavigate();
   const [forgotPassword] = useForgotPasswordMutation();
 
@@ -31,6 +37,10 @@ export default function useForgetPassword({ setLoading }: { setLoading: (loading
       const res = await forgotPassword(formData).unwrap();
       console.log("Forgot Password Response:", res);
       if (res.code === 200) {
+        // Set OTP expire time in localStorage
+        const expireAt = Date.now() + COUNTDOWN_DURATION * 1000;
+        localStorage.setItem("otp_expire_at", expireAt.toString());
+
         toast.dismiss();
         toast.success("OTP sent to your email!");
         setLoading(false);

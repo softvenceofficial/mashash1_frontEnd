@@ -41,6 +41,7 @@ export default function useOtpVerify({ setLoading }: { setLoading: (loading: boo
                 toast.success("OTP verified successfully!");
                 setLoading(false);
                 navigate(`/auth/change-password?token=${res.data.reset_token}`);
+                
             }
         } catch (error) {
           console.error("OTP Verification Error:", error);

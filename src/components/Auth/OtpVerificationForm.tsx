@@ -9,15 +9,20 @@ import {
 import { Button } from "@/components/ui/button";
 import useOtpVerify from "./hooks/use-otp-verify";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "../ui/input-otp";
+import useOtpTimer from "./hooks/use-otp-timer";
 import { useState } from "react";
 
 export default function OtpVerificationForm() {
   const [loading, setLoading] = useState(false);
   const { form, onSubmit, goBack } = useOtpVerify({ setLoading });
+  const { timeLeft, canResend, handleResend } = useOtpTimer(120);
+
   return (
     <div className="w-full max-w-md mx-auto py-10 min-h-[calc(100vh-300px)] flex flex-col justify-center">
       <div className="text-center">
-        <h2 className="text-[40px] font-bold mb-3 text-black">OTP Verification</h2>
+        <h2 className="text-[40px] font-bold mb-3 text-black">
+          OTP Verification
+        </h2>
         <p className="text-base font-normal text-auth-foreground">
           Enter the verification code we just sent to your email address
         </p>
@@ -62,8 +67,26 @@ export default function OtpVerificationForm() {
             )}
           />
           <div className="text-center mt-10">
-            <p className="text-auth-foreground mb-2">00:20 Sec</p>
-            <p className="text-auth-foreground">Don’t receive code?{" "}<span className="text-auth-text text-base font-medium cursor-pointer">Re-send</span></p>
+            {!canResend ? (
+              <p className="text-auth-foreground mb-2">
+                {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:
+                {String(timeLeft % 60).padStart(2, "0")}
+              </p>
+            ) : (
+              <p className="text-auth-foreground">Time expired</p>
+            )}
+
+            <p className="text-auth-foreground">
+              Didn’t receive code?{" "}
+              <span
+                onClick={canResend ? handleResend : undefined}
+                className={`text-base font-medium ${
+                  canResend ? "cursor-pointer text-auth-text" : "text-gray-400"
+                }`}
+              >
+                Re-send
+              </span>
+            </p>
           </div>
           {/* Send OTP */}
           <Button
