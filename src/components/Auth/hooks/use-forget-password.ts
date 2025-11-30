@@ -11,7 +11,7 @@ const forgetPasswordSchema = z.object({
 
 export type ForgetPasswordSchema = z.infer<typeof forgetPasswordSchema>;
 
-export default function useForgetPassword() {
+export default function useForgetPassword({ setLoading }: { setLoading: (loading: boolean) => void }) {
   const navigate = useNavigate();
   const [forgotPassword] = useForgotPasswordMutation();
 
@@ -23,14 +23,17 @@ export default function useForgetPassword() {
   });
 
   async function onSubmit(values: ForgetPasswordSchema) {
+    setLoading(true);
+    toast.loading("Sending OTP...");
     const formData = new FormData();
     formData.append("email", values.email);
     try {
       const res = await forgotPassword(formData).unwrap();
       console.log("Forgot Password Response:", res);
       if (res.code === 200) {
+        toast.dismiss();
         toast.success("OTP sent to your email!");
-
+        setLoading(false);
         navigate({
           pathname: "/auth/verify-otp",
           search: `?email=${btoa(values.email)}`,
@@ -38,8 +41,9 @@ export default function useForgetPassword() {
       }
     } catch (error) {
       console.error("Forgot Password Error:", error);
+      toast.dismiss();
       toast.error("Failed to send OTP. Please try again.");
-      return;
+      setLoading(false);
     }
   }
 

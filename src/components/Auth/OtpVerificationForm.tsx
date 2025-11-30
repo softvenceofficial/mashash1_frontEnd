@@ -9,9 +9,11 @@ import {
 import { Button } from "@/components/ui/button";
 import useOtpVerify from "./hooks/use-otp-verify";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "../ui/input-otp";
+import { useState } from "react";
 
 export default function OtpVerificationForm() {
-  const { form, onSubmit, goBack } = useOtpVerify();
+  const [loading, setLoading] = useState(false);
+  const { form, onSubmit, goBack } = useOtpVerify({ setLoading });
   return (
     <div className="w-full max-w-md mx-auto py-10 min-h-[calc(100vh-300px)] flex flex-col justify-center">
       <div className="text-center">
@@ -66,9 +68,10 @@ export default function OtpVerificationForm() {
           {/* Send OTP */}
           <Button
             type="submit"
-            className="w-full bg-black h-12 hover:bg-black text-base font-medium rounded-full cursor-pointer mt-12"
+            disabled={loading}
+            className="w-full bg-black h-12 hover:bg-black text-base font-medium rounded-full cursor-pointer mt-12 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirm Code
+            {loading ? "Confirming..." : "Confirm Code"}
           </Button>
 
           {/* Back */}

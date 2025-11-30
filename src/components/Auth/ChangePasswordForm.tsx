@@ -15,7 +15,8 @@ import useChangePassword from "./hooks/use-change-password";
 export default function ChangePasswordForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const { form, onSubmit } = useChangePassword();
+  const [loading, setLoading] = useState(false);
+  const { form, onSubmit } = useChangePassword({ setLoading });
   return (
     <div className="w-full max-w-md mx-auto py-10 min-h-[calc(100vh-300px)] flex flex-col justify-center">
       <div className="text-center mb-14">
@@ -98,9 +99,10 @@ export default function ChangePasswordForm() {
           />
           <Button
             type="submit"
-            className="w-full bg-black h-12 hover:bg-black text-base font-medium rounded-full mt-7 cursor-pointer"
+            disabled={loading}
+            className="w-full bg-black h-12 hover:bg-black text-base font-medium rounded-full mt-7 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Set Password
+            {loading ? "Setting..." : "Set Password"}
           </Button>
         </form>
       </Form>

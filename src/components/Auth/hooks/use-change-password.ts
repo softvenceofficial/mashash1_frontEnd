@@ -24,7 +24,7 @@ const formSchema = z
     message: "Passwords do not match",
   });
 
-export default function useChangePassword() {
+export default function useChangePassword({ setLoading }: { setLoading: (loading: boolean) => void }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
@@ -42,7 +42,8 @@ export default function useChangePassword() {
 
   // 2. Submit handler
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log("New Password:", values);
+    setLoading(true);
+    toast.loading("Setting new password...");
     const formData = new FormData();
     formData.append("new_password", values.password);
     formData.append("confirm_password", values.confirmPassword);
@@ -50,12 +51,15 @@ export default function useChangePassword() {
 
     try {
       const res = await resetPassword(formData).unwrap();
+      toast.dismiss();
       toast.success(res.message || "Password set successfully!");
-      navigate("/dashboard", { replace: true });
+      setLoading(false);
+      navigate("/auth/signin", { replace: true });
     } catch (error) {
       console.error("Reset Password Error:", error);
+      toast.dismiss();
       toast.error("Failed to set password. Please try again.");
-      return;
+      setLoading(false);
     }
   }
 

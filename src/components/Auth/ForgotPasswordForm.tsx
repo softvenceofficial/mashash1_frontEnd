@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import useForgetPassword from "./hooks/use-forget-password";
+import { useState } from "react";
 
 export default function ForgotPasswordForm() {
-  const { form, onSubmit, goBack } = useForgetPassword();
+  const [loading, setLoading] = useState(false);
+  const { form, onSubmit, goBack } = useForgetPassword({ setLoading });
 
   return (
     <div className="w-full max-w-md mx-auto py-10 min-h-[calc(100vh-300px)] flex flex-col justify-center">
@@ -54,9 +56,10 @@ export default function ForgotPasswordForm() {
           {/* Send OTP */}
           <Button
             type="submit"
-            className="w-full bg-black h-12 hover:bg-black text-base font-medium rounded-full cursor-pointer mt-12"
+            disabled={loading}
+            className="w-full bg-black h-12 hover:bg-black text-base font-medium rounded-full cursor-pointer mt-12 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Send OTP
+            {loading ? "Sending..." : "Send OTP"}
           </Button>
 
           {/* Back */}

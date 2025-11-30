@@ -12,7 +12,7 @@ const formSchema = z.object({
     }),
 });
 
-export default function useOtpVerify() {
+export default function useOtpVerify({ setLoading }: { setLoading: (loading: boolean) => void }) {
       const navigate = useNavigate();
       const [verifyOTPPassword] = useVerifyOTPPasswordMutation();
       const [searchParams] = useSearchParams();
@@ -29,21 +29,24 @@ export default function useOtpVerify() {
 
     // 2. Define a submit handler.
       async function onSubmit(values: z.infer<typeof formSchema>) {
-        console.log("Forget Password Data:", values);
+        setLoading(true);
+        toast.loading("Verifying OTP...");
         const formData = new FormData();
         formData.append("email", email || "");
         formData.append("otp_code", values.otp);
         try {
             const res = await verifyOTPPassword(formData).unwrap();
-            console.log("OTP Verification Response:", res);
             if (res.code === 200) {
+                toast.dismiss();
                 toast.success("OTP verified successfully!");
+                setLoading(false);
                 navigate(`/auth/change-password?token=${res.data.reset_token}`);
             }
         } catch (error) {
           console.error("OTP Verification Error:", error);
+          toast.dismiss();
           toast.error("Failed to verify OTP. Please try again.");
-          return;
+          setLoading(false);
         }
       }
     
