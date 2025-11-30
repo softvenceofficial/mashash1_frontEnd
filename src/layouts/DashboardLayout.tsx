@@ -6,14 +6,22 @@ import { useState } from "react";
 import { Outlet } from "react-router";
 
 export default function DashboardLayout() {
-  const [ sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   return (
     <>
       <div className="[--header-height:calc(--spacing(14))]">
         <SidebarProvider className="flex flex-col">
-          <SiteHeader sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+          <SiteHeader
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+          />
           <div className="flex flex-1">
-              <AppSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+            <div>
+              <AppSidebar
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+              />
+            </div>
             <SidebarInset className="p-4 md:p-10 md:ml-26">
               <Outlet />
             </SidebarInset>

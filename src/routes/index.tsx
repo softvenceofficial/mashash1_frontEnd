@@ -16,6 +16,7 @@ import TrashPage from "@/pages/Dashboard/Trash";
 import Creator from "@/pages/Dashboard/Creator";
 import DownloadPage from "@/pages/Dashboard/MyFile/DownloadPage";
 import { ProtectedRoute } from "./ProtectedRoute";
+import ViewProfilePage from "@/components/common/ViewProfilePage";
 
 const router = createBrowserRouter([
   {
@@ -54,6 +55,10 @@ const router = createBrowserRouter([
         path: "/dashboard/trash",
         element: <TrashPage />,
       },
+      {
+        path: "/dashboard/view-profile",
+        element: <ViewProfilePage />,
+      }
     ],
   },
   {
