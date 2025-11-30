@@ -18,7 +18,8 @@ import { Link } from "react-router";
 import { Eye, EyeOff } from "lucide-react";
 
 const SigninForm = () => {
-  const { form, onSubmit } = useLogin();
+  const [loading, setLoading] = useState(false);
+  const { form, onSubmit } = useLogin({setLoading});
   const [showPassword, setShowPassword] = useState(false);
   return (
     <div>
@@ -126,9 +127,10 @@ const SigninForm = () => {
 
           <Button
             type="submit"
+            disabled={loading}
             className="w-full bg-black h-12 hover:bg-black text-base font-medium rounded-full mt-7 cursor-pointer"
           >
-            Log In
+            {loading ? "Logging in..." : "Log In"}
           </Button>
         </form>
       </Form>

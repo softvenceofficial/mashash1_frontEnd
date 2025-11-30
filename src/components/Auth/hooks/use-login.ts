@@ -21,7 +21,7 @@ const formSchema = z.object({
   rememberMe: z.boolean().optional(),
 });
 
-export default function useLogin() {
+export default function useLogin({setLoading}: {setLoading: (loading: boolean) => void}) {
   const navigate = useNavigate();
   const [userLogin] = useUserLoginMutation();
 
@@ -37,9 +37,8 @@ export default function useLogin() {
 
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Do something with the form values.
-    // This will be type-safe and validated.
-    console.log(values);
+    setLoading(true);
+    toast.loading("Logging in...");
     const formData = new FormData();
     formData.append("email", values.email);
     formData.append("password", values.password);
@@ -48,16 +47,18 @@ export default function useLogin() {
       const response = await userLogin(formData);
       console.log("Login Response:", response);
       if(response.data.code === 200){
+        toast.dismiss();
         toast.success(response.data.message);
+        setLoading(false);
+        navigate("/dashboard");
       }
 
     } catch (error) {
       console.error("Login failed:", error);
+      toast.dismiss();
       toast.error("Login failed. Please check your credentials and try again.");
-      return;
+      setLoading(false);
     }
-    // Navigate to the dashboard or home page after successful login
-    navigate("/dashboard");
   }
 
   return { form, onSubmit };
