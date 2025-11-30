@@ -2,7 +2,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
+import { useResetPasswordMutation } from "@/redux/endpoints/authApi";
 
 // Reusable password validation
 export const passwordValidation = z
@@ -25,6 +26,10 @@ const formSchema = z
 
 export default function useChangePassword() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+  const [resetPassword] = useResetPasswordMutation();
+  console.log("Reset Token from URL:", token);
 
   // 1. Form setup
   const form = useForm<z.infer<typeof formSchema>>({
@@ -36,13 +41,22 @@ export default function useChangePassword() {
   });
 
   // 2. Submit handler
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     console.log("New Password:", values);
+    const formData = new FormData();
+    formData.append("new_password", values.password);
+    formData.append("confirm_password", values.confirmPassword);
+    formData.append("reset_token", token || "");
 
-    toast.success("Password set successfully!");
-
-    // Navigate to login or dashboard
-    navigate("/dashboard", { replace: true });
+    try {
+      const res = await resetPassword(formData).unwrap();
+      toast.success(res.message || "Password set successfully!");
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      console.error("Reset Password Error:", error);
+      toast.error("Failed to set password. Please try again.");
+      return;
+    }
   }
 
   return { form, onSubmit };

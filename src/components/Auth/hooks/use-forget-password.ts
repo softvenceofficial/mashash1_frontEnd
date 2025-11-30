@@ -23,11 +23,11 @@ export default function useForgetPassword() {
   });
 
   async function onSubmit(values: ForgetPasswordSchema) {
-    console.log("Forget Password Data:", values);
     const formData = new FormData();
     formData.append("email", values.email);
     try {
       const res = await forgotPassword(formData).unwrap();
+      console.log("Forgot Password Response:", res);
       if (res.code === 200) {
         toast.success("OTP sent to your email!");
 

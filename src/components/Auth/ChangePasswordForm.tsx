@@ -13,9 +13,9 @@ import { useState } from "react";
 import useChangePassword from "./hooks/use-change-password";
 
 export default function ChangePasswordForm() {
-      const [showPassword, setShowPassword] = useState(false);
-      const [showConfirm, setShowConfirm] = useState(false);
-        const { form, onSubmit } = useChangePassword();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const { form, onSubmit } = useChangePassword();
   return (
     <div className="w-full max-w-md mx-auto py-10 min-h-[calc(100vh-300px)] flex flex-col justify-center">
       <div className="text-center mb-14">
@@ -27,7 +27,6 @@ export default function ChangePasswordForm() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-
           {/* Password */}
           <FormField
             control={form.control}
@@ -106,5 +105,5 @@ export default function ChangePasswordForm() {
         </form>
       </Form>
     </div>
-  )
+  );
 }

@@ -7,7 +7,7 @@ export const baseApi = createApi({
     credentials: "include",
     prepareHeaders: (headers, { getState, endpoint }) => {
       void getState;
-      const skipAuthEndpoints = ["userLogin", "userSignUp"];
+      const skipAuthEndpoints = ["userLogin", "userSignUp", "forgotPassword", "verifyOTPPassword"];
 
       if (skipAuthEndpoints.includes(endpoint)) {
         return headers;
