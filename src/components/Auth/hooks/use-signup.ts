@@ -28,7 +28,7 @@ const signupSchema = z
 
 export type SignupSchema = z.infer<typeof signupSchema>;
 
-export default function useSignup() {
+export default function useSignup({ setLoading }: { setLoading: (loading: boolean) => void }) {
   const navigate = useNavigate();
   const [userSignUp] = useUserSignUpMutation();
   const form = useForm<SignupSchema>({
@@ -45,7 +45,8 @@ export default function useSignup() {
   });
 
   async function onSubmit(values: SignupSchema) {
-    console.log("Signup Data:", values);
+    setLoading(true);
+    toast.loading("Creating your account...");
     const formData = new FormData();
     formData.append("first_name", values.firstName);
     formData.append("last_name", values.lastName);
@@ -58,12 +59,16 @@ export default function useSignup() {
       const response = await userSignUp(formData).unwrap();
       console.log("Signup Response:", response);
       if (response.code === 201) {
+        toast.dismiss();
         toast.success(response.data.message || "Account created successfully!");
-        navigate("/auth/signin");
+        setLoading(false);
+        navigate("/auth/congrats");
       }
     } catch (error) {
       console.error("Signup error:", error);
+      toast.dismiss();
       toast.error("Failed to create account. Please try again.");
+      setLoading(false);
     }
   }
 

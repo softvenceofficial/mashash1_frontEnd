@@ -20,7 +20,8 @@ import useSignup from "./hooks/use-signup";
 export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const { form, onSubmit } = useSignup();
+  const [loading, setLoading] = useState(false);
+  const { form, onSubmit } = useSignup({ setLoading });
   return (
     <div>
       <div className="text-center">
@@ -114,7 +115,9 @@ export default function SignUpForm() {
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <Label className="font-medium text-base text-black">Phone Number</Label>
+                <Label className="font-medium text-base text-black">
+                  Phone Number
+                </Label>
                 <FormControl>
                   <Input
                     placeholder="your@email.com"
@@ -212,17 +215,19 @@ export default function SignUpForm() {
                     />
                   </FormControl>
                   <FormLabel className="text-sm md:text-base md:font-medium text-black cursor-pointer">
-                    Lorem ipsum dolor sit amet consectetur. Habitant feugiat pretium gravida fringilla phasellus.
+                    Lorem ipsum dolor sit amet consectetur. Habitant feugiat
+                    pretium gravida fringilla phasellus.
                   </FormLabel>
                 </FormItem>
               )}
             />
           </div>
           <Button
+            disabled={loading}
             type="submit"
-            className="w-full bg-black h-12 hover:bg-black text-base font-medium rounded-full mt-7 cursor-pointer"
+            className="w-full bg-black h-12 hover:bg-black text-base font-medium rounded-full mt-7 cursor-pointer disabled:cursor-not-allowed"
           >
-            Register Now
+            {loading ? "Registering..." : "Register Now"}
           </Button>
         </form>
       </Form>

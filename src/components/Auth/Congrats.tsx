@@ -1,11 +1,10 @@
 import Icon from "../common/Icon";
 import congrats from "@/assets/svgs/congrats.svg";
 import { Button } from "../ui/button";
+import { useNavigate } from "react-router";
 
 export default function Congrats() {
-  const goBack = () => {
-    window.history.back();
-  };
+  const navigate = useNavigate();
   return (
     <div className="min-h-[calc(100vh-300px)] flex justify-center items-center flex-col">
       <Icon src={congrats} className="mx-auto mb-6 size-52" />
@@ -19,11 +18,11 @@ export default function Congrats() {
       <div className="w-36 mx-auto">
         <Button
           type="button"
-          onClick={goBack}
+          onClick={() => navigate("/auth/signin")}
           variant="outline"
           className="w-full h-12 rounded-full text-base font-medium border border-black bg-transparent hover:bg-transparent cursor-pointer mt-16 dark:bg-transparent dark:hover:bg-transparent text-black!"
         >
-          Back
+          Back to Sign In
         </Button>
       </div>
     </div>
