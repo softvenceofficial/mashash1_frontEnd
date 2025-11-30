@@ -6,7 +6,7 @@ import Icon from "@/components/common/Icon";
 import { Menu } from "lucide-react";
 import useCurrentUser from "@/hooks/useCurrentUser";
 
-export function SiteHeader({ sidebarOpen, setSidebarOpen }: { sidebarOpen: boolean; setSidebarOpen: (open: boolean) => void }) {
+export function SiteHeader({ sidebarOpen, setSidebarOpen }: { sidebarOpen?: boolean; setSidebarOpen?: (open: boolean) => void }) {
   const userData = useCurrentUser();
   return (
     <header className="dark:bg-[#1B1B1B] bg-white sticky top-0 z-50 flex w-full items-center">
@@ -23,7 +23,7 @@ export function SiteHeader({ sidebarOpen, setSidebarOpen }: { sidebarOpen: boole
         <div className="ml-auto flex items-center gap-24">
           <div className="flex items-center gap-2 md:gap-5">
             <ModeToggle />
-            <Menu className="size-8 text-foreground cursor-pointer md:hidden" onClick={() => setSidebarOpen(!sidebarOpen)} />
+            <Menu className="size-8 text-foreground cursor-pointer md:hidden" onClick={sidebarOpen !== undefined && setSidebarOpen ? () => setSidebarOpen(!sidebarOpen) : undefined} />
             <div className="md:flex items-center gap-3 hidden">
               <div className="text-right">
                 <p className="text-base font-medium dark:text-white">
