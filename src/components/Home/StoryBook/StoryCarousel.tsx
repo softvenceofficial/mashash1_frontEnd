@@ -52,7 +52,7 @@ export default function StoryCarousel() {
                   <img
                     src={slide.image}
                     alt="Story slide"
-                    className={`md:w-[1200px] h-full object-contain rounded-lg shadow-md border border-border md:border-none ${isActive ? '' : ''}`}
+                    className={`md:w-[1200px] h-full object-contain rounded-lg shadow-md border border-border md:border-none relative z-10 ${isActive ? '' : ''}`}
                   />
                 </div>
               )}
@@ -65,7 +65,7 @@ export default function StoryCarousel() {
       <style>{`
         .dashboard-carousel {
           padding: 20px 0 60px 0;
-          overflow: hidden;
+            overflow: hidden !important;
         }
         
         .dashboard-carousel .swiper-slide {
