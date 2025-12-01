@@ -11,7 +11,7 @@ export default function Header() {
   console.log(user);
 
   return (
-    <nav className="border-b border-primary/30 bg-background py-4">
+    <nav className="relative z-10 py-4">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center gap-10">
           <Link to="/">

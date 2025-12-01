@@ -1,6 +1,5 @@
 import AuthLayout from "@/layouts/AuthLayout";
 import DashboardLayout from "@/layouts/DashboardLayout";
-import HomeLayout from "@/layouts/HomeLayout";
 import SigninForm from "@/components/Auth/SigninForm";
 import SignUpForm from "@/components/Auth/SignUpForm";
 import DashboardPage from "@/pages/Dashboard";
@@ -19,16 +18,21 @@ import { ProtectedRoute } from "./ProtectedRoute";
 import ViewProfilePage from "@/components/common/ViewProfilePage";
 
 const router = createBrowserRouter([
+  // {
+  //   path: "/",
+  //   element: <HomeLayout />,
+  //   errorElement: <NotFoundPage />,
+  //   children: [
+  //     {
+  //       index: true,
+  //       element: <HomePage />,
+  //     },
+  //   ],
+  // },
   {
     path: "/",
-    element: <HomeLayout />,
+    element: <HomePage />,
     errorElement: <NotFoundPage />,
-    children: [
-      {
-        index: true,
-        element: <HomePage />,
-      },
-    ],
   },
   {
     path: "/dashboard",
