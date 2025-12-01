@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Camera, Trash2 } from "lucide-react";
 import { useState } from "react";
 import useProfileSettings from "../Auth/hooks/use-profile-setting";
+import OpenModal from "../Modal/OpenModal";
 
 export default function ViewProfilePage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -49,7 +50,7 @@ export default function ViewProfilePage() {
               name="firstName"
               render={({ field }) => (
                 <FormItem>
-                  <Label className="text-white">First Name</Label>
+                  <Label className="dark:text-white text-sm">First Name</Label>
                   <FormControl>
                     <Input
                       placeholder="Enter first name"
@@ -68,7 +69,7 @@ export default function ViewProfilePage() {
               name="lastName"
               render={({ field }) => (
                 <FormItem>
-                  <Label className="text-white">Last Name</Label>
+                  <Label className="dark:text-white">Last Name</Label>
                   <FormControl>
                     <Input
                       placeholder="Enter last name"
@@ -90,7 +91,7 @@ export default function ViewProfilePage() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <Label className="text-white">Email Address</Label>
+                  <Label className="dark:text-white">Email Address</Label>
                   <FormControl>
                     <Input
                       placeholder="example@gmail.com"
@@ -109,7 +110,7 @@ export default function ViewProfilePage() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <Label className="text-white">Password</Label>
+                  <Label className="dark:text-white">Password</Label>
                   <FormControl>
                     <div className="relative">
                       <Input
@@ -120,10 +121,14 @@ export default function ViewProfilePage() {
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 dark:text-white"
                         onClick={() => setShowPassword(!showPassword)}
                       >
-                        {showPassword ? <Eye /> : <EyeOff />}
+                        {showPassword ? (
+                          <Eye className="size-4" />
+                        ) : (
+                          <EyeOff className="size-4" />
+                        )}
                       </button>
                     </div>
                   </FormControl>
@@ -137,13 +142,13 @@ export default function ViewProfilePage() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-32 bg-[#6A6CF3] text-white h-11 rounded-lg"
+            className="w-32 bg-[#6A6CF3] text-white h-11 rounded-lg text-base font-medium cursor-pointer"
           >
             {loading ? "Saving..." : "Done"}
           </Button>
 
           {/* CHANGE PASSWORD SECTION ------------------------------------------------------ */}
-          <h3 className="text-white font-medium">Change Password</h3>
+          <h3 className="dark:text-white font-medium">Change Password</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* New Password */}
@@ -152,7 +157,7 @@ export default function ViewProfilePage() {
               name="newPassword"
               render={({ field }) => (
                 <FormItem>
-                  <Label className="text-white">New Password</Label>
+                  <Label className="dark:text-white">New Password</Label>
                   <FormControl>
                     <div className="relative">
                       <Input
@@ -164,9 +169,13 @@ export default function ViewProfilePage() {
                       <button
                         type="button"
                         onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 dark:text-white"
                       >
-                        {showNewPassword ? <Eye /> : <EyeOff />}
+                        {showNewPassword ? (
+                          <Eye className="size-4" />
+                        ) : (
+                          <EyeOff className="size-4" />
+                        )}
                       </button>
                     </div>
                   </FormControl>
@@ -181,7 +190,7 @@ export default function ViewProfilePage() {
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <Label className="text-white">Confirm Password</Label>
+                  <Label className="dark:text-white">Confirm Password</Label>
                   <FormControl>
                     <div className="relative">
                       <Input
@@ -195,9 +204,13 @@ export default function ViewProfilePage() {
                         onClick={() =>
                           setShowConfirmPassword(!showConfirmPassword)
                         }
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 dark:text-white"
                       >
-                        {showConfirmPassword ? <Eye /> : <EyeOff />}
+                        {showConfirmPassword ? (
+                          <Eye className="size-4" />
+                        ) : (
+                          <EyeOff className="size-4" />
+                        )}
                       </button>
                     </div>
                   </FormControl>
@@ -207,18 +220,23 @@ export default function ViewProfilePage() {
             />
           </div>
 
-          <Button type="submit" className="w-40 bg-[#6A6CF3] text-white h-11 rounded-lg">
+          <Button
+            type="submit"
+            className="w-44 bg-[#6A6CF3] text-white h-11 rounded-lg text-base font-medium cursor-pointer"
+          >
             Change Password
           </Button>
 
           {/* DELETE ACCOUNT -------------------------------------------------------------- */}
-          <button
-            type="button"
-            className="flex items-center gap-2 text-red-500 mt-6"
-          >
-            <Trash2 className="size-5" />
-            Delete Account
-          </button>
+          <OpenModal query={[{ modalId: "modal", openId: "account-delete" }]} >
+            <button
+              type="button"
+              className="flex items-center gap-2 text-[#FF4842] mt-6 text-xl font-medium cursor-pointer"
+            >
+              <Trash2 className="size-5" />
+              Delete Account
+            </button>
+          </OpenModal>
         </form>
       </Form>
     </div>
