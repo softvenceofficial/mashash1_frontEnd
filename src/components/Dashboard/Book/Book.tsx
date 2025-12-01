@@ -58,7 +58,7 @@ const BOOK_SIZE_MAP: Record<string, { width: number; height: number }> = {
   'Square': { width: 500, height: 500 }
 };
 
-const INITIAL_PAGES: PageData[] = Array(6).fill(null).map(() => ({
+const INITIAL_PAGES: PageData[] = Array(10).fill(null).map(() => ({
   lines: [],
   texts: [],
   shapes: []
