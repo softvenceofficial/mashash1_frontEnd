@@ -1,5 +1,6 @@
 import Banner from "@/components/Home/Banner";
 import CreativeAiStudio from "@/components/Home/CreativeAiStudio/CreativeAiStudio";
+import DashboardSliders from "@/components/Home/DashboardSliders/DashboardSliders";
 import Footer from "@/components/Home/Footer/Footer";
 import ImaginationLab from "@/components/Home/ImaginationLab";
 import PricingSection from "@/components/Home/PricingSection/PricingSection";
@@ -13,6 +14,7 @@ export default function HomePage() {
       <Banner />
       <StorybookShowcase />
       <ImaginationLab />
+      <DashboardSliders />
       <CreativeAiStudio />
       <PricingSection />
       <Footer />
