@@ -3,6 +3,7 @@ import CreativeAiStudio from "@/components/Home/CreativeAiStudio/CreativeAiStudi
 import DashboardSliders from "@/components/Home/DashboardSliders/DashboardSliders";
 import Footer from "@/components/Home/Footer/Footer";
 import ImaginationLab from "@/components/Home/ImaginationLab";
+import ImmigrationAutoDesignSection from "@/components/Home/ImmigrationAutoDesign/ImmigrationAutoDesignSection";
 import PricingSection from "@/components/Home/PricingSection/PricingSection";
 import StorybookShowcase from "@/components/Home/StoryBook";
 
@@ -15,6 +16,7 @@ export default function HomePage() {
       <StorybookShowcase />
       <ImaginationLab />
       <DashboardSliders />
+      <ImmigrationAutoDesignSection />
       <CreativeAiStudio />
       <PricingSection />
       <Footer />
