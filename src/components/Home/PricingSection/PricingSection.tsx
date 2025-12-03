@@ -14,7 +14,7 @@ interface Plan {
 export default function PricingSection() {
   return (
     <div className="mt-10">
-      <h1 className="text-[40px] font-bold  max-w-2xl mx-auto text-center mb-12">
+      <h1 className="text-3xl md:text-4xl lg:text-[40px] font-bold  max-w-2xl mx-auto text-center mb-12 text-white">
         Choose the Plan That Fits Your Creativity
       </h1>
       <div className="w-full bg-black p-5 flex justify-center pb-20">
