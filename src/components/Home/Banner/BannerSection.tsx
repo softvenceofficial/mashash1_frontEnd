@@ -9,7 +9,7 @@ export default function BannerSection() {
     "https://github.com/evilrabbit.png",
   ];
   return (
-    <section className="container mx-auto pt-20 pb-40 relative z-10">
+    <section className="container mx-auto py-10 px-4 md:pt-20 md:pb-40 relative z-10">
       <div className="*:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:size-12 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:grayscale">
         {avatars.map((src, index) => (
           <Avatar className="size-8">
@@ -23,10 +23,10 @@ export default function BannerSection() {
         ))}
       </div>
       <p className="text-base font-normal mt-3">1,200+ reviews (4.9 of 5)</p>
-      <h1 className="text-[80px] font-bold max-w-3xl leading-snug">
+      <h1 className="text-3xl md:text-4xl lg:text-[60px] xl:text-[80px] font-bold max-w-96 md:max-w-md lg:max-w-3xl leading-snug">
         Make Your Own Book with Zero Effort
       </h1>
-      <p className="text-lg font-normal max-w-3xl mt-4">
+      <p className="text-base md:text-lg font-normal max-w-3xl mt-4">
         Design beautiful pages in minutes! Just choose a layout, add your ideas,
         and customize everything your way. It’s fast, fun, and super easy.
       </p>
