@@ -9,8 +9,6 @@ import story3 from "@/assets/images/story3.png";
 export default function StoryCarousel() {
   return (
     <div className=' mx-auto p-3 md:p-0'>
-      {/* <div className="absolute -left-10 top-0 bg-white z-20 h-full w-28 blur-2xl hidden md:block" ></div>
-      <div className="absolute -right-10 top-0 bg-white z-20 h-full w-28 blur-2xl hidden md:block" ></div> */}
       {/* Dashboard-style container */}
       <div className="relative">
         <Swiper
@@ -52,7 +50,7 @@ export default function StoryCarousel() {
                   <img
                     src={slide.image}
                     alt="Story slide"
-                    className={`md:w-[1200px] h-full object-contain rounded-lg shadow-md border border-border md:border-none relative z-10 ${isActive ? '' : ''}`}
+                    className={`md:w-[1200px] h-full object-contain rounded-lg shadow-md relative z-10 ${isActive ? '' : ''}`}
                   />
                 </div>
               )}
@@ -65,7 +63,13 @@ export default function StoryCarousel() {
       <style>{`
         .dashboard-carousel {
           padding: 20px 0 60px 0;
-            overflow: hidden !important;
+          overflow: hidden !important;
+        }
+        @media (min-width: 0px) and (max-width: 767px) {  
+          .dashboard-carousel {
+            padding: 0 0 !important;
+            overflow: visible !important;
+          }
         }
         
         .dashboard-carousel .swiper-slide {
@@ -88,6 +92,11 @@ export default function StoryCarousel() {
           bottom: -10px !important;
           padding-bottom: 20px !important;
           text-align: center;
+        }
+          @media (min-width: 0px) and (max-width: 767px) {  
+          .dashboard-carousel .swiper-pagination {
+            bottom: -60px !important;
+          }
         }
         
         .dashboard-bullet {
