@@ -69,19 +69,12 @@ export default function DashboardSliders() {
                         className={`w-full h-full object-cover rounded-xl! shadow-md md:border-none md:h-[750px] ${isActive ? "md:shadow-[0_5px_15px_rgba(0,0,0,0.35)]" : ""}`}
                       />
                     </div>
-
-                    {/* Active slide indicator */}
-                    {/* {isActive && (
-                    <div className="absolute top-4 left-4 bg-teal-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                      Featured
-                    </div>
-                  )} */}
                   </div>
                 )}
               </SwiperSlide>
             ))}
           </Swiper>
-          <div className="flex justify-center items-center gap-24 -mt-12 relative z-20">
+          <div className="flex justify-center items-center gap-5 md:gap-24 mt-10 md:-mt-12 relative z-20">
             {/* Left Arrow */}
             <button className="dashboard-prev w-12 h-12 rounded-full flex items-center justify-center bg-linear-to-b from-[#4A525B] via-[#212B36] to-[#212B36] hover:bg-linear-to-b hover:from-[#7F82F4] hover:via-[#6366F1] hover:to-[#6366F1] transition-colors cursor-pointer shadow-[0_0_25px_5px_#343434]">
               <Icon src={arrowLeft} className="text-white size-5" />
