@@ -32,7 +32,7 @@ export default function StoryCarousel() {
               slidesPerView: 1,
             },
             768: {
-              slidesPerView: 1.3,
+              slidesPerView: 1.7,
             },
             1024: {
               slidesPerView: 2,
@@ -68,7 +68,6 @@ export default function StoryCarousel() {
         @media (min-width: 0px) and (max-width: 767px) {  
           .dashboard-carousel {
             padding: 0 0 !important;
-            overflow: visible !important;
           }
         }
         
