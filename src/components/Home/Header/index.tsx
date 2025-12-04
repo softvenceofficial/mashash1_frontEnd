@@ -1,15 +1,19 @@
-import { Button } from "@/components/ui/button";
 import Logo from "@/assets/svgs/logo.svg";
-import { ModeToggle } from "@/components/ThemeToggle";
 import { Link } from "react-router";
-import useCurrentUser from "@/hooks/useCurrentUser";
-import { Input } from "@/components/ui/input";
-import Search from "@/assets/svgs/search.svg?react";
+import useCurrentUser from "@/hooks/useCurrentUser"
 import Icon from "@/components/common/Icon";
 
 export default function Header() {
   const user = useCurrentUser();
   console.log(user);
+
+const links = [
+  { name: "Home", id: "home" },
+  { name: "About us", id: "about" },
+  { name: "Create your own book", id: "create-book" },
+  { name: "Pricing", id: "pricing" },
+  { name: "Support", id: "support" },
+]
 
   return (
     <nav className="relative z-10 py-4">
@@ -19,11 +23,22 @@ export default function Header() {
             <Icon src={Logo} className="size-8 text-white" />
           </Link>
 
-          <div className="relative">
-            <Input placeholder="Search" className="w-90 pr-16" />
-            <Button className="absolute! top-0 right-0 px-5! h-9 rounded-l-none!">
-              <Search className="size-5" />
-            </Button>
+          <div className="">
+            <ul className="flex items-center gap-10 text-white font-medium">
+  {links.map((link) => (
+    <li key={link.name}>
+      <button
+        onClick={() => {
+          const element = document.getElementById(link.id)
+          element?.scrollIntoView({ behavior: "smooth" })
+        }}
+        className="text-lg font-normal cursor-pointer"
+      >
+        {link.name}
+      </button>
+    </li>
+  ))}
+</ul>
           </div>
         </div>
 
