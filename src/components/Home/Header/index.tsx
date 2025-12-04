@@ -42,14 +42,18 @@ const links = [
           </div>
         </div>
 
-        <ul className="flex items-center gap-4 font-semibold">
+        { 
+        user ? 
+          <Link to="/dashboard" className="bg-white text-black py-3 px-10 rounded-lg text-lg font-medium">Dashboard</Link>
+        :
+          <ul className="flex items-center gap-4 font-semibold">
           <li >
             <Link to="/auth/signup" className="border border-white py-3 px-10 rounded-lg text-white hover:bg-white hover:text-black transition-colors duration-300 ease-in-out">Register</Link>
           </li>
           <li  >
             <Link to="/auth/signin" className="bg-white py-3 px-10 rounded-lg text-black border border-white">Log In</Link>
           </li>
-        </ul>
+        </ul>}
       </div>
     </nav>
   );
