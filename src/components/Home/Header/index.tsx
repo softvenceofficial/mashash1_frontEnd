@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
-import Logo from "@/assets/react.svg?react";
+import Logo from "@/assets/svgs/logo.svg";
 import { ModeToggle } from "@/components/ThemeToggle";
 import { Link } from "react-router";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { Input } from "@/components/ui/input";
 import Search from "@/assets/svgs/search.svg?react";
+import Icon from "@/components/common/Icon";
 
 export default function Header() {
   const user = useCurrentUser();
@@ -15,7 +16,7 @@ export default function Header() {
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center gap-10">
           <Link to="/">
-            <Logo className="size-8 text-primary" />
+            <Icon src={Logo} className="size-8 text-white" />
           </Link>
 
           <div className="relative">
@@ -26,15 +27,12 @@ export default function Header() {
           </div>
         </div>
 
-        <ul className="flex items-center gap-12 font-semibold">
-          <li>
-            <Link to="/auth/signin">Log In</Link>
+        <ul className="flex items-center gap-4 font-semibold">
+          <li >
+            <Link to="/auth/signup" className="border border-white py-3 px-10 rounded-lg text-white hover:bg-white hover:text-black transition-colors duration-300 ease-in-out">Register</Link>
           </li>
-          <li>
-            <Link to="/auth/signup">Sign Up</Link>
-          </li>
-          <li>
-            <ModeToggle />
+          <li  >
+            <Link to="/auth/signin" className="bg-white py-3 px-10 rounded-lg text-black border border-white">Log In</Link>
           </li>
         </ul>
       </div>
