@@ -25,20 +25,20 @@ const links = [
 
           <div className="">
             <ul className="flex items-center gap-10 text-white font-medium">
-  {links.map((link) => (
-    <li key={link.name}>
-      <button
-        onClick={() => {
-          const element = document.getElementById(link.id)
-          element?.scrollIntoView({ behavior: "smooth" })
-        }}
-        className="text-lg font-normal cursor-pointer"
-      >
-        {link.name}
-      </button>
-    </li>
-  ))}
-</ul>
+              {links.map((link) => (
+                <li key={link.name}>
+                  <button
+                    onClick={() => {
+                    const element = document.getElementById(link.id)
+                    element?.scrollIntoView({ behavior: "smooth" })
+                    }}
+                    className="text-lg font-normal cursor-pointer"
+                  >
+                    {link.name}
+                  </button>
+                </li>
+              ))}
+          </ul>
           </div>
         </div>
 
