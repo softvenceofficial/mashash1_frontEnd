@@ -16,7 +16,7 @@ const links = [
 ]
 
   return (
-    <nav className="relative z-10 py-4">
+    <nav className="relative z-10 py-4 hidden md:block">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center gap-10">
           <Link to="/">
