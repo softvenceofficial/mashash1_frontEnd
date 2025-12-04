@@ -20,7 +20,7 @@ export default function Header() {
 
           <div className="relative">
             <Input placeholder="Search" className="w-90 pr-16" />
-            <Button className="!absolute top-0 right-0 !px-5 h-9 !rounded-l-none">
+            <Button className="absolute! top-0 right-0 px-5! h-9 rounded-l-none!">
               <Search className="size-5" />
             </Button>
           </div>
