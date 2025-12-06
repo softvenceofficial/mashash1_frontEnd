@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import  { useState } from "react";
+import { useState } from "react";
 import {
   RotateCcw,
   RotateCw,
@@ -40,37 +40,64 @@ import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import book1 from "@/assets/images/Books/5x7.png";
+import book2 from "@/assets/images/Books/6x4.png";
+import book3 from "@/assets/images/Books/6x8.png";
+import book4 from "@/assets/images/Books/6x9.png";
+import book5 from "@/assets/images/Books/7x10.png";
+import book6 from "@/assets/images/Books/8.5x11.png";
+import book7 from "@/assets/images/Books/8x10.png";
+import book8 from "@/assets/images/Books/12x9.png";
+import book9 from "@/assets/images/Books/Square.png";
 
 // --- Mock Data ---
 const BASIC_COLORS = [
-  "#3B82F6", "#67E8F9", "#86EFAC", "#FDBA74", "#EF4444", "#DB2777", "#9333EA"
+  "#3B82F6",
+  "#67E8F9",
+  "#86EFAC",
+  "#FDBA74",
+  "#EF4444",
+  "#DB2777",
+  "#9333EA",
 ];
 
 const CUSTOM_COLORS = [
-  "#3B82F6", "#67E8F9", "#86EFAC", "#C2410C", "#EF4444", "#BE185D", "#7E22CE"
+  "#3B82F6",
+  "#67E8F9",
+  "#86EFAC",
+  "#C2410C",
+  "#EF4444",
+  "#BE185D",
+  "#7E22CE",
 ];
 
 const BOOK_SIZES = [
-  { id: 1, label: "5 x 7", type: "Book" },
-  { id: 2, label: "6 x 4", type: "Book" },
-  { id: 3, label: "6 x 8", type: "Book Mockup" },
-  { id: 4, label: "6 x 9", type: "Book Mockup" },
-  { id: 5, label: "1 x 10", type: "Book Mockup" },
-  { id: 6, label: "8.5 x 11", type: "Book Mockup" },
-  { id: 7, label: "8 x 10", type: "Book Mockup" },
-  { id: 8, label: "12 x 9", type: "Book Mockup" },
-  { id: 9, label: "Square", type: "Book Mockup" },
+  { id: 1, label: "5 x 7", type: "Book", book1 },
+  { id: 2, label: "6 x 4", type: "Book", book2 },
+  { id: 3, label: "6 x 8", type: "Book Mockup", book3 },
+  { id: 4, label: "6 x 9", type: "Book Mockup", book4 },
+  { id: 5, label: "7 x 10", type: "Book Mockup", book5 },
+  { id: 6, label: "8.5 x 11", type: "Book Mockup", book6 },
+  { id: 7, label: "8 x 10", type: "Book Mockup", book7 },
+  { id: 8, label: "12 x 9", type: "Book Mockup", book8 },
+  { id: 9, label: "Square", type: "Book Mockup", book9 },
 ];
 
 // --- Shared Components ---
 
 const UndoRedoGroup = () => (
   <div className="flex items-center gap-4 ml-auto border-l border-gray-600 pl-4 h-10">
-    <Button variant="ghost" className="flex flex-col items-center h-auto p-1 hover:bg-white/10">
+    <Button
+      variant="ghost"
+      className="flex flex-col items-center h-auto p-1 hover:bg-white/10"
+    >
       <RotateCcw className="w-5 h-5 text-gray-400 group-hover:text-white" />
       <span className="text-[10px] text-gray-400 mt-1">Undo</span>
     </Button>
-    <Button variant="ghost" className="flex flex-col items-center h-auto p-1 hover:bg-white/10">
+    <Button
+      variant="ghost"
+      className="flex flex-col items-center h-auto p-1 hover:bg-white/10"
+    >
       <RotateCw className="w-5 h-5 text-gray-400 group-hover:text-white" />
       <span className="text-[10px] text-gray-400 mt-1">Redo</span>
     </Button>
@@ -78,7 +105,10 @@ const UndoRedoGroup = () => (
 );
 
 const RefreshButton = ({ onClick }: { onClick?: () => void }) => (
-  <div className="flex flex-col items-center mr-4 cursor-pointer" onClick={onClick}>
+  <div
+    className="flex flex-col items-center mr-4 cursor-pointer"
+    onClick={onClick}
+  >
     <RefreshCcw className="w-5 h-5 text-white" />
     <span className="text-[10px] text-gray-400">Refresh</span>
   </div>
@@ -102,19 +132,23 @@ const BookSizePanel = ({ onChange }: { onChange?: (size: string) => void }) => {
           onClick={() => handleBookSelect(book.id, book.label)}
           className={cn(
             "shrink-0 cursor-pointer transition-all duration-200 relative group",
-            selectedBook === book.id ? "scale-105" : "opacity-70 hover:opacity-100"
+            selectedBook === book.id
+              ? "scale-105"
+              : "opacity-70 hover:opacity-100",
           )}
         >
           {selectedBook === book.id && (
             <div className="absolute -inset-2 rounded-lg border border-gray-500 bg-white/5 z-0" />
           )}
           <div className="relative z-10 flex flex-col items-center">
-            <div className="w-12 h-16 bg-linear-to-br from-gray-200 to-gray-400 rounded-sm shadow-md flex items-center justify-center mb-2 overflow-hidden border-l-4 border-gray-500">
-              <div className="w-full h-full bg-white/30 rotate-12 transform translate-y-4"></div>
+            <div className="">
+              <img src={book[`book${book.id}`]} alt="" />
             </div>
             <div className="text-center">
               <p className="text-white font-bold text-xs">{book.label}</p>
-              <p className="text-gray-400 text-[9px] leading-tight">{book.type}</p>
+              <p className="text-gray-400 text-[9px] leading-tight">
+                {book.type}
+              </p>
             </div>
           </div>
         </div>
@@ -142,14 +176,16 @@ const TextPanel = () => {
         </Select>
 
         <div className="flex items-center bg-[#444] rounded-md h-9 px-2">
-          <button 
+          <button
             className="text-white hover:text-primary px-1"
             onClick={() => setFontSize(Math.max(8, fontSize - 1))}
           >
             <Minus size={16} />
           </button>
-          <span className="text-white w-8 text-center text-sm font-medium">{fontSize}</span>
-          <button 
+          <span className="text-white w-8 text-center text-sm font-medium">
+            {fontSize}
+          </span>
+          <button
             className="text-white hover:text-primary px-1"
             onClick={() => setFontSize(Math.min(72, fontSize + 1))}
           >
@@ -162,25 +198,79 @@ const TextPanel = () => {
         <Separator orientation="vertical" className="h-8 bg-gray-600 mx-1" />
 
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10 rounded"><Bold size={18} /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"><Italic size={18} /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"><Underline size={18} /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"><Strikethrough size={18} /></Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-white hover:bg-white/10 rounded"
+          >
+            <Bold size={18} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
+          >
+            <Italic size={18} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
+          >
+            <Underline size={18} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
+          >
+            <Strikethrough size={18} />
+          </Button>
         </div>
 
         <Separator orientation="vertical" className="h-8 bg-gray-600 mx-1" />
 
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10 rounded"><AlignLeft size={18} /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"><Type size={18} /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"><span className="text-xs font-bold">TT</span></Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-white hover:bg-white/10 rounded"
+          >
+            <AlignLeft size={18} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
+          >
+            <Type size={18} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
+          >
+            <span className="text-xs font-bold">TT</span>
+          </Button>
         </div>
 
         <Separator orientation="vertical" className="h-8 bg-gray-600 mx-1" />
 
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"><List size={18} /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"><ListOrdered size={18} /></Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
+          >
+            <List size={18} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
+          >
+            <ListOrdered size={18} />
+          </Button>
         </div>
       </div>
       <UndoRedoGroup />
@@ -197,7 +287,11 @@ const ColorPanel = () => (
       <span className="text-xs text-white font-medium">Basic colors</span>
       <div className="flex gap-1.5">
         {BASIC_COLORS.map((color, i) => (
-          <div key={i} className="w-6 h-6 rounded-md cursor-pointer border border-white/10 hover:scale-110 transition-transform" style={{ backgroundColor: color }} />
+          <div
+            key={i}
+            className="w-6 h-6 rounded-md cursor-pointer border border-white/10 hover:scale-110 transition-transform"
+            style={{ backgroundColor: color }}
+          />
         ))}
       </div>
     </div>
@@ -206,7 +300,11 @@ const ColorPanel = () => (
       <span className="text-xs text-white font-medium">Custom Colors</span>
       <div className="flex gap-1.5">
         {CUSTOM_COLORS.map((color, i) => (
-          <div key={i} className="w-6 h-6 rounded-md cursor-pointer border border-white/10 hover:scale-110 transition-transform" style={{ backgroundColor: color }} />
+          <div
+            key={i}
+            className="w-6 h-6 rounded-md cursor-pointer border border-white/10 hover:scale-110 transition-transform"
+            style={{ backgroundColor: color }}
+          />
         ))}
         <div className="w-6 h-6 rounded-md bg-[#444] flex items-center justify-center cursor-pointer hover:bg-[#555] text-white">
           <Plus size={14} />
@@ -217,7 +315,12 @@ const ColorPanel = () => (
     <div className="flex flex-col justify-center w-32 gap-1 ml-2">
       <div className="relative w-full h-4 bg-gray-600 rounded-full overflow-hidden">
         <div className="absolute inset-0 bg-gray-300 opacity-30"></div>
-        <Slider defaultValue={[70]} max={100} step={1} className="absolute inset-0 z-10" />
+        <Slider
+          defaultValue={[70]}
+          max={100}
+          step={1}
+          className="absolute inset-0 z-10"
+        />
       </div>
     </div>
     <UndoRedoGroup />
@@ -250,7 +353,9 @@ const BrushPanel = () => (
             key={i}
             className={cn(
               "rounded-full bg-gray-400 hover:bg-white cursor-pointer transition-all",
-              i === 2 ? "bg-white ring-2 ring-primary ring-offset-2 ring-offset-[#2B2B2B]" : ""
+              i === 2
+                ? "bg-white ring-2 ring-primary ring-offset-2 ring-offset-[#2B2B2B]"
+                : "",
             )}
             style={{ width: size, height: size }}
           />
@@ -271,7 +376,7 @@ const BrushPanel = () => (
 
 const GeneralToolPanel = () => {
   const [activeTool, setActiveTool] = useState("pencil");
-  
+
   const tools = [
     { id: "pencil", icon: Pencil, label: "Pencil" },
     { id: "eraser", icon: Eraser, label: "Eraser" },
@@ -286,26 +391,38 @@ const GeneralToolPanel = () => {
       <RefreshButton />
       <div className="flex items-center gap-4">
         {tools.map((t) => (
-           <div 
-             key={t.id}
-             className={cn(
-                "flex flex-col items-center gap-1 cursor-pointer group p-2 rounded-md transition-all",
-                activeTool === t.id ? "bg-white/10" : "hover:bg-white/5"
-             )}
-             onClick={() => setActiveTool(t.id)}
-           >
-              <t.icon className={cn("w-5 h-5", activeTool === t.id ? "text-primary" : "text-gray-300")} />
-              <span className={cn("text-[9px]", activeTool === t.id ? "text-white" : "text-gray-400")}>{t.label}</span>
-           </div>
+          <div
+            key={t.id}
+            className={cn(
+              "flex flex-col items-center gap-1 cursor-pointer group p-2 rounded-md transition-all",
+              activeTool === t.id ? "bg-white/10" : "hover:bg-white/5",
+            )}
+            onClick={() => setActiveTool(t.id)}
+          >
+            <t.icon
+              className={cn(
+                "w-5 h-5",
+                activeTool === t.id ? "text-primary" : "text-gray-300",
+              )}
+            />
+            <span
+              className={cn(
+                "text-[9px]",
+                activeTool === t.id ? "text-white" : "text-gray-400",
+              )}
+            >
+              {t.label}
+            </span>
+          </div>
         ))}
       </div>
-      
+
       <Separator orientation="vertical" className="h-8 bg-gray-600 mx-4" />
-      
+
       <div className="flex flex-col gap-1 w-32">
         <div className="flex justify-between text-[10px] text-gray-400">
-           <span>Size</span>
-           <span>5px</span>
+          <span>Size</span>
+          <span>5px</span>
         </div>
         <Slider defaultValue={[5]} max={50} step={1} className="h-4" />
       </div>
@@ -317,7 +434,7 @@ const GeneralToolPanel = () => {
 
 const ShapesPanel = () => {
   const [selectedShape, setSelectedShape] = useState("square");
-  
+
   const shapes = [
     { id: "square", icon: Square, label: "Square" },
     { id: "circle", icon: Circle, label: "Circle" },
@@ -331,32 +448,34 @@ const ShapesPanel = () => {
     <>
       <RefreshButton />
       <div className="flex items-center gap-3">
-         {shapes.map((s) => (
-             <Button
-                key={s.id}
-                variant="ghost"
-                className={cn(
-                   "h-10 w-10 p-2 rounded-md",
-                   selectedShape === s.id ? "bg-primary text-white hover:bg-primary/90" : "text-gray-400 hover:text-white hover:bg-white/10"
-                )}
-                onClick={() => setSelectedShape(s.id)}
-             >
-                <s.icon className="w-full h-full" />
-             </Button>
-         ))}
+        {shapes.map((s) => (
+          <Button
+            key={s.id}
+            variant="ghost"
+            className={cn(
+              "h-10 w-10 p-2 rounded-md",
+              selectedShape === s.id
+                ? "bg-primary text-white hover:bg-primary/90"
+                : "text-gray-400 hover:text-white hover:bg-white/10",
+            )}
+            onClick={() => setSelectedShape(s.id)}
+          >
+            <s.icon className="w-full h-full" />
+          </Button>
+        ))}
       </div>
 
       <Separator orientation="vertical" className="h-8 bg-gray-600 mx-4" />
 
       <div className="flex items-center gap-4">
-         <div className="flex items-center gap-2">
-            <div className="w-6 h-6 border-2 border-white rounded bg-transparent"></div>
-            <span className="text-[10px] text-gray-400">Stroke</span>
-         </div>
-         <div className="flex items-center gap-2">
-            <div className="w-6 h-6 border border-gray-500 rounded bg-primary"></div>
-            <span className="text-[10px] text-gray-400">Fill</span>
-         </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 border-2 border-white rounded bg-transparent"></div>
+          <span className="text-[10px] text-gray-400">Stroke</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 border border-gray-500 rounded bg-primary"></div>
+          <span className="text-[10px] text-gray-400">Fill</span>
+        </div>
       </div>
 
       <UndoRedoGroup />
@@ -388,7 +507,11 @@ const Toolbox = ({ activeTool, onBookSizeChange }: ToolboxProps) => {
       case "Shapes":
         return <ShapesPanel />;
       default:
-        return <div className="text-gray-400 text-sm pl-4">Select a tool to see options</div>;
+        return (
+          <div className="text-gray-400 text-sm pl-4">
+            Select a tool to see options
+          </div>
+        );
     }
   };
 
