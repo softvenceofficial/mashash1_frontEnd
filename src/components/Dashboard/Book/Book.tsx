@@ -5,7 +5,7 @@ import Konva from 'konva';
 import HTMLFlipBook from 'react-pageflip';
 import { Plus, Minus, Maximize, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
+import bookBG from "@/assets/images/Books/mainBookbg.png"
 // --- Types ---
 interface BookProps {
   activeTool?: string;
@@ -321,9 +321,8 @@ const Book = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWidth = 5, s
         bookRef.current.pageFlip().flipPrev();
     }
   }, []);
-
   return (
-    <div className="relative flex flex-col items-center justify-center h-[calc(100vh-140px)] w-full bg-transparent overflow-hidden">
+    <div style={{ backgroundImage: `url(${bookBG})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat'}} className="relative flex flex-col items-center justify-center h-[calc(100vh-140px)] w-full bg-transparent overflow-hidden">
       
       {/* Zoom / View Controls */}
       <div className="absolute right-4 bottom-4 flex flex-col gap-2 z-50">
