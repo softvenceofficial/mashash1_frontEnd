@@ -3,7 +3,7 @@ import StoryCarousel from "./StoryCarousel";
 export default function StorybookShowcase() {
 
   return (
-    <section className="pt-20 pb-20 min-h-screen  relative">
+    <section className="pt-20 md:pb-20 md:min-h-screen  relative">
         <div className="absolute h-20 bg-black blur-2xl top-4 right-0 w-full"/>
       <div className="mx-auto w-fit mb-20 text-center relative">
         <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold max-w-4xl px-4 md:px-0 text-white">Pick a moment, a feeling, or a line that keeps knocking on your mind.</h1>

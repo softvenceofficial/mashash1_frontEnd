@@ -11,8 +11,8 @@ export default function Banner() {
         className={`h-full w-full bg-cover bg-position-[center_30%] md:rounded-[30px] overflow-hidden relative `}
         style={{ backgroundImage: `url(${banner1})` }}
       >
-        <MobileHomeHeader />
-        <Header /> 
+          <MobileHomeHeader />
+          <Header />
         <BannerSection />
         <div className="absolute inset-0 bg-linear-to-t from-[#000000] to-transparent rounded-[30px] overflow-hidden" />
       </div>
