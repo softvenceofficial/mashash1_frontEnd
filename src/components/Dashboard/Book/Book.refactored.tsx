@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useCallback, useEffect, useMemo, memo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Konva from "konva";
 import bookBG from "@/assets/images/Books/mainBookbg.png";
 import { BOOK_SIZE_MAP } from "../shared/constants/bookSizes";
-import type { PageData, TextType } from "../shared/types/book.types";
+import { TEXT_TEMPLATES } from "../shared/constants/templates";
+import { PageData, TextType, TextTemplate } from "../shared/types/book.types";
 import { useCanvasInteractions } from "../shared/hooks/useCanvasInteractions";
 import { useTextOperations } from "../shared/hooks/useTextOperations";
 import { BookCanvas } from "./BookCanvas/BookCanvas";
@@ -83,7 +84,6 @@ const Book = ({
   const [editingItalic, setEditingItalic] = useState(false);
   const [editingUnderline, setEditingUnderline] = useState(false);
   const [editingStrike, setEditingStrike] = useState(false);
-  const [editingColor, setEditingColor] = useState("#000000");
   const [bookFlipRef, setBookFlipRef] = useState<any>(null);
 
   const bookDimensions = BOOK_SIZE_MAP[selectedBookSize] || BOOK_SIZE_MAP["6 x 4"];
@@ -92,15 +92,15 @@ const Book = ({
 
   const textOps = useTextOperations(pages, setPages);
 
-  const updatePageData = useCallback((pageIndex: number, key: keyof PageData, data: any) => {
+  const updatePageData = (pageIndex: number, key: keyof PageData, data: any) => {
     setPages((prev) => {
       const newPages = [...prev];
       newPages[pageIndex] = { ...newPages[pageIndex], [key]: data };
       return newPages;
     });
-  }, []);
+  };
 
-  const handleTextCreated = useCallback((textId: string, pageIndex: number) => {
+  const handleTextCreated = (textId: string, pageIndex: number) => {
     setSelectedTextId(textId);
     setEditingTextId(textId);
     setCurrentPageIndex(pageIndex);
@@ -111,12 +111,10 @@ const Book = ({
       setEditingBold(text.bold || false);
       setEditingItalic(text.italic || false);
       setEditingUnderline(text.underline || false);
-      setEditingStrike(text.strike || false);
-      setEditingColor(text.fill);
       setTextEditPos({ x: text.x, y: text.y });
       setTextEditVisible(true);
     }
-  }, [pages]);
+  };
 
   const canvasInteractions = useCanvasInteractions({
     pages,
@@ -136,9 +134,24 @@ const Book = ({
     onTextCreated: handleTextCreated,
   });
 
+  useEffect(() => {
+    if (selectedTextId) {
+      textOps.updateText(selectedTextId, {
+        fontSize: selectedFontSize,
+        fontFamily: selectedFontFamily,
+        bold: isBold,
+        italic: isItalic,
+        underline: isUnderline,
+        strike: isStrike,
+        align: textAlign,
+        fill: strokeColor,
+        textCase,
+        listType,
+      });
+    }
+  }, [selectedTextId, selectedFontSize, selectedFontFamily, isBold, isItalic, isUnderline, isStrike, textAlign, strokeColor, textCase, listType]);
 
-
-  const handleTextClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>, _pageIndex: number, textItem: TextType) => {
+  const handleTextClick = (e: Konva.KonvaEventObject<MouseEvent>, _pageIndex: number, textItem: TextType) => {
     const textNode = e.target as Konva.Text;
     const stageBox = textNode.getStage()?.container().getBoundingClientRect();
 
@@ -152,38 +165,32 @@ const Book = ({
       setEditingItalic(textItem.italic || false);
       setEditingUnderline(textItem.underline || false);
       setEditingStrike(textItem.strike || false);
-      setEditingColor(textItem.fill);
       setTextEditPos({ x: stageBox.left + absPos.x, y: stageBox.top + absPos.y });
       setTextEditVisible(true);
     }
-  }, []);
-
-  const updateTextInPages = useCallback((updates: Partial<TextType>) => {
-    const targetId = editingTextId || selectedTextId;
-    if (targetId) {
-      setPages((prevPages) => {
-        return prevPages.map((page) => {
-          const textIndex = page.texts.findIndex((t) => t.id === targetId);
-          if (textIndex !== -1) {
-            const newTexts = [...page.texts];
-            newTexts[textIndex] = {
-              ...newTexts[textIndex],
-              ...updates,
-            };
-            return { ...page, texts: newTexts };
-          }
-          return page;
-        });
-      });
-    }
-  }, [editingTextId, selectedTextId]);
+  };
 
   const handleTextEditComplete = useCallback(() => {
+    if (editingTextId) {
+      let finalText = textEditValue;
+      if (textCase === "uppercase") finalText = finalText.toUpperCase();
+      textOps.updateText(editingTextId, {
+        text: finalText,
+        fontSize: editingTextSize,
+        bold: editingBold,
+        italic: editingItalic,
+        underline: editingUnderline,
+        strike: editingStrike,
+        textCase,
+        listType,
+      });
+    }
     setTextEditVisible(false);
     setEditingTextId(null);
-  }, []);
+    setEditingStrike(false);
+  }, [editingTextId, textEditValue, textCase, editingTextSize, editingBold, editingItalic, editingUnderline, editingStrike, listType]);
 
-  const addTextFromTemplate = useCallback((template: any) => {
+  const addTextFromTemplate = (template: TextTemplate) => {
     const newText: TextType = {
       id: Date.now().toString(),
       x: 100,
@@ -201,92 +208,28 @@ const Book = ({
     updatePageData(currentPageIndex, "texts", [...pages[currentPageIndex].texts, newText]);
     setShowTemplates(false);
     setSelectedTextId(newText.id);
-  }, [strokeColor, selectedFontFamily, currentPageIndex, pages, updatePageData]);
+  };
 
-  const handleAddPages = useCallback((count: number) => {
+  const handleAddPages = (count: number) => {
     const newPages = Array(count).fill(null).map(() => ({
       lines: [],
       texts: [],
       shapes: [],
     }));
     setPages((prev) => [...prev, ...newPages]);
-  }, []);
+  };
 
   const flipNext = useCallback(() => {
-    if (bookFlipRef?.pageFlip) {
+    if (bookFlipRef) {
       bookFlipRef.pageFlip().flipNext();
     }
   }, [bookFlipRef]);
 
   const flipPrev = useCallback(() => {
-    if (bookFlipRef?.pageFlip) {
+    if (bookFlipRef) {
       bookFlipRef.pageFlip().flipPrev();
     }
   }, [bookFlipRef]);
-
-  const handleFlipRef = useCallback((ref: any) => {
-    setBookFlipRef(ref);
-  }, []);
-
-  useEffect(() => {
-    if (selectedTextId && !textEditVisible) {
-      updateTextInPages({
-        fontSize: selectedFontSize,
-        fontFamily: selectedFontFamily,
-        bold: isBold,
-        italic: isItalic,
-        underline: isUnderline,
-        strike: isStrike,
-        align: textAlign,
-        fill: strokeColor,
-        textCase,
-        listType,
-      });
-    }
-  }, [selectedTextId, selectedFontSize, selectedFontFamily, isBold, isItalic, isUnderline, isStrike, textAlign, strokeColor, textCase, listType, textEditVisible, updateTextInPages]);
-
-  const textEditorCallbacks = useMemo(() => ({
-    onFontSizeChange: (size: number) => {
-      setEditingTextSize(size);
-      updateTextInPages({ fontSize: size });
-    },
-    onFontFamilyChange: (family: string) => {
-      setEditingFontFamily(family);
-      updateTextInPages({ fontFamily: family });
-    },
-    onToggleBold: () => {
-      setEditingBold(prev => {
-        const newVal = !prev;
-        updateTextInPages({ bold: newVal });
-        return newVal;
-      });
-    },
-    onToggleItalic: () => {
-      setEditingItalic(prev => {
-        const newVal = !prev;
-        updateTextInPages({ italic: newVal });
-        return newVal;
-      });
-    },
-    onToggleUnderline: () => {
-      setEditingUnderline(prev => {
-        const newVal = !prev;
-        updateTextInPages({ underline: newVal });
-        return newVal;
-      });
-    },
-    onToggleStrike: () => {
-      setEditingStrike(prev => {
-        const newVal = !prev;
-        updateTextInPages({ strike: newVal });
-        return newVal;
-      });
-    },
-    onColorChange: (color: string) => {
-      setEditingColor(color);
-      updateTextInPages({ fill: color });
-    },
-  }), [updateTextInPages]);
 
   return (
     <div
@@ -341,7 +284,7 @@ const Book = ({
         onTextContextMenu={() => {}}
         onTextSelect={setSelectedTextId}
         onTextTransform={textOps.updateText}
-        onFlipRef={handleFlipRef}
+        onFlipRef={setBookFlipRef}
       />
 
       <InlineTextEditor
@@ -354,19 +297,32 @@ const Book = ({
         isItalic={editingItalic}
         isUnderline={editingUnderline}
         isStrike={editingStrike}
-        textColor={editingColor}
-        onChange={(value) => {
-          setTextEditValue(value);
-          updateTextInPages({ text: value });
-        }}
+        onChange={setTextEditValue}
         onComplete={handleTextEditComplete}
-        onFontSizeChange={textEditorCallbacks.onFontSizeChange}
-        onFontFamilyChange={textEditorCallbacks.onFontFamilyChange}
-        onToggleBold={textEditorCallbacks.onToggleBold}
-        onToggleItalic={textEditorCallbacks.onToggleItalic}
-        onToggleUnderline={textEditorCallbacks.onToggleUnderline}
-        onToggleStrike={textEditorCallbacks.onToggleStrike}
-        onColorChange={textEditorCallbacks.onColorChange}
+        onFontSizeChange={(size) => {
+          setEditingTextSize(size);
+          if (editingTextId) textOps.updateText(editingTextId, { fontSize: size });
+        }}
+        onFontFamilyChange={(family) => {
+          setEditingFontFamily(family);
+          if (editingTextId) textOps.updateText(editingTextId, { fontFamily: family });
+        }}
+        onToggleBold={() => {
+          setEditingBold(!editingBold);
+          if (editingTextId) textOps.updateText(editingTextId, { bold: !editingBold });
+        }}
+        onToggleItalic={() => {
+          setEditingItalic(!editingItalic);
+          if (editingTextId) textOps.updateText(editingTextId, { italic: !editingItalic });
+        }}
+        onToggleUnderline={() => {
+          setEditingUnderline(!editingUnderline);
+          if (editingTextId) textOps.updateText(editingTextId, { underline: !editingUnderline });
+        }}
+        onToggleStrike={() => {
+          setEditingStrike(!editingStrike);
+          if (editingTextId) textOps.updateText(editingTextId, { strike: !editingStrike });
+        }}
       />
 
       <AddPageModal

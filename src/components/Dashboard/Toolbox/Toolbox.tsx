@@ -1,9 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState } from "react";
 import {
-  RotateCcw,
   RotateCw,
-  RefreshCcw,
   Minus,
   Plus,
   Bold,
@@ -11,9 +9,11 @@ import {
   Underline,
   Strikethrough,
   AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
   List,
   ListOrdered,
-  Type,
   PaintBucket,
   Brush,
   Eraser,
@@ -28,14 +28,11 @@ import {
   MoveRight,
   Hand,
   Pencil,
+  ChevronDown,
+  Undo2,
+  Redo2,
 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ChromePicker } from "react-color";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -85,33 +82,32 @@ const BOOK_SIZES = [
 
 // --- Shared Components ---
 
-const UndoRedoGroup = () => (
-  <div className="flex items-center gap-4 ml-auto border-l border-gray-600 pl-4 h-10">
-    <Button
-      variant="ghost"
-      className="flex flex-col items-center h-auto p-1 hover:bg-white/10"
-    >
-      <RotateCcw className="w-5 h-5 text-gray-400 group-hover:text-white" />
-      <span className="text-[10px] text-gray-400 mt-1">Undo</span>
-    </Button>
-    <Button
-      variant="ghost"
-      className="flex flex-col items-center h-auto p-1 hover:bg-white/10"
-    >
-      <RotateCw className="w-5 h-5 text-gray-400 group-hover:text-white" />
-      <span className="text-[10px] text-gray-400 mt-1">Redo</span>
-    </Button>
+const RefreshButton = ({ onClick }: { onClick?: () => void }) => (
+  <div
+    className="flex flex-col items-center mr-4 cursor-pointer group"
+    onClick={onClick}
+  >
+    <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
+    <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
   </div>
 );
 
-const RefreshButton = ({ onClick }: { onClick?: () => void }) => (
-  <div
-    className="flex flex-col items-center mr-4 cursor-pointer"
+const Divider = () => (
+  <div className="w-px h-6 bg-zinc-700 mx-2 self-center" />
+);
+
+const ToolbarButton = ({ children, isActive, onClick, className = "" }: { children: React.ReactNode; isActive?: boolean; onClick?: () => void; className?: string }) => (
+  <button
     onClick={onClick}
+    className={`
+      h-9 min-w-[36px] px-2 rounded-lg flex items-center justify-center transition-all duration-200
+      hover:bg-white/10 active:scale-95
+      ${isActive ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}
+      ${className}
+    `}
   >
-    <RefreshCcw className="w-5 h-5 text-white" />
-    <span className="text-[10px] text-gray-400">Refresh</span>
-  </div>
+    {children}
+  </button>
 );
 
 // --- Sub-Components (Tool Panels) ---
@@ -162,175 +158,391 @@ const BookSizePanel = ({ onChange }: { onChange?: (size: string) => void }) => {
   );
 };
 
-const TextPanel = () => {
+const FONT_FAMILIES = [
+  'Anton',
+  'Bebas Neue',
+  'Caveat',
+  'Comfortaa',
+  'Dancing Script',
+  'Fredoka',
+  'Heebo',
+  'Josefin Sans',
+  'Lobster',
+  'Lora',
+  'Merriweather',
+  'Montserrat',
+  'Oswald',
+  'Pacifico',
+  'Playfair Display',
+  'Quicksand',
+  'Raleway',
+  'Roboto',
+  'Roboto Slab',
+  'Source Code Pro',
+  'Work Sans',
+];
+
+
+interface TextPanelProps {
+  onFontChange?: (font: string) => void;
+  onFontSizeChange?: (size: number) => void;
+  onTextColorChange?: (color: string) => void;
+  onBoldChange?: (active: boolean) => void;
+  onItalicChange?: (active: boolean) => void;
+  onUnderlineChange?: (active: boolean) => void;
+  onStrikeChange?: (active: boolean) => void;
+  onAlignChange?: (align: string) => void;
+  onCaseChange?: (caseType: 'normal' | 'uppercase') => void;
+  onListChange?: (listType: 'none' | 'bullet' | 'ordered') => void;
+}
+
+const TextPanel = ({ onFontChange, onFontSizeChange, onTextColorChange, onBoldChange, onItalicChange, onUnderlineChange, onStrikeChange, onAlignChange, onCaseChange, onListChange }: TextPanelProps) => {
   const [fontSize, setFontSize] = useState(24);
+  const [fontFamily, setFontFamily] = useState('Roboto');
+  const [activeFormats, setActiveFormats] = useState<string[]>(['bold']);
+  const [textColor, setTextColor] = useState('#ffffff');
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [textAlign, setTextAlign] = useState('left');
+  const [caseType, setCaseType] = useState<'normal' | 'uppercase'>('normal');
+  const [listType, setListType] = useState<'none' | 'bullet' | 'ordered'>('none');
+
+  const handleFontChange = (font: string) => {
+    setFontFamily(font);
+    onFontChange?.(font);
+  };
+
+  const handleFontSizeChange = (size: number) => {
+    const validSize = Math.max(8, Math.min(72, size));
+    setFontSize(validSize);
+    onFontSizeChange?.(validSize);
+  };
+
+  const handleColorChange = (color: string) => {
+    setTextColor(color);
+    onTextColorChange?.(color);
+  };
+
+  const toggleFormat = (format: string) => {
+    const isActive = activeFormats.includes(format);
+    const newFormats = isActive 
+      ? activeFormats.filter(f => f !== format) 
+      : [...activeFormats, format];
+    setActiveFormats(newFormats);
+    
+    if (format === 'bold') onBoldChange?.(!isActive);
+    if (format === 'italic') onItalicChange?.(!isActive);
+    if (format === 'underline') onUnderlineChange?.(!isActive);
+    if (format === 'strike') onStrikeChange?.(!isActive);
+  };
+
+  const handleAlignChange = (align: string) => {
+    setTextAlign(align);
+    onAlignChange?.(align);
+  };
 
   return (
     <>
       <RefreshButton />
-      <div className="flex items-center gap-3">
-        <Select defaultValue="open-sans">
-          <SelectTrigger className="w-[130px] h-9 bg-[#444] border-none text-white focus:ring-0 rounded-md">
-            <SelectValue placeholder="Font" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#333] text-white border-gray-600">
-            <SelectItem value="open-sans">Open Sans</SelectItem>
-            <SelectItem value="roboto">Roboto</SelectItem>
-            <SelectItem value="inter">Inter</SelectItem>
-          </SelectContent>
-        </Select>
+      <Divider />
 
-        <div className="flex items-center bg-[#444] rounded-md h-9 px-2">
-          <button
-            className="text-white hover:text-primary px-1"
-            onClick={() => setFontSize(Math.max(8, fontSize - 1))}
-          >
-            <Minus size={16} />
-          </button>
-          <span className="text-white w-8 text-center text-sm font-medium">
-            {fontSize}
-          </span>
-          <button
-            className="text-white hover:text-primary px-1"
-            onClick={() => setFontSize(Math.min(72, fontSize + 1))}
-          >
-            <Plus size={16} />
-          </button>
-        </div>
-
-        <div className="w-7 h-7 rounded-full bg-linear-to-r from-green-400 via-yellow-400 to-red-500 cursor-pointer border border-white/20"></div>
-
-        <Separator orientation="vertical" className="h-8 bg-gray-600 mx-1" />
-
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-white hover:bg-white/10 rounded"
-          >
-            <Bold size={18} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
-          >
-            <Italic size={18} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
-          >
-            <Underline size={18} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
-          >
-            <Strikethrough size={18} />
-          </Button>
-        </div>
-
-        <Separator orientation="vertical" className="h-8 bg-gray-600 mx-1" />
-
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-white hover:bg-white/10 rounded"
-          >
-            <AlignLeft size={18} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
-          >
-            <Type size={18} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
-          >
-            <span className="text-xs font-bold">TT</span>
-          </Button>
-        </div>
-
-        <Separator orientation="vertical" className="h-8 bg-gray-600 mx-1" />
-
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
-          >
-            <List size={18} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-gray-400 hover:bg-white/10 rounded"
-          >
-            <ListOrdered size={18} />
-          </Button>
+      {/* Font Family Selector */}
+      <div className="relative group">
+        <button className="h-10 px-4 bg-white/5 rounded-lg flex items-center gap-3 text-zinc-200 hover:bg-white/10 transition-colors border border-transparent hover:border-zinc-700">
+          <span className="text-sm font-medium">{fontFamily}</span>
+          <ChevronDown className="w-4 h-4 text-zinc-500" />
+        </button>
+        <div className="absolute top-full left-0 mt-2 w-48 max-h-64 overflow-y-auto bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-left z-50">
+          {FONT_FAMILIES.map((font) => (
+            <div 
+              key={font}
+              onClick={() => handleFontChange(font)}
+              className="px-4 py-2 text-sm text-zinc-300 hover:bg-indigo-600 hover:text-white cursor-pointer first:rounded-t-lg last:rounded-b-lg"
+              style={{ fontFamily: font }}
+            >
+              {font}
+            </div>
+          ))}
         </div>
       </div>
-      <UndoRedoGroup />
+
+      {/* Font Size Control */}
+      <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700 mx-2">
+        <button 
+          onClick={() => handleFontSizeChange(fontSize - 1)}
+          className="h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <input
+          type="number"
+          min="8"
+          max="72"
+          value={fontSize}
+          onChange={(e) => handleFontSizeChange(parseInt(e.target.value) || 24)}
+          className="w-12 text-center text-sm font-medium text-zinc-200 font-mono bg-transparent border-none outline-none"
+        />
+        <button 
+          onClick={() => handleFontSizeChange(fontSize + 1)}
+          className="h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Color Picker */}
+      <div className="relative">
+        <div 
+          className="w-9 h-9 rounded-full mx-2 cursor-pointer hover:scale-110 transition-transform shadow-lg ring-2 ring-transparent hover:ring-white/20" 
+          style={{ backgroundColor: textColor }}
+          title="Text Color"
+          onClick={() => setShowColorPicker(!showColorPicker)}
+        />
+        {showColorPicker && (
+          <div className="absolute top-12 left-0 z-50 shadow-2xl rounded-lg bg-white">
+            <ChromePicker 
+              color={textColor} 
+              onChange={(color) => handleColorChange(color.hex)}
+              disableAlpha
+            />
+            <button
+              onClick={() => setShowColorPicker(false)}
+              className="w-full px-3 py-2 bg-indigo-600 text-white text-sm rounded-b-lg hover:bg-indigo-700 transition-colors font-medium"
+            >
+              Done
+            </button>
+          </div>
+        )}
+      </div>
+
+      <Divider />
+
+      {/* Basic Formatting */}
+      <div className="flex items-center gap-1">
+        <ToolbarButton 
+          isActive={activeFormats.includes('bold')} 
+          onClick={() => toggleFormat('bold')}
+        >
+          <Bold className="w-5 h-5" strokeWidth={2.5} />
+        </ToolbarButton>
+        
+        <ToolbarButton 
+          isActive={activeFormats.includes('italic')} 
+          onClick={() => toggleFormat('italic')}
+        >
+          <Italic className="w-5 h-5" />
+        </ToolbarButton>
+        
+        <ToolbarButton 
+          isActive={activeFormats.includes('underline')} 
+          onClick={() => toggleFormat('underline')}
+        >
+          <Underline className="w-5 h-5" />
+        </ToolbarButton>
+        
+        <ToolbarButton 
+          isActive={activeFormats.includes('strike')} 
+          onClick={() => toggleFormat('strike')}
+        >
+          <Strikethrough className="w-5 h-5" />
+        </ToolbarButton>
+      </div>
+
+      <Divider />
+
+      {/* Alignment */}
+      <div className="flex items-center gap-1">
+        <ToolbarButton 
+          isActive={textAlign === 'left'} 
+          onClick={() => handleAlignChange('left')}
+        >
+          <AlignLeft className="w-5 h-5" />
+        </ToolbarButton>
+        <ToolbarButton 
+          isActive={textAlign === 'center'} 
+          onClick={() => handleAlignChange('center')}
+        >
+          <AlignCenter className="w-5 h-5" />
+        </ToolbarButton>
+        <ToolbarButton 
+          isActive={textAlign === 'right'} 
+          onClick={() => handleAlignChange('right')}
+        >
+          <AlignRight className="w-5 h-5" />
+        </ToolbarButton>
+        <ToolbarButton 
+          isActive={textAlign === 'justify'} 
+          onClick={() => handleAlignChange('justify')}
+        >
+          <AlignJustify className="w-5 h-5" />
+        </ToolbarButton>
+      </div>
+      
+      <Divider />
+      
+      {/* Case Switching */}
+      <div className="flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800">
+        <ToolbarButton 
+          isActive={caseType === 'normal'} 
+          className="!h-8 !min-w-[32px]"
+          onClick={() => {
+            setCaseType('normal');
+            onCaseChange?.('normal');
+          }}
+        >
+          <span className="font-bold text-sm">Tt</span>
+        </ToolbarButton>
+        <ToolbarButton 
+          isActive={caseType === 'uppercase'} 
+          className="!h-8 !min-w-[32px]"
+          onClick={() => {
+            setCaseType('uppercase');
+            onCaseChange?.('uppercase');
+          }}
+        >
+          <span className="font-bold text-sm">TT</span>
+        </ToolbarButton>
+      </div>
+
+      <Divider />
+
+      {/* Lists */}
+      <div className="flex items-center gap-1">
+        <ToolbarButton 
+          isActive={listType === 'bullet'}
+          onClick={() => {
+            const newListType = listType === 'bullet' ? 'none' : 'bullet';
+            setListType(newListType);
+            onListChange?.(newListType);
+          }}
+        >
+          <List className="w-5 h-5" />
+        </ToolbarButton>
+        <ToolbarButton 
+          isActive={listType === 'ordered'}
+          onClick={() => {
+            const newListType = listType === 'ordered' ? 'none' : 'ordered';
+            setListType(newListType);
+            onListChange?.(newListType);
+          }}
+        >
+          <ListOrdered className="w-5 h-5" />
+        </ToolbarButton>
+      </div>
+
+      <div className="flex-grow" />
+
+      {/* Undo / Redo */}
+      <div className="flex items-center gap-4 ml-4 px-4 border-l border-zinc-700">
+        <div className="flex flex-col items-center group cursor-pointer">
+          <Undo2 className="w-5 h-5 text-zinc-400 group-hover:text-white transition-colors" />
+          <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Undo</span>
+        </div>
+        <div className="flex flex-col items-center group cursor-pointer">
+          <Redo2 className="w-5 h-5 text-zinc-400 group-hover:text-white transition-colors" />
+          <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Redo</span>
+        </div>
+      </div>
     </>
   );
 };
 
-const ColorPanel = () => (
-  <>
-    <RefreshButton />
-    <div className="w-10 h-10 rounded-full bg-[conic-gradient(at_center,red,yellow,lime,cyan,blue,magenta,red)] border-2 border-white/20 mr-6 shadow-md cursor-pointer hover:scale-105 transition-transform" />
+interface ColorPanelProps {
+  onColorChange?: (color: string) => void;
+}
 
-    <div className="flex flex-col gap-1 mr-6">
-      <span className="text-xs text-white font-medium">Basic colors</span>
-      <div className="flex gap-1.5">
-        {BASIC_COLORS.map((color, i) => (
-          <div
-            key={i}
-            className="w-6 h-6 rounded-md cursor-pointer border border-white/10 hover:scale-110 transition-transform"
-            style={{ backgroundColor: color }}
-          />
-        ))}
+const ColorPanel = ({ onColorChange }: ColorPanelProps) => {
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [selectedColor, setSelectedColor] = useState('#3B82F6');
+
+  const handleColorSelect = (color: string) => {
+    setSelectedColor(color);
+    onColorChange?.(color);
+  };
+
+  return (
+    <>
+      <RefreshButton />
+      
+      {/* Main Color Picker Button */}
+      <div className="relative">
+        <div 
+          className="w-10 h-10 rounded-full border-2 border-white/20 mr-6 shadow-md cursor-pointer hover:scale-105 transition-transform" 
+          style={{ backgroundColor: selectedColor }}
+          onClick={() => setShowColorPicker(!showColorPicker)}
+          title="Open Color Picker"
+        />
+        {showColorPicker && (
+          <div className="absolute top-12 left-0 z-50 shadow-2xl rounded-lg bg-white">
+            <ChromePicker 
+              color={selectedColor} 
+              onChange={(color) => handleColorSelect(color.hex)}
+              disableAlpha
+            />
+            <button
+              onClick={() => setShowColorPicker(false)}
+              className="w-full px-3 py-2 bg-indigo-600 text-white text-sm rounded-b-lg hover:bg-indigo-700 transition-colors font-medium"
+            >
+              Done
+            </button>
+          </div>
+        )}
       </div>
-    </div>
 
-    <div className="flex flex-col gap-1 mr-6">
-      <span className="text-xs text-white font-medium">Custom Colors</span>
-      <div className="flex gap-1.5">
-        {CUSTOM_COLORS.map((color, i) => (
-          <div
-            key={i}
-            className="w-6 h-6 rounded-md cursor-pointer border border-white/10 hover:scale-110 transition-transform"
-            style={{ backgroundColor: color }}
-          />
-        ))}
-        <div className="w-6 h-6 rounded-md bg-[#444] flex items-center justify-center cursor-pointer hover:bg-[#555] text-white">
-          <Plus size={14} />
+      <div className="flex flex-col gap-1 mr-6">
+        <span className="text-xs text-white font-medium">Basic colors</span>
+        <div className="flex gap-1.5">
+          {BASIC_COLORS.map((color, i) => (
+            <div
+              key={i}
+              onClick={() => handleColorSelect(color)}
+              className={cn(
+                "w-6 h-6 rounded-md cursor-pointer border-2 hover:scale-110 transition-transform",
+                selectedColor === color ? "border-white" : "border-white/10"
+              )}
+              style={{ backgroundColor: color }}
+            />
+          ))}
         </div>
       </div>
-    </div>
 
-    <div className="flex flex-col justify-center w-32 gap-1 ml-2">
-      <div className="relative w-full h-4 bg-gray-600 rounded-full overflow-hidden">
-        <div className="absolute inset-0 bg-gray-300 opacity-30"></div>
-        <Slider
-          defaultValue={[70]}
-          max={100}
-          step={1}
-          className="absolute inset-0 z-10"
-        />
+      <div className="flex flex-col gap-1 mr-6">
+        <span className="text-xs text-white font-medium">Custom Colors</span>
+        <div className="flex gap-1.5">
+          {CUSTOM_COLORS.map((color, i) => (
+            <div
+              key={i}
+              onClick={() => handleColorSelect(color)}
+              className={cn(
+                "w-6 h-6 rounded-md cursor-pointer border-2 hover:scale-110 transition-transform",
+                selectedColor === color ? "border-white" : "border-white/10"
+              )}
+              style={{ backgroundColor: color }}
+            />
+          ))}
+          <div 
+            className="w-6 h-6 rounded-md bg-[#444] flex items-center justify-center cursor-pointer hover:bg-[#555] text-white"
+            onClick={() => setShowColorPicker(true)}
+            title="Add custom color"
+          >
+            <Plus size={14} />
+          </div>
+        </div>
       </div>
-    </div>
-    <UndoRedoGroup />
-  </>
-);
+
+      <div className="flex flex-col justify-center w-32 gap-1 ml-2">
+        <div className="relative w-full h-4 bg-gray-600 rounded-full overflow-hidden">
+          <div className="absolute inset-0 bg-gray-300 opacity-30"></div>
+          <Slider
+            defaultValue={[70]}
+            max={100}
+            step={1}
+            className="absolute inset-0 z-10"
+          />
+        </div>
+      </div>
+    </>
+  );
+};
 
 const BrushPanel = () => (
   <>
@@ -375,7 +587,6 @@ const BrushPanel = () => (
         </div>
       </div>
     </div>
-    <UndoRedoGroup />
   </>
 );
 
@@ -431,8 +642,6 @@ const GeneralToolPanel = () => {
         </div>
         <Slider defaultValue={[5]} max={50} step={1} className="h-4" />
       </div>
-
-      <UndoRedoGroup />
     </>
   );
 };
@@ -482,8 +691,6 @@ const ShapesPanel = () => {
           <span className="text-[10px] text-gray-400">Fill</span>
         </div>
       </div>
-
-      <UndoRedoGroup />
     </>
   );
 };
@@ -493,18 +700,27 @@ const ShapesPanel = () => {
 interface ToolboxProps {
   activeTool: string;
   onBookSizeChange?: (size: string) => void;
-  // Add other handlers as needed for functionalization
+  onFontFamilyChange?: (font: string) => void;
+  onFontSizeChange?: (size: number) => void;
+  onTextColorChange?: (color: string) => void;
+  onBoldChange?: (active: boolean) => void;
+  onItalicChange?: (active: boolean) => void;
+  onUnderlineChange?: (active: boolean) => void;
+  onStrikeChange?: (active: boolean) => void;
+  onAlignChange?: (align: string) => void;
+  onCaseChange?: (caseType: 'normal' | 'uppercase') => void;
+  onListChange?: (listType: 'none' | 'bullet' | 'ordered') => void;
 }
 
-const Toolbox = ({ activeTool, onBookSizeChange }: ToolboxProps) => {
+const Toolbox = ({ activeTool, onBookSizeChange, onFontFamilyChange, onFontSizeChange, onTextColorChange, onBoldChange, onItalicChange, onUnderlineChange, onStrikeChange, onAlignChange, onCaseChange, onListChange }: ToolboxProps) => {
   const renderContent = () => {
     switch (activeTool) {
       case "Book Size":
         return <BookSizePanel onChange={onBookSizeChange} />;
       case "Text":
-        return <TextPanel />;
+        return <TextPanel onFontChange={onFontFamilyChange} onFontSizeChange={onFontSizeChange} onTextColorChange={onTextColorChange} onBoldChange={onBoldChange} onItalicChange={onItalicChange} onUnderlineChange={onUnderlineChange} onStrikeChange={onStrikeChange} onAlignChange={onAlignChange} onCaseChange={onCaseChange} onListChange={onListChange} />;
       case "Color":
-        return <ColorPanel />;
+        return <ColorPanel onColorChange={onTextColorChange} />;
       case "Brush":
         return <BrushPanel />;
       case "Tool":

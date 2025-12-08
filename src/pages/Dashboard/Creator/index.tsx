@@ -7,27 +7,57 @@ import AIImageType from "@/components/Dashboard/AI-Image-TypeBox/AIImageType";
 import { SiteHeader } from "@/components/Dashboard/DashboardHeader";
 
 export default function Creator() {
-  // Lifted state to manage active tool across components
   const [activeTool, setActiveTool] = useState("Book Size");
   const [selectedBookSize, setSelectedBookSize] = useState("6 x 4");
+  const [selectedFontFamily, setSelectedFontFamily] = useState("Roboto");
+  const [selectedFontSize, setSelectedFontSize] = useState(16);
+  const [selectedTextColor, setSelectedTextColor] = useState("#ffffff");
+
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const [isStrike, setIsStrike] = useState(false);
+  const [textAlign, setTextAlign] = useState("left");
+  const [textCase, setTextCase] = useState<'normal' | 'uppercase'>('normal');
+  const [listType, setListType] = useState<'none' | 'bullet' | 'ordered'>('none');
 
   return (
     <div>
       <SiteHeader />
       <div className="flex min-h-screen gap-4 mt-3">
         <div className="w-[23.3%]">
-          {/* Pass state and setter to Tools */}
           <Tools activeTool={activeTool} setActiveTool={setActiveTool} />
           <AIImageBox />
         </div>
         <div className="w-[63.8%]">
-          {/* Pass active state to Toolbox */}
-          <Toolbox activeTool={activeTool} onBookSizeChange={setSelectedBookSize} />
+          <Toolbox 
+            activeTool={activeTool} 
+            onBookSizeChange={setSelectedBookSize} 
+            onFontFamilyChange={setSelectedFontFamily} 
+            onFontSizeChange={setSelectedFontSize}
+            onTextColorChange={setSelectedTextColor}
+            onBoldChange={setIsBold}
+            onItalicChange={setIsItalic}
+            onUnderlineChange={setIsUnderline}
+            onStrikeChange={setIsStrike}
+            onAlignChange={setTextAlign}
+            onCaseChange={setTextCase}
+            onListChange={setListType}
+          />
           <Book
             activeTool={activeTool}
             selectedBookSize={selectedBookSize}
-            strokeColor="#000000"
+            selectedFontFamily={selectedFontFamily}
+            selectedFontSize={selectedFontSize}
+            strokeColor={selectedTextColor}
             strokeWidth={5}
+            isBold={isBold}
+            isItalic={isItalic}
+            isUnderline={isUnderline}
+            isStrike={isStrike}
+            textAlign={textAlign}
+            textCase={textCase}
+            listType={listType}
           />
         </div>
         <div className="w-[10.2%] bg-white">

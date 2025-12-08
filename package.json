@@ -52,6 +52,7 @@
     "react-konva": "^19.2.1",
     "react-pageflip": "^2.0.3",
     "react-redux": "^9.2.0",
+    "react-color": "^2.19.3",
     "react-router": "^7.6.3",
     "react-svg": "^16.3.0",
     "redux-persist": "^6.0.0",
@@ -77,6 +78,7 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",
     "vite": "^7.0.4",
-    "vite-plugin-svgr": "^4.3.0"
+    "vite-plugin-svgr": "^4.3.0",
+    "@types/react-color": "^3.0.3"
   }
 }
