@@ -9,9 +9,7 @@ interface FloatingTextToolbarProps {
   position: { x: number; y: number };
 }
 
-type FontStyle = 'bold' | 'italic' | 'bold italic' | 'normal';
-type TextDecoration = 'underline' | 'line-through' | 'none';
-type TextAlign = 'left' | 'center' | 'right' | 'justify';
+
 
 const FONTS = ['Arial', 'Roboto', 'Times New Roman', 'Georgia', 'Courier New', 'Verdana'];
 const SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72];

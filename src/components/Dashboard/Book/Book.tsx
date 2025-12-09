@@ -6,7 +6,7 @@ import HTMLFlipBook from 'react-pageflip';
 import { Plus, Minus, Maximize, X, ChevronLeft, ChevronRight, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import bookBG from "@/assets/images/Books/mainBookbg.png"
-import type { TextType, LineType, ShapeType, PageData } from './types';
+import type { TextType, ShapeType, PageData } from './types';
 import { FloatingTextToolbar } from './FloatingTextToolbar';
 import { TextContextMenu } from './TextContextMenu';
 import { InPlaceTextEditor } from './InPlaceTextEditor';
@@ -48,6 +48,7 @@ INITIAL_PAGES[0].texts.push({
   y: 200,
   text: 'My Book',
   fontSize: 32,
+  fontFamily: 'Roboto',
   fill: '#fff'
 });
 INITIAL_PAGES[0].background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
@@ -382,7 +383,7 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
   };
 
   // --- Text Editing ---
-  const handleTextDblClick = (e: Konva.KonvaEventObject<MouseEvent>, pageIndex: number, textItem: TextType) => {
+  const handleTextDblClick = (_e: Konva.KonvaEventObject<MouseEvent>, pageIndex: number, textItem: TextType) => {
     setCurrentPageIndex(pageIndex);
     setEditingTextItem(textItem);
     setShowToolbar(false);
