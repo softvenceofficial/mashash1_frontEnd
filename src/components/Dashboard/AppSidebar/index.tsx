@@ -8,9 +8,10 @@ import NavMain from "./NavMain";
 import useTheme from "@/theme";
 import Icon from "@/components/common/Icon";
 import Trash from "@/assets/svgs/trash.svg";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
 import MobileSidebar from "./MobileSidebar";
 import logo from "@/assets/svgs/logo.svg";
+import { Link } from "react-router";
 
 export type TNavMenu = {
   title: string;
@@ -66,11 +67,15 @@ export function AppSidebar({
       {isMobile && sidebarOpen && (
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent className="bg-white dark:bg-background">
-            <div className="w-24 mt-4 mb-5">
-              <Icon
-                src={logo}
-                className="size-8 text-center w-full text-primary dark:text-white ml-1"
-              />
+            <div className="w-24 mt-4 mb-5 ml-3.5">
+              <Link to="/dashboard/home">
+                <SheetClose>
+                  <Icon
+                    src={logo}
+                    className="size-8 text-center w-full text-primary dark:text-white ml-1"
+                  />
+                </SheetClose>
+              </Link>
             </div>
             <div>
               {items.map((item, i) => {

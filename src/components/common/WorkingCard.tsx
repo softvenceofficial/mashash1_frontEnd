@@ -10,8 +10,8 @@ export default function WorkingCard({
   const pathName = window.location.pathname;
   console.log("Current Path:", pathName);
   return (
-    <Card className="dark:bg-[#212B36] border-none p-4 mr-6 relative">
-      <div className="absolute top-0 -right-8">
+    <Card className="dark:bg-[#212B36] border-none p-4 mr-6 relative ">
+      <div className="absolute top-0.5 -right-6">
         {
           pathName.includes("trash") ? <TrashThreeDotButton /> : <ThreeDotButton />
         }
