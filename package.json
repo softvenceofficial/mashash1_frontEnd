@@ -29,6 +29,7 @@
     "@reduxjs/toolkit": "^2.8.2",
     "@tailwindcss/vite": "^4.1.11",
     "@tanstack/react-table": "^8.21.3",
+    "@types/react-color": "^3.0.13",
     "apexcharts": "^5.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -44,6 +45,7 @@
     "radix-ui": "^1.4.2",
     "react": "^19.1.0",
     "react-apexcharts": "^1.7.0",
+    "react-color": "^2.19.3",
     "react-day-picker": "^9.8.1",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.60.0",
@@ -52,7 +54,6 @@
     "react-konva": "^19.2.1",
     "react-pageflip": "^2.0.3",
     "react-redux": "^9.2.0",
-    "react-color": "^2.19.3",
     "react-router": "^7.6.3",
     "react-svg": "^16.3.0",
     "redux-persist": "^6.0.0",
@@ -78,7 +79,6 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",
     "vite": "^7.0.4",
-    "vite-plugin-svgr": "^4.3.0",
-    "@types/react-color": "^3.0.3"
+    "vite-plugin-svgr": "^4.3.0"
   }
 }
