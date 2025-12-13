@@ -3,7 +3,7 @@ import { useState, useRef, useCallback, forwardRef, useEffect, useImperativeHand
 import { Stage, Layer, Line, Text as KonvaText, Rect, Circle, Transformer } from 'react-konva';
 import Konva from 'konva';
 import HTMLFlipBook from 'react-pageflip';
-import { Plus, Minus, Maximize, X, ChevronLeft, ChevronRight, Undo, Redo } from 'lucide-react';
+import { Plus, Minus, Maximize, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import bookBG from "@/assets/images/Books/mainBookbg.png"
 import type { TextType, ShapeType, PageData } from './types';
@@ -282,7 +282,7 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
           });
           updatedText = { ...updatedText, text: newLines.join('\n'), listType: value };
         } else {
-          updatedText[property as keyof TextType] = value;
+          (updatedText as any)[property] = value;
         }
 
         handleTextUpdate(updatedText);

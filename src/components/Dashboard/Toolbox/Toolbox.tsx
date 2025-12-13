@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo } from 'react';
 import { 
@@ -172,13 +173,7 @@ const Toolbox = ({
   const [opacity, setOpacity] = useState(100);
   const [textAlignment, setTextAlignment] = useState<'left' | 'center' | 'right'>('left');
   const [isBrushMode, setIsBrushMode] = useState(true);
-  const [lineHeight, setLineHeight] = useState(1.2);
-  const [letterSpacing, setLetterSpacing] = useState(0);
   const [textTransform, setTextTransform] = useState<'none' | 'uppercase' | 'lowercase' | 'capitalize'>('none');
-  const [shadowColor, setShadowColor] = useState('rgba(0, 0, 0, 1)');
-  const [shadowBlur, setShadowBlur] = useState(0);
-  const [strokeOutlineColor, setStrokeOutlineColor] = useState('rgba(0, 0, 0, 1)');
-  const [strokeOutlineWidth, setStrokeOutlineWidth] = useState(0);
 
   const pickerColor = useMemo(() => {
     return rgbaToHex(strokeColor);
@@ -211,8 +206,6 @@ const Toolbox = ({
     setTextColor(newRgba);
     setBrushColor(newRgba);
     setShapeColor(newRgba);
-    setShadowColor(newRgba);
-    setStrokeOutlineColor(newRgba);
 
     // Sync opacity slider
     setOpacity(Math.round(alpha * 100));
@@ -292,27 +285,9 @@ const Toolbox = ({
     onAdvancedTextChange?.('listType', type);
   };
 
-  const handleLineHeightChange = (value: number) => {
-    setLineHeight(value);
-    onAdvancedTextChange?.('lineHeight', value);
-  };
 
-  const handleLetterSpacingChange = (value: number) => {
-    setLetterSpacing(value);
-    onAdvancedTextChange?.('letterSpacing', value);
-  };
 
-  const handleShadowChange = (property: string, value: any) => {
-    if (property === 'color') setShadowColor(value);
-    if (property === 'blur') setShadowBlur(value);
-    onAdvancedTextChange?.(`shadow${property.charAt(0).toUpperCase() + property.slice(1)}`, value);
-  };
 
-  const handleStrokeChange = (property: string, value: any) => {
-    if (property === 'color') setStrokeOutlineColor(value);
-    if (property === 'width') setStrokeOutlineWidth(value);
-    onAdvancedTextChange?.(property === 'color' ? 'stroke' : 'strokeWidth', value);
-  };
 
   const renderBookSizePanel = () => (
     <div className="flex items-center justify-around w-full gap-4 px-2">
@@ -536,8 +511,6 @@ const Toolbox = ({
                   setTextColor(rgbaColor);
                   setBrushColor(rgbaColor);
                   setShapeColor(rgbaColor);
-                  setShadowColor(rgbaColor);
-                  setStrokeOutlineColor(rgbaColor);
                   onStrokeColorChange?.(rgbaColor);
                 }}
               />
@@ -557,8 +530,6 @@ const Toolbox = ({
                   setTextColor(color);
                   setBrushColor(color);
                   setShapeColor(color);
-                  setShadowColor(color);
-                  setStrokeOutlineColor(color);
                   onStrokeColorChange?.(color);
                 }}
               />
