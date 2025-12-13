@@ -20,6 +20,7 @@ interface BookProps {
   selectedBookSize?: string;
   fontSize?: number;
   fontFamily?: string;
+  onAdvancedTextChange?: (property: string, value: any) => void;
 }
 
 // --- Constants ---
@@ -158,11 +159,12 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                 rotation={textItem.rotation || 0}
                 opacity={textItem.opacity || 1}
                 shadowColor={textItem.shadowColor}
-                shadowBlur={textItem.shadowBlur}
-                shadowOffsetX={textItem.shadowOffsetX}
-                shadowOffsetY={textItem.shadowOffsetY}
+                shadowBlur={textItem.shadowBlur || 0}
+                shadowOffsetX={textItem.shadowOffsetX || 0}
+                shadowOffsetY={textItem.shadowOffsetY || 0}
+                shadowOpacity={textItem.shadowOpacity || 1}
                 stroke={textItem.stroke}
-                strokeWidth={textItem.strokeWidth}
+                strokeWidth={textItem.strokeWidth || 0}
                 draggable={activeTool === 'Tool'}
                 onClick={() => onTextSelect(textItem.id)}
                 onDblClick={(e) => onTextDblClick(e, pageIndex, textItem)}
@@ -199,7 +201,7 @@ BookPage.displayName = 'BookPage';
 
 // --- Main Book Component ---
 
-const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWidth = 5, selectedBookSize = '6 x 4', fontSize = 16, fontFamily = 'Roboto' }: BookProps, ref: any) => {
+const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWidth = 5, selectedBookSize = '6 x 4', fontSize = 16, fontFamily = 'Roboto', onAdvancedTextChange }: BookProps, ref: any) => {
   const [pages, setPages] = useState<PageData[]>(INITIAL_PAGES);
   const [zoom, setZoom] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -230,6 +232,66 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
     updatePageData,
     currentPageIndex
   }));
+
+  const updatePageData = useCallback((pageIndex: number, key: keyof PageData, data: any) => {
+    setPages(prev => {
+      const newPages = [...prev];
+      newPages[pageIndex] = { ...newPages[pageIndex], [key]: data };
+      return newPages;
+    });
+  }, []);
+
+  // Update page background when color tool is active
+  useEffect(() => {
+    if (strokeColor) {
+      // This ensures color changes from the toolbox apply to the page background.
+      // Apply to the current page (which is the left page in a spread).
+      updatePageData(currentPageIndex, 'background', strokeColor);
+
+      // If we are in a spread view (currentPageIndex will be odd), and the right page exists,
+      // apply the color to the right page as well.
+      if (currentPageIndex % 2 !== 0 && (currentPageIndex + 1) < pages.length) {
+        updatePageData(currentPageIndex + 1, 'background', strokeColor);
+      }
+    }
+  }, [strokeColor, currentPageIndex, updatePageData, pages.length]);
+
+
+  // Handle advanced text changes from Toolbox
+  useEffect(() => {
+    if (onAdvancedTextChange && selectedTextId) {
+      const handleAdvancedChange = (property: string, value: any) => {
+        const textItem = pages[currentPageIndex]?.texts.find(t => t.id === selectedTextId);
+        if (!textItem) return;
+
+        let updatedText = { ...textItem };
+
+        if (property === 'textTransform') {
+          let newText = textItem.text;
+          if (value === 'uppercase') newText = newText.toUpperCase();
+          else if (value === 'lowercase') newText = newText.toLowerCase();
+          else if (value === 'capitalize') newText = newText.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+          updatedText = { ...updatedText, text: newText, textTransform: value };
+        } else if (property === 'listType') {
+          const lines = textItem.text.split('\n');
+          const newLines = lines.map((line, index) => {
+            let cleanLine = line.replace(/^[•\-\*]\s+/, '').replace(/^\d+\.\s+/, '');
+            if (value === 'bullet') return `• ${cleanLine}`;
+            if (value === 'number') return `${index + 1}. ${cleanLine}`;
+            return cleanLine;
+          });
+          updatedText = { ...updatedText, text: newLines.join('\n'), listType: value };
+        } else {
+          updatedText[property as keyof TextType] = value;
+        }
+
+        handleTextUpdate(updatedText);
+      };
+
+      // Store the handler so Toolbox can call it
+      (window as any).__handleAdvancedTextChange = handleAdvancedChange;
+    }
+  }, [selectedTextId, currentPageIndex, pages, onAdvancedTextChange]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -374,14 +436,6 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
     isDrawing.current = false;
   };
 
-  const updatePageData = (pageIndex: number, key: keyof PageData, data: any) => {
-    setPages(prev => {
-      const newPages = [...prev];
-      newPages[pageIndex] = { ...newPages[pageIndex], [key]: data };
-      return newPages;
-    });
-  };
-
   // --- Text Editing ---
   const handleTextDblClick = (_e: Konva.KonvaEventObject<MouseEvent>, pageIndex: number, textItem: TextType) => {
     setCurrentPageIndex(pageIndex);
@@ -506,36 +560,15 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
         bookRef.current.pageFlip().flipPrev();
     }
   }, []);
+
+  const onFlip = useCallback((e: { data: number }) => {
+    setCurrentPageIndex(e.data);
+  }, []);
   return (
     <div style={{ backgroundImage: `url(${bookBG})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat'}} className="relative flex flex-col items-center justify-center h-[calc(100vh-140px)] w-full bg-transparent overflow-hidden">
       
       {/* Undo/Redo Controls */}
-      <div className="absolute left-4 top-4 flex gap-2 z-50">
-        <Button 
-          size="icon" 
-          variant="secondary" 
-          className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-          onClick={() => {
-            const undoTexts = undo();
-            if (undoTexts) updatePageData(currentPageIndex, 'texts', undoTexts);
-          }}
-          disabled={!canUndo}
-        >
-          <Undo size={18} />
-        </Button>
-        <Button 
-          size="icon" 
-          variant="secondary" 
-          className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-          onClick={() => {
-            const redoTexts = redo();
-            if (redoTexts) updatePageData(currentPageIndex, 'texts', redoTexts);
-          }}
-          disabled={!canRedo}
-        >
-          <Redo size={18} />
-        </Button>
-      </div>
+      
 
       {/* Zoom / View Controls */}
       <div className="absolute right-4 bottom-4 flex flex-col gap-2 z-50">
@@ -590,6 +623,7 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
             className="shadow-2xl"
             ref={bookRef}
             useMouseEvents={false}
+            onFlip={onFlip}
             startPage={0} 
             drawShadow={true} 
             flippingTime={1000} 

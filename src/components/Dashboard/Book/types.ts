@@ -19,8 +19,11 @@ export interface TextType {
   shadowBlur?: number;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
+  shadowOpacity?: number;
   stroke?: string;
   strokeWidth?: number;
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  listType?: 'none' | 'bullet' | 'number';
 }
 
 export interface LineType {

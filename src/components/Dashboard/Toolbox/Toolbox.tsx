@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   RotateCw, 
   Undo2, 
@@ -10,6 +10,7 @@ import {
   Bold, 
   Italic, 
   Underline, 
+  Check,
   Strikethrough, 
   AlignLeft, 
   AlignCenter, 
@@ -66,7 +67,54 @@ const ToolbarButton = ({ children, isActive, onClick, className = "" }: any) => 
   </button>
 );
 
+// Helper function to convert rgba to hex
+const rgbaToHex = (rgba: string): string => {
+  if (!rgba || !rgba.startsWith('rgba')) return rgba; // Return if not rgba, could be hex already
+  
+  const match = rgba.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
+  if (!match) return '#000000';
+  
+  const r = parseInt(match[1]);
+  const g = parseInt(match[2]);
+  const b = parseInt(match[3]);
+  
+  const toHex = (c: number) => ('0' + c.toString(16)).slice(-2);
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+
+// Helper function to convert hex to rgba
+const hexToRgba = (hex: string, opacity: number = 1): string => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return `rgba(0, 0, 0, ${opacity})`;
+  
+  const r = parseInt(result[1], 16);
+  const g = parseInt(result[2], 16);
+  const b = parseInt(result[3], 16);
+  
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
 const Divider = () => <div className="w-px h-6 bg-zinc-700 mx-2 self-center" />;
+
+const ColorSwatch = ({ color, isSelected, onClick }: { color: string, isSelected: boolean, onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    className={cn(`w-8 h-8 rounded-md transition-all duration-200 relative group`,
+      isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-800 scale-110 z-10' : 'hover:scale-105 border border-white/10'
+    )}
+    style={{ backgroundColor: color }}
+    aria-label={`Select color ${color}`}
+  >
+    {isSelected && (
+      <span className="absolute inset-0 flex items-center justify-center">
+        <Check className="w-4 h-4 text-white drop-shadow-md" strokeWidth={3} />
+      </span>
+    )}
+  </button>
+);
+
+
+
 
 interface ToolboxProps {
   activeTool: string;
@@ -86,6 +134,7 @@ interface ToolboxProps {
   canRedo?: boolean;
   updatePageData?: (pageIndex: number, key: string, data: any) => void;
   currentPageIndex?: number;
+  onAdvancedTextChange?: (property: string, value: any) => void;
 }
 
 const Toolbox = ({ 
@@ -105,16 +154,35 @@ const Toolbox = ({
   canUndo = false,
   canRedo = false,
   updatePageData,
-  currentPageIndex = 0
+  currentPageIndex = 0,
+  onAdvancedTextChange
 }: ToolboxProps) => {
   const [selectedBook, setSelectedBook] = useState(2);
   const [fontSize, setFontSize] = useState(24);
   const [fontFamily, setFontFamily] = useState('Roboto');
   const [activeFormats, setActiveFormats] = useState<string[]>([]);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [customColors, setCustomColors] = useState(['rgba(96, 165, 250, 1)']);
   const [selectedShape, setSelectedShape] = useState('square');
-  const [selectedTool, setSelectedTool] = useState('pencil');
+  const [selectedTool, setSelectedTool] = useState('select');
   const [brushSize, setBrushSize] = useState(strokeWidth);
+  const [textColor, setTextColor] = useState('rgba(0, 0, 0, 1)');
+  const [brushColor, setBrushColor] = useState(strokeColor);
+  const [shapeColor, setShapeColor] = useState(strokeColor);
+  const [opacity, setOpacity] = useState(100);
+  const [textAlignment, setTextAlignment] = useState<'left' | 'center' | 'right'>('left');
+  const [isBrushMode, setIsBrushMode] = useState(true);
+  const [lineHeight, setLineHeight] = useState(1.2);
+  const [letterSpacing, setLetterSpacing] = useState(0);
+  const [textTransform, setTextTransform] = useState<'none' | 'uppercase' | 'lowercase' | 'capitalize'>('none');
+  const [shadowColor, setShadowColor] = useState('rgba(0, 0, 0, 1)');
+  const [shadowBlur, setShadowBlur] = useState(0);
+  const [strokeOutlineColor, setStrokeOutlineColor] = useState('rgba(0, 0, 0, 1)');
+  const [strokeOutlineWidth, setStrokeOutlineWidth] = useState(0);
+
+  const pickerColor = useMemo(() => {
+    return rgbaToHex(strokeColor);
+  }, [strokeColor]);
 
   const toggleFormat = (format: string) => {
     setActiveFormats(prev => 
@@ -135,8 +203,21 @@ const Toolbox = ({
     onStrokeWidthChange?.(newSize);
   };
 
-  const handleColorChange = (color: any) => {
-    onStrokeColorChange?.(color.hex);
+  const handleColorChange = (color: any) => { // color is from react-color
+    const alpha = color.rgb.a !== undefined ? color.rgb.a : 1;
+    const newRgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${alpha})`;
+
+    // Update all color states for consistency
+    setTextColor(newRgba);
+    setBrushColor(newRgba);
+    setShapeColor(newRgba);
+    setShadowColor(newRgba);
+    setStrokeOutlineColor(newRgba);
+
+    // Sync opacity slider
+    setOpacity(Math.round(alpha * 100));
+
+    onStrokeColorChange?.(newRgba);
   };
 
   const handleBookSelect = (bookId: number, label: string) => {
@@ -149,9 +230,88 @@ const Toolbox = ({
     onShapeChange?.(shape);
   };
 
+  const handleAddColor = () => {
+    if (customColors.length < 14 && !customColors.includes(strokeColor)) {
+      setCustomColors([...customColors, strokeColor]); // strokeColor is now rgba
+    }
+  };
+
+  const handleRefresh = () => {
+    if (activeTool === 'Text') {
+      setFontSize(24);
+      setFontFamily('Roboto');
+      setActiveFormats([]);
+      setTextColor('rgba(0, 0, 0, 1)');
+      setTextAlignment('left');
+      onFontSizeChange?.(24);
+      onFontFamilyChange?.('Roboto');
+    } else if (activeTool === 'Brush') {
+      setBrushSize(5);
+      setBrushColor('#000000');
+      setIsBrushMode(true);
+      onStrokeWidthChange?.(5);
+    } else if (activeTool === 'Color') {
+      setOpacity(100);
+      onStrokeColorChange?.('rgba(0, 0, 0, 1)');
+    }
+  };
+
+  const handleOpacityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    setOpacity(value);
+
+    const rgbaMatch = strokeColor.match(/rgba\((\d+,\s*\d+,\s*\d+)/);
+    if (rgbaMatch) {
+      onStrokeColorChange?.(`rgba(${rgbaMatch[1]}, ${value / 100})`);
+    } else { // Assume hex
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(strokeColor);
+      if (result) {
+        const r = parseInt(result[1], 16);
+        const g = parseInt(result[2], 16);
+        const b = parseInt(result[3], 16);
+        onStrokeColorChange?.(`rgba(${r}, ${g}, ${b}, ${value / 100})`);
+      }
+    }
+  };
+
+  const handleAlignmentChange = (align: 'left' | 'center' | 'right') => {
+    setTextAlignment(align);
+  };
+
   const handleToolSelect = (tool: string) => {
     setSelectedTool(tool);
     onToolChange?.(tool);
+  };
+
+  const handleTextTransform = (type: 'uppercase' | 'lowercase' | 'capitalize') => {
+    setTextTransform(type);
+    onAdvancedTextChange?.('textTransform', type);
+  };
+
+  const handleListToggle = (type: 'bullet' | 'number') => {
+    onAdvancedTextChange?.('listType', type);
+  };
+
+  const handleLineHeightChange = (value: number) => {
+    setLineHeight(value);
+    onAdvancedTextChange?.('lineHeight', value);
+  };
+
+  const handleLetterSpacingChange = (value: number) => {
+    setLetterSpacing(value);
+    onAdvancedTextChange?.('letterSpacing', value);
+  };
+
+  const handleShadowChange = (property: string, value: any) => {
+    if (property === 'color') setShadowColor(value);
+    if (property === 'blur') setShadowBlur(value);
+    onAdvancedTextChange?.(`shadow${property.charAt(0).toUpperCase() + property.slice(1)}`, value);
+  };
+
+  const handleStrokeChange = (property: string, value: any) => {
+    if (property === 'color') setStrokeOutlineColor(value);
+    if (property === 'width') setStrokeOutlineWidth(value);
+    onAdvancedTextChange?.(property === 'color' ? 'stroke' : 'strokeWidth', value);
   };
 
   const renderBookSizePanel = () => (
@@ -189,7 +349,10 @@ const Toolbox = ({
 
   const renderTextPanel = () => (
     <>
-      <div className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group">
+      <div 
+        onClick={handleRefresh}
+        className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
+      >
         <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
         <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
       </div>
@@ -229,13 +392,13 @@ const Toolbox = ({
         <div 
           onClick={() => setShowColorPicker(!showColorPicker)}
           className="w-9 h-9 rounded-full cursor-pointer hover:scale-110 transition-transform shadow-lg ring-2 ring-transparent hover:ring-white/20" 
-          style={{ backgroundColor: strokeColor }}
+          style={{ backgroundColor: textColor }}
           title="Text Color"
         />
         {showColorPicker && (
           <div className="absolute top-12 left-0 z-50">
             <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
-            <SketchPicker color={strokeColor} onChange={handleColorChange} />
+            <SketchPicker color={textColor} onChange={handleColorChange} />
           </div>
         )}
       </div>
@@ -260,27 +423,35 @@ const Toolbox = ({
       <Divider />
 
       <div className="flex items-center gap-1">
-        <ToolbarButton isActive={false}><AlignLeft className="w-5 h-5" /></ToolbarButton>
-        <ToolbarButton isActive={false}><AlignCenter className="w-5 h-5" /></ToolbarButton>
-        <ToolbarButton isActive={false}><AlignRight className="w-5 h-5" /></ToolbarButton>
+        <ToolbarButton isActive={textAlignment === 'left'} onClick={() => handleAlignmentChange('left')}>
+          <AlignLeft className="w-5 h-5" />
+        </ToolbarButton>
+        <ToolbarButton isActive={textAlignment === 'center'} onClick={() => handleAlignmentChange('center')}>
+          <AlignCenter className="w-5 h-5" />
+        </ToolbarButton>
+        <ToolbarButton isActive={textAlignment === 'right'} onClick={() => handleAlignmentChange('right')}>
+          <AlignRight className="w-5 h-5" />
+        </ToolbarButton>
       </div>
       
       <Divider />
-      
-      <div className="flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800">
-        <ToolbarButton isActive={true} className="!h-8 !min-w-[32px] bg-indigo-500/20 text-indigo-300">
-          <span className="font-bold text-sm">Tt</span>
-        </ToolbarButton>
-        <ToolbarButton isActive={false} className="!h-8 !min-w-[32px]">
-          <span className="font-bold text-sm">TT</span>
-        </ToolbarButton>
-      </div>
 
-      <Divider />
-
+      {/* Text Transform */}
       <div className="flex items-center gap-1">
-        <ToolbarButton isActive={false}><List className="w-5 h-5" /></ToolbarButton>
-        <ToolbarButton isActive={false}><ListOrdered className="w-5 h-5" /></ToolbarButton>
+        <ToolbarButton isActive={textTransform === 'uppercase'} onClick={() => handleTextTransform('uppercase')}>
+          <span className="text-xs font-bold">AA</span>
+        </ToolbarButton>
+        <ToolbarButton isActive={textTransform === 'capitalize'} onClick={() => handleTextTransform('capitalize')}>
+          <span className="text-xs font-bold">Aa</span>
+        </ToolbarButton>
+      </div>
+
+      <Divider />
+
+      {/* Lists */}
+      <div className="flex items-center gap-1">
+        <ToolbarButton onClick={() => handleListToggle('bullet')}><List className="w-5 h-5" /></ToolbarButton>
+        <ToolbarButton onClick={() => handleListToggle('number')}><ListOrdered className="w-5 h-5" /></ToolbarButton>
       </div>
 
       <div className="flex-grow" />
@@ -320,62 +491,128 @@ const Toolbox = ({
     </>
   );
 
-  const renderColorPanel = () => (
-    <>
-      <div className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group">
-        <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
-        <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
-      </div>
+  const renderColorPanel = () => {
+    const basicColors = [
+      '#60a5fa', // Blue-400
+      '#67e8f9', // Cyan-300
+      '#86efac', // Green-300
+      '#ef4444', // Red-500
+      '#be185d', // Pink-700
+      '#9333ea', // Purple-600
+    ];
 
-      <Divider />
-
-      <div className="relative">
-        <div 
-          onClick={() => setShowColorPicker(!showColorPicker)}
-          className="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition-transform shadow-lg ring-2 ring-white/20"
-          style={{ background: 'conic-gradient(at center, red, yellow, lime, cyan, blue, magenta, red)' }}
-        />
-        {showColorPicker && (
-          <div className="absolute top-12 left-0 z-50">
-            <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
-            <SketchPicker color={strokeColor} onChange={handleColorChange} />
+    return (
+      <>
+      <div className='w-full flex justify-around'>
+        <div onClick={handleRefresh} className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group">
+          <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
+          <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
+        </div>
+        <Divider />
+        <div className="relative group cursor-pointer" onClick={() => setShowColorPicker(!showColorPicker)}>
+          <div className="w-16 h-16 rounded-full shadow-lg border-2 border-white/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
+            <div className="absolute inset-0 bg-[conic-gradient(from_90deg,red,yellow,lime,aqua,blue,magenta,red)]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 to-black/20 mix-blend-overlay" />
+            <div className="absolute inset-0 bg-radial-gradient(circle_at_30%_30%,white_0%,transparent_40%) opacity-50" />
           </div>
-        )}
-      </div>
-
-      <Divider />
-
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-zinc-400">Opacity</span>
-        <input 
-          type="range" 
-          min="0" 
-          max="100" 
-          defaultValue="100"
-          className="w-32 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
-        />
-      </div>
-
-      <div className="flex-grow" />
-
-      <div className="flex items-center gap-4 ml-4 px-4 border-l border-zinc-700">
-        <div className="flex flex-col items-center group cursor-pointer">
-          <Button 
-            size="icon" 
-            variant="secondary" 
-            className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-            onClick={() => {
-              const undoTexts = undo?.();
-              if (undoTexts) updatePageData?.(currentPageIndex, 'texts', undoTexts);
-            }}
-            disabled={!canUndo}
-          >
-            <Undo2 className="w-5 h-5" />
-          </Button>
-          <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Undo</span>
+          {showColorPicker && (
+            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50">
+              <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
+              <SketchPicker color={pickerColor} onChange={handleColorChange} />
+            </div>
+          )}
         </div>
-        <div className="flex flex-col items-center group cursor-pointer">
-          <Button 
+
+        <div className="flex flex-col gap-2 ml-4">
+          <h3 className="text-white text-xs font-medium tracking-wide">Basic colors</h3>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto max-w-[250px]">
+            {basicColors.map((color, index) => (
+              <ColorSwatch 
+                key={`basic-${index}`} 
+                color={color} 
+                isSelected={rgbaToHex(strokeColor) === color}
+                onClick={() => {
+                  const rgbaColor = hexToRgba(color, opacity / 100);
+                  setTextColor(rgbaColor);
+                  setBrushColor(rgbaColor);
+                  setShapeColor(rgbaColor);
+                  setShadowColor(rgbaColor);
+                  setStrokeOutlineColor(rgbaColor);
+                  onStrokeColorChange?.(rgbaColor);
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 ml-4">
+          <h3 className="text-white text-xs font-medium tracking-wide">Custom Colors</h3>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto max-w-[250px]">
+            {customColors.map((color) => (
+              <ColorSwatch 
+                key={color}
+                color={color}
+                isSelected={strokeColor === color}
+                onClick={() => {
+                  setTextColor(color);
+                  setBrushColor(color);
+                  setShapeColor(color);
+                  setShadowColor(color);
+                  setStrokeOutlineColor(color);
+                  onStrokeColorChange?.(color);
+                }}
+              />
+            ))}
+            <button 
+              onClick={handleAddColor}
+              className="w-8 h-8 rounded-md bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group"
+              title="Add current color"
+              disabled={customColors.length >= 14 || customColors.includes(strokeColor)}
+            >
+              <Plus className="w-4 h-4 text-slate-400 group-hover:text-white" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 items-center ml-4">
+          <span className="text-xs text-zinc-400">Opacity</span>
+          <div className="relative w-32 h-4 rounded-full overflow-hidden border border-white/20 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAAXNSR0IArs4c6QAAAB5JREFUKFNjZGRiYGD4/58BCQYwmoHBAABjIwH8qceD4wAAAABJRU5ErkJggg==')] bg-repeat">
+              <div 
+                className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent to-white pointer-events-none"
+                style={{ background: `linear-gradient(to right, transparent, ${strokeColor})` }}
+              />
+          </div>
+          <div className="relative w-32 h-6 flex items-center">
+               <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  value={opacity}
+                  onChange={handleOpacityChange}
+                  className="w-full h-1 bg-transparent rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-indigo-500 [&::-webkit-slider-thumb]:shadow-lg hover:[&::-webkit-slider-thumb]:scale-110 transition-all"
+                />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-indigo-500 pointer-events-none" style={{ width: `${opacity}%` }} />
+          </div>
+          <span className="text-xs text-zinc-300 w-8 text-center">{opacity}%</span>
+        </div>
+
+        <Divider />
+
+        <div className="flex items-center gap-4 ml-4 px-4">
+          <div className="flex flex-col items-center group cursor-pointer">
+            <Button 
+              size="icon" 
+              variant="secondary" 
+              className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
+              onClick={() => undo?.()}
+              disabled={!canUndo}
+            >
+              <Undo2 className="w-5 h-5" />
+            </Button>
+            <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Undo</span>
+          </div>
+          <div className="flex flex-col items-center group cursor-pointer">
+            <Button 
             size="icon" 
             variant="secondary" 
             className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
@@ -388,14 +625,19 @@ const Toolbox = ({
             <Redo2 className="w-5 h-5" />
           </Button>
           <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Redo</span>
+          </div>
         </div>
-      </div>
-    </>
-  );
+        </div>
+      </>
+    );
+  }
 
   const renderBrushPanel = () => (
     <>
-      <div className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group">
+      <div 
+        onClick={handleRefresh}
+        className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
+      >
         <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
         <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
       </div>
@@ -403,14 +645,21 @@ const Toolbox = ({
       <Divider />
 
       <div className="flex items-center gap-4">
-        <div className="flex flex-col items-center gap-1 group cursor-pointer">
-          <Brush className="text-white w-6 h-6" />
-          <span className="text-[10px] text-white">Brush</span>
-          <div className="h-0.5 w-4 bg-primary rounded-full"></div>
+        <div 
+          className="flex flex-col items-center gap-1 group cursor-pointer"
+          onClick={() => setIsBrushMode(true)}
+        >
+          <Brush className={cn("w-6 h-6", isBrushMode ? "text-white" : "text-gray-400")} />
+          <span className={cn("text-[10px]", isBrushMode ? "text-white" : "text-gray-400")}>Brush</span>
+          {isBrushMode && <div className="h-0.5 w-4 bg-primary rounded-full"></div>}
         </div>
-        <div className="flex flex-col items-center gap-1 group cursor-pointer" onClick={() => handleToolSelect('eraser')}>
-          <Eraser className="text-gray-400 w-6 h-6" />
-          <span className="text-[10px] text-gray-400">Eraser</span>
+        <div 
+          className="flex flex-col items-center gap-1 group cursor-pointer" 
+          onClick={() => { setIsBrushMode(false); handleToolSelect('eraser'); }}
+        >
+          <Eraser className={cn("w-6 h-6", !isBrushMode ? "text-white" : "text-gray-400")} />
+          <span className={cn("text-[10px]", !isBrushMode ? "text-white" : "text-gray-400")}>Eraser</span>
+          {!isBrushMode && <div className="h-0.5 w-4 bg-primary rounded-full"></div>}
         </div>
       </div>
 
@@ -430,12 +679,12 @@ const Toolbox = ({
         <div 
           onClick={() => setShowColorPicker(!showColorPicker)}
           className="w-9 h-9 rounded-full cursor-pointer hover:scale-110 transition-transform shadow-lg ring-2 ring-transparent hover:ring-white/20" 
-          style={{ backgroundColor: strokeColor }}
+          style={{ backgroundColor: brushColor }}
         />
         {showColorPicker && (
           <div className="absolute top-12 left-0 z-50">
             <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
-            <SketchPicker color={strokeColor} onChange={handleColorChange} />
+            <SketchPicker color={brushColor} onChange={handleColorChange} />
           </div>
         )}
       </div>
@@ -487,7 +736,10 @@ const Toolbox = ({
 
     return (
       <>
-        <div className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group">
+        <div 
+          onClick={handleRefresh}
+          className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
+        >
           <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
           <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
         </div>
@@ -506,6 +758,7 @@ const Toolbox = ({
             >
               <t.icon className={cn("w-5 h-5", selectedTool === t.id ? "text-primary" : "text-gray-300")} />
               <span className={cn("text-[9px]", selectedTool === t.id ? "text-white" : "text-gray-400")}>{t.label}</span>
+              {selectedTool === t.id && <div className="h-0.5 w-4 bg-primary rounded-full mt-0.5"></div>}
             </div>
           ))}
         </div>
@@ -560,7 +813,10 @@ const Toolbox = ({
 
     return (
       <>
-        <div className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group">
+        <div 
+          onClick={handleRefresh}
+          className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
+        >
           <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
           <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
         </div>
@@ -572,12 +828,13 @@ const Toolbox = ({
             <button
               key={s.id}
               className={cn(
-                "h-10 w-10 p-2 rounded-md transition-all",
+                "h-10 w-10 p-2 rounded-md transition-all active:scale-95",
                 selectedShape === s.id
                   ? "bg-primary text-white hover:bg-primary/90"
                   : "text-gray-400 hover:text-white hover:bg-white/10"
               )}
               onClick={() => handleShapeSelect(s.id)}
+              title={s.label}
             >
               <s.icon className="w-full h-full" />
             </button>
@@ -590,12 +847,13 @@ const Toolbox = ({
           <div 
             onClick={() => setShowColorPicker(!showColorPicker)}
             className="w-9 h-9 rounded-full cursor-pointer hover:scale-110 transition-transform shadow-lg ring-2 ring-transparent hover:ring-white/20" 
-            style={{ backgroundColor: strokeColor }}
+            style={{ backgroundColor: shapeColor }}
+            title="Shape Color"
           />
           {showColorPicker && (
             <div className="absolute top-12 left-0 z-50">
               <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
-              <SketchPicker color={strokeColor} onChange={handleColorChange} />
+              <SketchPicker color={shapeColor} onChange={handleColorChange} />
             </div>
           )}
         </div>

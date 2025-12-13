@@ -15,6 +15,12 @@ export default function Creator() {
   const [fontFamily, setFontFamily] = useState("Roboto");
   const bookRef = useRef<any>(null);
 
+  const handleAdvancedTextChange = (property: string, value: any) => {
+    if ((window as any).__handleAdvancedTextChange) {
+      (window as any).__handleAdvancedTextChange(property, value);
+    }
+  };
+
   return (
     <div>
       <SiteHeader />
@@ -39,6 +45,7 @@ export default function Creator() {
             canRedo={bookRef.current?.canRedo}
             updatePageData={bookRef.current?.updatePageData}
             currentPageIndex={bookRef.current?.currentPageIndex}
+            onAdvancedTextChange={handleAdvancedTextChange}
           />
           <Book
             ref={bookRef}
@@ -48,6 +55,7 @@ export default function Creator() {
             strokeWidth={strokeWidth}
             fontSize={fontSize}
             fontFamily={fontFamily}
+            onAdvancedTextChange={handleAdvancedTextChange}
           />
         </div>
         <div className="w-[10.2%] bg-white">
