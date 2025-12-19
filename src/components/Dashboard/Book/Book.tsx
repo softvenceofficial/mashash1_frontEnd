@@ -243,18 +243,24 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
 
   // Update page background when color tool is active
   useEffect(() => {
-    if (strokeColor) {
-      // This ensures color changes from the toolbox apply to the page background.
-      // Apply to the current page (which is the left page in a spread).
-      updatePageData(currentPageIndex, 'background', strokeColor);
+    let timeoutId: NodeJS.Timeout;
 
-      // If we are in a spread view (currentPageIndex will be odd), and the right page exists,
-      // apply the color to the right page as well.
-      if (currentPageIndex % 2 !== 0 && (currentPageIndex + 1) < pages.length) {
-        updatePageData(currentPageIndex + 1, 'background', strokeColor);
-      }
+    if (strokeColor && activeTool === 'Color') {
+      // Wait 50ms before applying the color to prevent flashing when switching tools
+      timeoutId = setTimeout(() => {
+        // This ensures color changes from the toolbox apply to the page background.
+        // Apply to the current page (which is the left page in a spread).
+        updatePageData(currentPageIndex, 'background', strokeColor);
+
+        // If we are in a spread view (currentPageIndex will be odd), and the right page exists,
+        // apply the color to the right page as well.
+        if (currentPageIndex % 2 !== 0 && (currentPageIndex + 1) < pages.length) {
+          updatePageData(currentPageIndex + 1, 'background', strokeColor);
+        }
+      }, 50);
     }
-  }, [strokeColor, currentPageIndex, updatePageData, pages.length]);
+    return () => clearTimeout(timeoutId);
+  }, [strokeColor, currentPageIndex, updatePageData, pages.length, activeTool]);
 
 
   // Handle advanced text changes from Toolbox

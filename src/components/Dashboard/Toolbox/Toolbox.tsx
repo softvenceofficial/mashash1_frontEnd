@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   RotateCw, 
   Undo2, 
@@ -170,10 +170,37 @@ const Toolbox = ({
   const [textColor, setTextColor] = useState('rgba(0, 0, 0, 1)');
   const [brushColor, setBrushColor] = useState(strokeColor);
   const [shapeColor, setShapeColor] = useState(strokeColor);
+  const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const [opacity, setOpacity] = useState(100);
   const [textAlignment, setTextAlignment] = useState<'left' | 'center' | 'right'>('left');
   const [isBrushMode, setIsBrushMode] = useState(true);
   const [textTransform, setTextTransform] = useState<'none' | 'uppercase' | 'lowercase' | 'capitalize'>('none');
+
+  // Helper to extract opacity for the slider when switching
+  const parseOpacity = (rgbaString: string) => {
+    const match = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/);
+    if (match && match[4]) {
+      return Math.round(parseFloat(match[4]) * 100);
+    }
+    return 100;
+  };
+
+  // FIX: Restore the saved local color when switching tools
+  useEffect(() => {
+    if (activeTool === 'Text') {
+      onStrokeColorChange?.(textColor);
+      setOpacity(parseOpacity(textColor)); 
+    } else if (activeTool === 'Brush') {
+      onStrokeColorChange?.(brushColor);
+      setOpacity(parseOpacity(brushColor));
+    } else if (activeTool === 'Shapes') {
+      onStrokeColorChange?.(shapeColor);
+      setOpacity(parseOpacity(shapeColor));
+    } else if (activeTool === 'Color') {
+      onStrokeColorChange?.(backgroundColor);
+      setOpacity(parseOpacity(backgroundColor));
+    }
+  }, [activeTool]);
 
   const pickerColor = useMemo(() => {
     return rgbaToHex(strokeColor);
@@ -202,13 +229,19 @@ const Toolbox = ({
     const alpha = color.rgb.a !== undefined ? color.rgb.a : 1;
     const newRgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${alpha})`;
 
-    // Update all color states for consistency
-    setTextColor(newRgba);
-    setBrushColor(newRgba);
-    setShapeColor(newRgba);
-
     // Sync opacity slider
     setOpacity(Math.round(alpha * 100));
+
+    // FIX: Only update the local state for the currently active tool
+    if (activeTool === 'Text') {
+      setTextColor(newRgba);
+    } else if (activeTool === 'Brush') {
+      setBrushColor(newRgba);
+    } else if (activeTool === 'Shapes') {
+      setShapeColor(newRgba);
+    } else if (activeTool === 'Color') {
+      setBackgroundColor(newRgba);
+    }
 
     onStrokeColorChange?.(newRgba);
   };
@@ -508,9 +541,7 @@ const Toolbox = ({
                 isSelected={rgbaToHex(strokeColor) === color}
                 onClick={() => {
                   const rgbaColor = hexToRgba(color, opacity / 100);
-                  setTextColor(rgbaColor);
-                  setBrushColor(rgbaColor);
-                  setShapeColor(rgbaColor);
+                  setBackgroundColor(rgbaColor);
                   onStrokeColorChange?.(rgbaColor);
                 }}
               />
@@ -527,9 +558,7 @@ const Toolbox = ({
                 color={color}
                 isSelected={strokeColor === color}
                 onClick={() => {
-                  setTextColor(color);
-                  setBrushColor(color);
-                  setShapeColor(color);
+                  setBackgroundColor(color);
                   onStrokeColorChange?.(color);
                 }}
               />
