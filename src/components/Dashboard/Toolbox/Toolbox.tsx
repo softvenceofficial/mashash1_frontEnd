@@ -29,6 +29,9 @@ import {
   Star,
   Minus as LineIcon,
   MoveRight,
+  RefreshCcw,
+  PenTool,
+  PaintBucket,
 } from 'lucide-react';
 import { SketchPicker } from 'react-color';
 import { cn } from '@/lib/utils';
@@ -67,6 +70,37 @@ const ToolbarButton = ({ children, isActive, onClick, className = "" }: any) => 
     {children}
   </button>
 );
+
+const ToolItem = ({ isActive, label, icon, onClick }: any) => {
+  return (
+    <div 
+      onClick={onClick}
+      className={`group flex flex-col items-center gap-2 cursor-pointer relative transition-all duration-300 ${isActive ? '-translate-y-1' : ''}`}
+    >
+      {/* Icon Container with Glow effect if active */}
+      <div className={`relative p-2 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}>
+        {isActive && (
+          <div className="absolute inset-0 bg-indigo-500/20 blur-lg rounded-full" />
+        )}
+        <div className="relative z-10">
+          {icon}
+        </div>
+      </div>
+
+      {/* Label */}
+      <span className={`text-[10px] font-medium tracking-wide transition-colors ${isActive ? 'text-indigo-100' : 'text-slate-400 group-hover:text-slate-200'}`}>
+        {label}
+      </span>
+
+      {/* Active Indicator Underline */}
+      <div 
+        className={`h-0.5 w-6 rounded-full transition-all duration-300 mx-auto mt-1
+          ${isActive ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-transparent w-0'}
+        `}
+      />
+    </div>
+  );
+};
 
 // Helper function to convert rgba to hex
 const rgbaToHex = (rgba: string): string => {
@@ -632,99 +666,150 @@ const Toolbox = ({
     );
   }
 
-  const renderBrushPanel = () => (
-    <>
-      <div 
-        onClick={handleRefresh}
-        className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
-      >
-        <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
-        <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
-      </div>
+  const renderBrushPanel = () => {
+    // Predefined sizes for the circles
+    const brushSizes = [8, 16, 24, 32, 48];
 
-      <Divider />
+    // Handle hue change from slider
+    const handleHueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const hue = e.target.value;
+      const color = `hsla(${hue}, 100%, 50%, 1)`;
+      // Note: You might want a conversion to RGBA here if your app strictly requires RGBA
+      // For now, passing the HSLA string to your color handler
+      setBrushColor(color);
+      onStrokeColorChange?.(color); 
+    };
 
-      <div className="flex items-center gap-4">
+    return (
+      <div className="flex w-full h-full items-center justify-between px-2 gap-4 overflow-x-auto">
+        
+        {/* Left Section: Refresh */}
         <div 
-          className="flex flex-col items-center gap-1 group cursor-pointer"
-          onClick={() => setIsBrushMode(true)}
+          onClick={handleRefresh}
+          className="flex flex-col items-center gap-1.5 cursor-pointer hover:text-white transition-colors group px-2"
         >
-          <Brush className={cn("w-6 h-6", isBrushMode ? "text-white" : "text-gray-400")} />
-          <span className={cn("text-[10px]", isBrushMode ? "text-white" : "text-gray-400")}>Brush</span>
-          {isBrushMode && <div className="h-0.5 w-4 bg-primary rounded-full"></div>}
-        </div>
-        <div 
-          className="flex flex-col items-center gap-1 group cursor-pointer" 
-          onClick={() => { setIsBrushMode(false); handleToolSelect('eraser'); }}
-        >
-          <Eraser className={cn("w-6 h-6", !isBrushMode ? "text-white" : "text-gray-400")} />
-          <span className={cn("text-[10px]", !isBrushMode ? "text-white" : "text-gray-400")}>Eraser</span>
-          {!isBrushMode && <div className="h-0.5 w-4 bg-primary rounded-full"></div>}
-        </div>
-      </div>
-
-      <Divider />
-
-      <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700 mx-2">
-        <button onClick={() => handleBrushSizeChange(-1)} className="h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg">
-          <Minus className="w-4 h-4" />
-        </button>
-        <div className="w-10 text-center text-sm font-medium text-zinc-200 font-mono">{brushSize}</div>
-        <button onClick={() => handleBrushSizeChange(1)} className="h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg">
-          <Plus className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className="relative">
-        <div 
-          onClick={() => setShowColorPicker(!showColorPicker)}
-          className="w-9 h-9 rounded-full cursor-pointer hover:scale-110 transition-transform shadow-lg ring-2 ring-transparent hover:ring-white/20" 
-          style={{ backgroundColor: brushColor }}
-        />
-        {showColorPicker && (
-          <div className="absolute top-12 left-0 z-50">
-            <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
-            <SketchPicker color={brushColor} onChange={handleColorChange} />
+          <div className="p-2 rounded-lg bg-zinc-700/50 group-hover:bg-zinc-700 transition-colors">
+            <RefreshCcw size={18} className="text-slate-300 group-hover:text-white" />
           </div>
-        )}
-      </div>
+          <span className="text-[10px] font-medium tracking-wide opacity-80">Refresh</span>
+        </div>
 
-      <div className="flex-grow" />
+        {/* Divider */}
+        <div className="h-10 w-px bg-zinc-700 hidden sm:block"></div>
 
-      <div className="flex items-center gap-4 ml-4 px-4 border-l border-zinc-700">
-        <div className="flex flex-col items-center group cursor-pointer">
-          <Button 
-            size="icon" 
-            variant="secondary" 
-            className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
+        {/* Middle Section: Tools & Settings */}
+        <div className="flex flex-1 items-center justify-center gap-6 lg:gap-10">
+          
+          {/* Tool Selector */}
+          <div className="flex items-end gap-4">
+            <ToolItem 
+              isActive={isBrushMode} 
+              label="Brush" 
+              onClick={() => { setIsBrushMode(true); }}
+              icon={<Brush size={20} className={isBrushMode ? "text-indigo-200" : "text-gray-400"} />}
+            />
+            {/* Using the 'Pen' slot for Eraser functionality based on your existing logic */}
+            <ToolItem 
+              isActive={!isBrushMode} 
+              label="Eraser" 
+              onClick={() => { setIsBrushMode(false); handleToolSelect('eraser'); }}
+              icon={<Eraser size={20} className={!isBrushMode ? "text-indigo-200" : "text-gray-400"} />}
+            />
+            {/* Visual placeholder for Fill if you don't have logic for it yet */}
+            <ToolItem 
+              isActive={false} 
+              label="Fill" 
+              onClick={() => { /* Add Fill Logic Later */ }}
+              icon={<PaintBucket size={20} className="text-gray-400" />}
+            />
+          </div>
+
+          {/* Size & Slider Group */}
+          <div className="flex items-center gap-6">
+            
+            {/* Brush Size Circles */}
+            <div className="flex items-center gap-3">
+              {brushSizes.map((size) => (
+                <button
+                  key={size}
+                  onClick={() => {
+                    setBrushSize(size);
+                    onStrokeWidthChange?.(size);
+                  }}
+                  className={`rounded-full transition-all duration-300 flex items-center justify-center
+                    ${brushSize === size 
+                      ? 'bg-slate-200 border-2 border-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' 
+                      : 'bg-zinc-600 hover:bg-zinc-500 opacity-40 hover:opacity-70'
+                    }`}
+                  style={{ width: Math.max(12, size / 1.5), height: Math.max(12, size / 1.5) }} // Scaled down slightly for UI fit
+                  title={`Size: ${size}px`}
+                />
+              ))}
+            </div>
+
+            {/* Color/Gradient Slider */}
+            <div className="flex flex-col gap-2 w-48">
+              {/* Gradient Bar Background */}
+              <div className="relative h-4 w-full">
+                 <div className="absolute inset-0 rounded-full bg-gradient-to-r from-red-500 via-green-500 via-blue-500 to-purple-500 shadow-inner ring-1 ring-white/10" />
+                 
+                 {/* Slider Input */}
+                 <input 
+                  type="range" 
+                  min="0" 
+                  max="360" 
+                  defaultValue="0"
+                  onChange={handleHueChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                
+                {/* Custom Thumb Indicator (Visual only - controlled by input) */}
+                <div 
+                   className="pointer-events-none absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full border-2 border-zinc-800 shadow-md transition-all"
+                   // Note: A real implementation would need state to track the thumb position accurately based on hue
+                   style={{ left: `calc(${parseInt(brushColor.match(/\d+/)?.[0] || '0') / 360 * 100}% - 8px)` }} 
+                />
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="h-10 w-px bg-zinc-700 hidden sm:block"></div>
+
+        {/* Right Section: Undo/Redo */}
+        <div className="flex items-center gap-3">
+          <div 
             onClick={() => {
               const undoTexts = undo?.();
               if (undoTexts) updatePageData?.(currentPageIndex, 'texts', undoTexts);
             }}
-            disabled={!canUndo}
+            className={`flex flex-col items-center gap-1.5 cursor-pointer transition-colors group ${!canUndo ? 'opacity-30 pointer-events-none' : 'hover:text-white'}`}
           >
-            <Undo2 className="w-5 h-5" />
-          </Button>
-          <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Undo</span>
-        </div>
-        <div className="flex flex-col items-center group cursor-pointer">
-          <Button 
-            size="icon" 
-            variant="secondary" 
-            className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-            onClick={() => {
+            <div className="p-2 rounded-lg bg-zinc-700/50 group-hover:bg-zinc-700 transition-colors">
+              <Undo2 size={18} className="text-slate-300 group-hover:text-white" />
+            </div>
+            <span className="text-[10px] font-medium tracking-wide opacity-80">Undo</span>
+          </div>
+          
+          <div 
+             onClick={() => {
               const redoTexts = redo?.();
               if (redoTexts) updatePageData?.(currentPageIndex, 'texts', redoTexts);
             }}
-            disabled={!canRedo}
+            className={`flex flex-col items-center gap-1.5 cursor-pointer transition-colors group ${!canRedo ? 'opacity-30 pointer-events-none' : 'hover:text-white'}`}
           >
-            <Redo2 className="w-5 h-5" />
-          </Button>
-          <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Redo</span>
+             <div className="p-2 rounded-lg bg-zinc-700/50 group-hover:bg-zinc-700 transition-colors">
+              <Redo2 size={18} className="text-slate-300 group-hover:text-white" />
+            </div>
+            <span className="text-[10px] font-medium tracking-wide opacity-80">Redo</span>
+          </div>
         </div>
+
       </div>
-    </>
-  );
+    );
+  };
 
   const renderToolPanel = () => {
     const tools = [
