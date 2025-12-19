@@ -61,7 +61,7 @@ export const InPlaceTextEditor = ({ textItem, onUpdate, onBlur }: InPlaceTextEdi
         fontStyle: textItem.fontStyle?.includes('italic') ? 'italic' : 'normal',
         textDecoration: textItem.textDecoration,
         textAlign: textItem.textAlign || 'left',
-        color: textItem.fill,
+        color: '#000',
         background: 'rgba(255, 255, 255, 0.95)',
         border: '2px solid #3B82F6',
         borderRadius: '4px',
