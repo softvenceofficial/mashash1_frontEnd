@@ -18,7 +18,6 @@ import {
   AlignRight,
   List,
   ListOrdered,
-  Brush,
   Eraser,
   MousePointer2,
   Hand,
@@ -32,6 +31,7 @@ import {
   RefreshCcw,
   PenTool,
   PaintBucket,
+  Brush,
 } from 'lucide-react';
 import { SketchPicker } from 'react-color';
 import { cn } from '@/lib/utils';
@@ -45,6 +45,15 @@ import book7 from "@/assets/images/Books/8x10.png";
 import book8 from "@/assets/images/Books/12x9.png";
 import book9 from "@/assets/images/Books/Square.png";
 import { Button } from '@/components/ui/button';
+import BrushIcon from '@/assets/icons/BrushIcon.svg';
+import { ReactSVG } from 'react-svg';
+
+export enum DrawingMode {
+  BRUSH = 'brush',
+  FILL = 'fill',
+  ERASER = 'eraser',
+}
+
 
 const BOOK_SIZES = [
   { id: 1, label: "5 x 7", image: book1 },
@@ -58,7 +67,25 @@ const BOOK_SIZES = [
   { id: 9, label: "Square", image: book9 },
 ];
 
-const ToolbarButton = ({ children, isActive, onClick, className = "" }: any) => (
+const DRAWING_MODE_CONFIG = {
+  [DrawingMode.BRUSH]: {
+    minSize: 1,
+    maxSize: 300,
+    defaultSize: 5
+  },
+  [DrawingMode.FILL]: {
+    minSize: 3000,
+    maxSize: 3000,
+    defaultSize: 3000
+  },
+  [DrawingMode.ERASER]: {
+    minSize: 0,
+    maxSize: 300,
+    defaultSize: 20
+  }
+} as const;
+
+const ToolbarButton = ({ children, isActive, onClick, className = "", ...props }: any) => (
   <button
     onClick={onClick}
     className={cn(
@@ -66,6 +93,7 @@ const ToolbarButton = ({ children, isActive, onClick, className = "" }: any) => 
       isActive ? 'bg-[#6366f1] text-white' : 'text-gray-400 hover:text-white',
       className
     )}
+    {...props}
   >
     {children}
   </button>
@@ -170,6 +198,11 @@ interface ToolboxProps {
   updatePageData?: (pageIndex: number, key: string, data: any) => void;
   currentPageIndex?: number;
   onAdvancedTextChange?: (property: string, value: any) => void;
+  drawingMode?: DrawingMode;
+  onDrawingModeChange?: (mode: DrawingMode) => void;
+  onBrushOptionChange?: (option: string, value: any) => void;
+  onFillAction?: (color: string) => void;
+  onBackgroundChange?: (color: string) => void;
 }
 
 const Toolbox = ({ 
@@ -190,7 +223,12 @@ const Toolbox = ({
   canRedo = false,
   updatePageData,
   currentPageIndex = 0,
-  onAdvancedTextChange
+  onAdvancedTextChange,
+  onDrawingModeChange,
+  onBrushOptionChange,
+  onFillAction,
+  onBackgroundChange,
+  drawingMode
 }: ToolboxProps) => {
   const [selectedBook, setSelectedBook] = useState(2);
   const [fontSize, setFontSize] = useState(24);
@@ -210,6 +248,11 @@ const Toolbox = ({
   const [isBrushMode, setIsBrushMode] = useState(true);
   const [textTransform, setTextTransform] = useState<'none' | 'uppercase' | 'lowercase' | 'capitalize'>('none');
 
+  // Brush specific states
+  const [internalDrawingMode, setInternalDrawingMode] = useState<DrawingMode>(DrawingMode.BRUSH);
+  const currentDrawingMode = drawingMode ?? internalDrawingMode;
+  const [brushOpacity, setBrushOpacity] = useState(100);
+
   // Helper to extract opacity for the slider when switching
   const parseOpacity = (rgbaString: string) => {
     const match = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/);
@@ -219,14 +262,34 @@ const Toolbox = ({
     return 100;
   };
 
+  const validateBrushSize = (mode: DrawingMode, currentSize: number): number => {
+    const config = DRAWING_MODE_CONFIG[mode];
+    
+    if (mode === DrawingMode.FILL) {
+      return config.defaultSize; // Always 3000px for fill
+    }
+    
+    // For brush and eraser, clamp to min/max
+    return Math.max(
+      config.minSize,
+      Math.min(config.maxSize, currentSize)
+    );
+  };
+
   // FIX: Restore the saved local color when switching tools
   useEffect(() => {
     if (activeTool === 'Text') {
       onStrokeColorChange?.(textColor);
       setOpacity(parseOpacity(textColor)); 
     } else if (activeTool === 'Brush') {
+      const validatedSize = validateBrushSize(currentDrawingMode, brushSize);
+      if (validatedSize !== brushSize) {
+        setBrushSize(validatedSize);
+        onStrokeWidthChange?.(validatedSize);
+      }
       onStrokeColorChange?.(brushColor);
       setOpacity(parseOpacity(brushColor));
+      setBrushOpacity(parseOpacity(brushColor));
     } else if (activeTool === 'Shapes') {
       onStrokeColorChange?.(shapeColor);
       setOpacity(parseOpacity(shapeColor));
@@ -271,6 +334,7 @@ const Toolbox = ({
       setTextColor(newRgba);
     } else if (activeTool === 'Brush') {
       setBrushColor(newRgba);
+      setBrushOpacity(Math.round(alpha * 100));
     } else if (activeTool === 'Shapes') {
       setShapeColor(newRgba);
     } else if (activeTool === 'Color') {
@@ -278,6 +342,12 @@ const Toolbox = ({
     }
 
     onStrokeColorChange?.(newRgba);
+  };
+
+  const handleBrushColorChange = (color: any) => {
+    const rgbaColor = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${brushOpacity / 100})`;
+    setBrushColor(rgbaColor);
+    onStrokeColorChange?.(rgbaColor);
   };
 
   const handleBookSelect = (bookId: number, label: string) => {
@@ -306,10 +376,14 @@ const Toolbox = ({
       onFontSizeChange?.(24);
       onFontFamilyChange?.('Roboto');
     } else if (activeTool === 'Brush') {
-      setBrushSize(5);
+      const config = DRAWING_MODE_CONFIG[DrawingMode.BRUSH];
+      setBrushSize(config.defaultSize);
       setBrushColor('#000000');
       setIsBrushMode(true);
-      onStrokeWidthChange?.(5);
+      if (drawingMode === undefined) setInternalDrawingMode(DrawingMode.BRUSH);
+      setBrushOpacity(100);
+      onStrokeWidthChange?.(config.defaultSize);
+      onDrawingModeChange?.(DrawingMode.BRUSH);
     } else if (activeTool === 'Color') {
       setOpacity(100);
       onStrokeColorChange?.('rgba(0, 0, 0, 1)');
@@ -351,9 +425,6 @@ const Toolbox = ({
   const handleListToggle = (type: 'bullet' | 'number') => {
     onAdvancedTextChange?.('listType', type);
   };
-
-
-
 
 
   const renderBookSizePanel = () => (
@@ -667,146 +738,371 @@ const Toolbox = ({
   }
 
   const renderBrushPanel = () => {
-    // Predefined sizes for the circles
-    const brushSizes = [8, 16, 24, 32, 48];
-
-    // Handle hue change from slider
-    const handleHueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const hue = e.target.value;
-      const color = `hsla(${hue}, 100%, 50%, 1)`;
-      // Note: You might want a conversion to RGBA here if your app strictly requires RGBA
-      // For now, passing the HSLA string to your color handler
-      setBrushColor(color);
-      onStrokeColorChange?.(color); 
+    const drawingModes = [
+      { id: DrawingMode.BRUSH, label: 'Brush', icon: <ReactSVG src={BrushIcon}/>, description: 'Size: 1-300px' },
+      { id: DrawingMode.FILL, label: 'Fill', icon: PaintBucket, description: 'Full page (3000px)' },
+      { id: DrawingMode.ERASER, label: 'Eraser', icon: Eraser, description: 'Size: 0-300px' },
+    ];
+ 
+    // ENHANCED: Better mode change handler
+    const handleModeChange = (mode: DrawingMode) => {
+      if (drawingMode === undefined) setInternalDrawingMode(mode);
+      onDrawingModeChange?.(mode);
+      
+      // Get size configuration for the new mode
+      const config = DRAWING_MODE_CONFIG[mode];
+      const newSize = config.defaultSize;
+      
+      // Update brush size based on mode
+      setBrushSize(newSize);
+      onStrokeWidthChange?.(newSize);
+      
+      // Show color picker immediately for Fill mode
+      if (mode === DrawingMode.FILL) {
+        setShowColorPicker(true);
+      } else {
+        setShowColorPicker(false);
+      }
+      
+      // Additional actions based on mode
+      switch(mode) {
+        case DrawingMode.ERASER:
+          // Set color to canvas background color (or white for eraser)
+          onStrokeColorChange?.('#ffffff'); // Or use current canvas bg
+          break;
+        case DrawingMode.FILL:
+          // Show color picker for fill
+          setShowColorPicker(true);
+          break;
+        case DrawingMode.BRUSH:
+          // Restore previous brush color
+          onStrokeColorChange?.(brushColor);
+          break;
+      }
     };
 
+    // ENHANCED: Better fill handler
+    const handleFill = () => {
+      if (currentDrawingMode === DrawingMode.FILL) {
+        onFillAction?.(brushColor);
+        onBackgroundChange?.(brushColor);
+      }
+    };
+
+    // ENHANCED: Color change handler specifically for fill
+    const handleFillColorChange = (color: any) => {
+      const rgbaColor = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${brushOpacity / 100})`;
+      setBrushColor(rgbaColor);
+      
+      // If we're in fill mode, update immediately
+      if (currentDrawingMode === DrawingMode.FILL) {
+        onStrokeColorChange?.(rgbaColor);
+        // Optional: Auto-apply fill could go here
+      }
+    };
+  
     return (
-      <div className="flex w-full h-full items-center justify-between px-2 gap-4 overflow-x-auto">
+      <div className="w-full h-full flex flex-row items-center gap-6 px-4">
         
-        {/* Left Section: Refresh */}
-        <div 
-          onClick={handleRefresh}
-          className="flex flex-col items-center gap-1.5 cursor-pointer hover:text-white transition-colors group px-2"
-        >
-          <div className="p-2 rounded-lg bg-zinc-700/50 group-hover:bg-zinc-700 transition-colors">
-            <RefreshCcw size={18} className="text-slate-300 group-hover:text-white" />
+        {/* Section 1: Drawing Modes */}
+        <div className="flex items-center gap-2 border-r border-zinc-700 pr-6">
+
+          <div className="flex gap-1">
+            {drawingModes.map((mode) => (
+              <ToolbarButton
+                key={mode.id}
+                isActive={currentDrawingMode === mode.id}
+                onClick={() => handleModeChange(mode.id)}
+                className={cn(
+                  "flex-col h-14 px-3 min-w-[50px] relative",
+                  currentDrawingMode === mode.id && mode.id === DrawingMode.FILL
+                    ? "ring-2 ring-indigo-400 ring-offset-1 ring-offset-zinc-800"
+                    : ""
+                )}
+                title={mode.label}
+              >
+                <mode.icon className={cn(
+                  "w-4 h-4",
+                  currentDrawingMode === mode.id && mode.id === DrawingMode.FILL
+                    ? "text-indigo-300"
+                    : ""
+                )} />
+                <span className="text-[10px] mt-1 font-medium">{mode.label}</span>
+                <span className="text-[8px] text-zinc-400 mt-0.5">{mode.description}</span>
+                
+                {/* Visual indicator for active mode */}
+                {currentDrawingMode === mode.id && (
+                  <div className={cn(
+                    "absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full",
+                    mode.id === DrawingMode.FILL
+                      ? "bg-indigo-400 animate-pulse"
+                      : "bg-indigo-400"
+                  )} />
+                )}
+              </ToolbarButton>
+            ))}
           </div>
-          <span className="text-[10px] font-medium tracking-wide opacity-80">Refresh</span>
         </div>
-
-        {/* Divider */}
-        <div className="h-10 w-px bg-zinc-700 hidden sm:block"></div>
-
-        {/* Middle Section: Tools & Settings */}
-        <div className="flex flex-1 items-center justify-center gap-6 lg:gap-10">
+  
+        {/* Section 2: Properties */}
+        <div className="flex items-center gap-6 flex-1">
           
-          {/* Tool Selector */}
-          <div className="flex items-end gap-4">
-            <ToolItem 
-              isActive={isBrushMode} 
-              label="Brush" 
-              onClick={() => { setIsBrushMode(true); }}
-              icon={<Brush size={20} className={isBrushMode ? "text-indigo-200" : "text-gray-400"} />}
-            />
-            {/* Using the 'Pen' slot for Eraser functionality based on your existing logic */}
-            <ToolItem 
-              isActive={!isBrushMode} 
-              label="Eraser" 
-              onClick={() => { setIsBrushMode(false); handleToolSelect('eraser'); }}
-              icon={<Eraser size={20} className={!isBrushMode ? "text-indigo-200" : "text-gray-400"} />}
-            />
-            {/* Visual placeholder for Fill if you don't have logic for it yet */}
-            <ToolItem 
-              isActive={false} 
-              label="Fill" 
-              onClick={() => { /* Add Fill Logic Later */ }}
-              icon={<PaintBucket size={20} className="text-gray-400" />}
-            />
-          </div>
+          {/* Color & Opacity Group */}
+          <div className="flex items-center gap-4">
+            {/* Color Picker */}
+            <div className="relative group">
+              <div
+                onClick={() => {
+                  if (currentDrawingMode === DrawingMode.FILL) {
+                    handleFill();
+                  } else if (currentDrawingMode !== DrawingMode.ERASER) {
+                    setShowColorPicker(!showColorPicker);
+                  }
+                }}
+                className={cn(
+                  "w-10 h-10 rounded-full cursor-pointer border-2 shadow-lg hover:scale-105 transition-transform duration-200 relative overflow-hidden",
+                  currentDrawingMode === DrawingMode.FILL 
+                    ? "border-indigo-400 border-4 animate-pulse" 
+                    : currentDrawingMode === DrawingMode.ERASER
+                    ? "border-gray-400"
+                    : "border-white/20"
+                )}
+                style={{ 
+                  backgroundColor: currentDrawingMode === DrawingMode.ERASER 
+                    ? '#f0f0f0' // Gray for eraser
+                    : brushColor 
+                }}
+                title={
+                  currentDrawingMode === DrawingMode.FILL 
+                    ? "Click to fill page" 
+                    : currentDrawingMode === DrawingMode.ERASER
+                    ? "Eraser Active"
+                    : "Brush Color"
+                }
+              >
+                  {/* Fill icon overlay for Fill mode */}
+                  {currentDrawingMode === DrawingMode.FILL && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <PaintBucket className="w-4 h-4 text-white/90 drop-shadow-lg" />
+                    </div>
+                  )}
+              </div>
+              
+              {/* Different badge for different modes */}
+              <div className="absolute -bottom-1 -right-1 bg-zinc-800 rounded-full p-1 pointer-events-none border border-zinc-700">
+                {currentDrawingMode === DrawingMode.ERASER ? (
+                  <Eraser className="w-2 h-2 text-white" />
+                ) : currentDrawingMode === DrawingMode.FILL ? (
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full" />
+                ) : (
+                  <div className="w-2 h-2 bg-white rounded-full" />
+                )}
+              </div>
 
-          {/* Size & Slider Group */}
-          <div className="flex items-center gap-6">
+              {showColorPicker && currentDrawingMode !== DrawingMode.ERASER && (
+                <div className="absolute top-12 left-0 z-50">
+                  <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
+                  <div className="relative bg-zinc-800 rounded-lg shadow-2xl p-2 border border-zinc-700">
+                    <SketchPicker
+                      color={rgbaToHex(brushColor)}
+                      onChangeComplete={(color) => {
+                        if (currentDrawingMode === DrawingMode.FILL) {
+                          handleFillColorChange(color);
+                        } else {
+                          const rgbaColor = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${brushOpacity / 100})`;
+                          setBrushColor(rgbaColor);
+                          onStrokeColorChange?.(rgbaColor);
+                        }
+                      }}
+                      disableAlpha={true}
+                    />
+                    {currentDrawingMode === DrawingMode.FILL && (
+                      <div className="mt-2 px-2 py-1 bg-indigo-500/20 rounded text-xs text-indigo-200 border border-indigo-500/30">
+                        <div className="flex items-center gap-1">
+                          <PaintBucket className="w-3 h-3" />
+                          <span>Selected color will fill the entire page</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Opacity Slider - Hide for Eraser mode */}
+            {currentDrawingMode !== DrawingMode.ERASER && (
+              <div className="flex flex-col gap-1 w-28">
+                <div className="flex justify-between items-center px-1">
+                  <span className={cn(
+                    "text-[10px] font-medium",
+                    currentDrawingMode === DrawingMode.FILL ? "text-indigo-300" : "text-zinc-400"
+                  )}>
+                    {currentDrawingMode === DrawingMode.FILL ? "Fill Opacity" : "Opacity"}
+                  </span>
+                  <span className="text-[10px] text-white font-mono">{brushOpacity}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  value={brushOpacity}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    setBrushOpacity(value);
+                    const match = brushColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
+                    if (match) {
+                      const newColor = `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${value / 100})`;
+                      setBrushColor(newColor);
+                      onStrokeColorChange?.(newColor);
+                    }
+                  }}
+                  className={cn(
+                    "w-full h-1.5 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full hover:[&::-webkit-slider-thumb]:scale-110 transition-all",
+                    currentDrawingMode === DrawingMode.FILL
+                      ? "bg-indigo-900/30 [&::-webkit-slider-thumb]:bg-indigo-400"
+                      : "bg-zinc-600 [&::-webkit-slider-thumb]:bg-white"
+                  )}
+                />
+              </div>
+            )}
+          </div>
+  
+          <Divider />
+
+          {/* Size Controls */}
+          <div className="flex flex-col gap-1 flex-1 max-w-[200px]">
+            <div className="flex justify-between items-center px-1">
+              <span className={cn(
+                "text-[10px] font-medium",
+                currentDrawingMode === DrawingMode.FILL ? "text-indigo-300" : "text-zinc-400"
+              )}>
+                {currentDrawingMode === DrawingMode.ERASER 
+                  ? "Eraser Size" 
+                  : currentDrawingMode === DrawingMode.FILL 
+                    ? "Fill Area (3000px)" 
+                    : "Brush Size"
+                }
+              </span>
+              <span className="text-[10px] text-white font-mono">
+                {currentDrawingMode === DrawingMode.FILL 
+                  ? "Full Page" 
+                  : `${brushSize}px`
+                }
+              </span>
+            </div>
             
-            {/* Brush Size Circles */}
-            <div className="flex items-center gap-3">
-              {brushSizes.map((size) => (
-                <button
-                  key={size}
-                  onClick={() => {
+            {currentDrawingMode !== DrawingMode.FILL ? (
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min={DRAWING_MODE_CONFIG[currentDrawingMode].minSize}
+                  max={DRAWING_MODE_CONFIG[currentDrawingMode].maxSize}
+                  value={brushSize}
+                  onChange={(e) => {
+                    const size = parseInt(e.target.value);
                     setBrushSize(size);
                     onStrokeWidthChange?.(size);
                   }}
-                  className={`rounded-full transition-all duration-300 flex items-center justify-center
-                    ${brushSize === size 
-                      ? 'bg-slate-200 border-2 border-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' 
-                      : 'bg-zinc-600 hover:bg-zinc-500 opacity-40 hover:opacity-70'
-                    }`}
-                  style={{ width: Math.max(12, size / 1.5), height: Math.max(12, size / 1.5) }} // Scaled down slightly for UI fit
-                  title={`Size: ${size}px`}
-                />
-              ))}
-            </div>
-
-            {/* Color/Gradient Slider */}
-            <div className="flex flex-col gap-2 w-48">
-              {/* Gradient Bar Background */}
-              <div className="relative h-4 w-full">
-                 <div className="absolute inset-0 rounded-full bg-gradient-to-r from-red-500 via-green-500 via-blue-500 to-purple-500 shadow-inner ring-1 ring-white/10" />
-                 
-                 {/* Slider Input */}
-                 <input 
-                  type="range" 
-                  min="0" 
-                  max="360" 
-                  defaultValue="0"
-                  onChange={handleHueChange}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  className={cn(
+                    "w-full h-1.5 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full hover:[&::-webkit-slider-thumb]:scale-110 transition-all",
+                    currentDrawingMode === DrawingMode.ERASER
+                      ? "bg-gray-700 [&::-webkit-slider-thumb]:bg-gray-300"
+                      : "bg-zinc-600 [&::-webkit-slider-thumb]:bg-white"
+                  )}
                 />
                 
-                {/* Custom Thumb Indicator (Visual only - controlled by input) */}
-                <div 
-                   className="pointer-events-none absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full border-2 border-zinc-800 shadow-md transition-all"
-                   // Note: A real implementation would need state to track the thumb position accurately based on hue
-                   style={{ left: `calc(${parseInt(brushColor.match(/\d+/)?.[0] || '0') / 360 * 100}% - 8px)` }} 
-                />
+                {/* Visual Preview */}
+                <div className="shrink-0 flex items-center justify-center">
+                  {currentDrawingMode === DrawingMode.ERASER ? (
+                    <div className="relative">
+                      <div 
+                        className="rounded-full bg-gray-300 border-2 border-white shadow-md"
+                        style={{ 
+                          width: Math.min(24, Math.max(4, brushSize / 8)), 
+                          height: Math.min(24, Math.max(4, brushSize / 8)),
+                        }}
+                      />
+                      <Eraser className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 text-gray-700" />
+                    </div>
+                  ) : (
+                    <div 
+                      className="rounded-full bg-white transition-all"
+                      style={{ 
+                        width: Math.min(24, Math.max(4, brushSize / 8)), 
+                        height: Math.min(24, Math.max(4, brushSize / 8)),
+                        backgroundColor: brushColor 
+                      }}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
-
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="w-full h-1.5 bg-indigo-900/30 rounded-lg flex items-center justify-center relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent rounded-lg" />
+                  <div className="relative text-[8px] text-indigo-300 font-medium px-2 py-0.5 bg-indigo-900/50 rounded">
+                    Full Page Fill (3000px)
+                  </div>
+                </div>
+                
+                <div className="shrink-0">
+                  <div 
+                    className="w-6 h-6 rounded-lg border-2 border-indigo-400 shadow-lg"
+                    style={{ backgroundColor: brushColor }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Divider */}
-        <div className="h-10 w-px bg-zinc-700 hidden sm:block"></div>
-
-        {/* Right Section: Undo/Redo */}
-        <div className="flex items-center gap-3">
-          <div 
-            onClick={() => {
-              const undoTexts = undo?.();
-              if (undoTexts) updatePageData?.(currentPageIndex, 'texts', undoTexts);
-            }}
-            className={`flex flex-col items-center gap-1.5 cursor-pointer transition-colors group ${!canUndo ? 'opacity-30 pointer-events-none' : 'hover:text-white'}`}
-          >
-            <div className="p-2 rounded-lg bg-zinc-700/50 group-hover:bg-zinc-700 transition-colors">
-              <Undo2 size={18} className="text-slate-300 group-hover:text-white" />
-            </div>
-            <span className="text-[10px] font-medium tracking-wide opacity-80">Undo</span>
-          </div>
+        {/* Section 3: Actions */}
+        <div className="flex items-center gap-3 border-l border-zinc-700 pl-6">
+           {/* Fill Action Button - Only show in Fill mode */}
+           {currentDrawingMode === DrawingMode.FILL && (
+             <div 
+               className="flex flex-col items-center group cursor-pointer"
+               onClick={handleFill}
+               title="Fill entire page with current color"
+             >
+               <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center hover:scale-110 transition-transform duration-200 shadow-lg shadow-indigo-500/30">
+                 <PaintBucket className="w-4.5 h-4.5 text-white" />
+               </div>
+               <span className="text-[9px] text-indigo-300 mt-1 font-medium">Fill Page</span>
+             </div>
+           )}
+           
+           <div className="flex flex-col items-center group cursor-pointer" onClick={handleRefresh}>
+             <RefreshCcw className={cn(
+                "w-4 h-4 transition-colors",
+                currentDrawingMode === DrawingMode.FILL ? "text-indigo-400 group-hover:text-indigo-300" : "text-zinc-400 group-hover:text-white"
+             )} />
+             <span className={cn("text-[9px] mt-1", currentDrawingMode === DrawingMode.FILL ? "text-indigo-400" : "text-zinc-500")}>Reset</span>
+           </div>
           
-          <div 
-             onClick={() => {
-              const redoTexts = redo?.();
-              if (redoTexts) updatePageData?.(currentPageIndex, 'texts', redoTexts);
-            }}
-            className={`flex flex-col items-center gap-1.5 cursor-pointer transition-colors group ${!canRedo ? 'opacity-30 pointer-events-none' : 'hover:text-white'}`}
-          >
-             <div className="p-2 rounded-lg bg-zinc-700/50 group-hover:bg-zinc-700 transition-colors">
-              <Redo2 size={18} className="text-slate-300 group-hover:text-white" />
-            </div>
-            <span className="text-[10px] font-medium tracking-wide opacity-80">Redo</span>
-          </div>
+           <div className="flex gap-1">
+              <ToolbarButton 
+                  onClick={() => {
+                      const undoTexts = undo?.();
+                      if (undoTexts) updatePageData?.(currentPageIndex, 'texts', undoTexts);
+                  }}
+                  disabled={!canUndo}
+                  className={`h-8 w-8 p-0 ${!canUndo ? 'opacity-50' : ''}`}
+              >
+                  <Undo2 className="w-4 h-4" />
+              </ToolbarButton>
+              <ToolbarButton 
+                  onClick={() => {
+                      const redoTexts = redo?.();
+                      if (redoTexts) updatePageData?.(currentPageIndex, 'texts', redoTexts);
+                  }}
+                  disabled={!canRedo}
+                  className={`h-8 w-8 p-0 ${!canRedo ? 'opacity-50' : ''}`}
+              >
+                  <Redo2 className="w-4 h-4" />
+              </ToolbarButton>
+           </div>
         </div>
-
       </div>
     );
   };

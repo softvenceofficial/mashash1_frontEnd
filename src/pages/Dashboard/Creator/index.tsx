@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef } from "react";
 import Tools from "@/components/Dashboard/Tools/Tools";
-import Toolbox from "@/components/Dashboard/Toolbox/Toolbox";
+import Toolbox, { DrawingMode } from "@/components/Dashboard/Toolbox/Toolbox";
 import AIImageBox from "@/components/Dashboard/AI-Image-box/AIImageBox";
 import Book from "@/components/Dashboard/Book/Book";
 import AIImageType from "@/components/Dashboard/AI-Image-TypeBox/AIImageType";
@@ -13,6 +14,7 @@ export default function Creator() {
   const [strokeWidth, setStrokeWidth] = useState(5);
   const [fontSize, setFontSize] = useState(24);
   const [fontFamily, setFontFamily] = useState("Roboto");
+  const [drawingMode, setDrawingMode] = useState<DrawingMode>(DrawingMode.BRUSH);
   const bookRef = useRef<any>(null);
 
   const handleAdvancedTextChange = (property: string, value: any) => {
@@ -46,6 +48,8 @@ export default function Creator() {
             updatePageData={bookRef.current?.updatePageData}
             currentPageIndex={bookRef.current?.currentPageIndex}
             onAdvancedTextChange={handleAdvancedTextChange}
+            drawingMode={drawingMode}
+            onDrawingModeChange={setDrawingMode}
           />
           <Book
             ref={bookRef}
@@ -56,6 +60,7 @@ export default function Creator() {
             fontSize={fontSize}
             fontFamily={fontFamily}
             onAdvancedTextChange={handleAdvancedTextChange}
+            drawingMode={drawingMode}
           />
         </div>
         <div className="w-[10.2%] bg-white">

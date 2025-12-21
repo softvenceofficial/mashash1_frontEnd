@@ -21,6 +21,7 @@ interface BookProps {
   fontSize?: number;
   fontFamily?: string;
   onAdvancedTextChange?: (property: string, value: any) => void;
+  drawingMode?: string;
 }
 
 // --- Constants ---
@@ -201,7 +202,7 @@ BookPage.displayName = 'BookPage';
 
 // --- Main Book Component ---
 
-const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWidth = 5, selectedBookSize = '6 x 4', fontSize = 16, fontFamily = 'Roboto', onAdvancedTextChange }: BookProps, ref: any) => {
+const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWidth = 5, selectedBookSize = '6 x 4', fontSize = 16, fontFamily = 'Roboto', onAdvancedTextChange, drawingMode }: BookProps, ref: any) => {
   const [pages, setPages] = useState<PageData[]>(INITIAL_PAGES);
   const [zoom, setZoom] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -373,11 +374,16 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
 
+      let currentTool = activeTool;
+      if (activeTool === 'Brush' && drawingMode === 'eraser') {
+        currentTool = 'Eraser';
+      }
+
       const newLines = [...pages[pageIndex].lines, {
-        tool: activeTool,
+        tool: currentTool,
         points: [pos.x, pos.y],
-        color: activeTool === 'Eraser' ? '#ffffff' : strokeColor,
-        width: activeTool === 'Eraser' ? 20 : strokeWidth,
+        color: currentTool === 'Eraser' ? '#ffffff' : strokeColor,
+        width: strokeWidth,
       }];
 
       updatePageData(pageIndex, 'lines', newLines);
