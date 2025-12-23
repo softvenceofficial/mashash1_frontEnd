@@ -47,6 +47,14 @@ import { Button } from '@/components/ui/button';
 import BrushIcon from '@/assets/icons/BrushIcon.svg';
 import paint_bucket_icon from '@/assets/icons/paint-bucket-icon.svg';
 import eraser_color_icon from '@/assets/icons/eraser-color-icon.svg';
+// icons for the tools
+import hand from '@/assets/icons/hand.svg';
+import import_image from '@/assets/icons/import_image.svg';
+import Pen_tool from '@/assets/icons/Pen_tool.svg';
+import Sticky_note from '@/assets/icons/Sticky_note.svg';
+import table from '@/assets/icons/table.svg';
+import zoom_lens from '@/assets/icons/zoom_lens.svg';
+// icons for the tools
 import { ReactSVG } from 'react-svg';
 
 export const DrawingMode = {
@@ -88,7 +96,7 @@ const DRAWING_MODE_CONFIG = {
   }
 } as const;
 
-const ToolbarButton = ({ children, isActive, onClick, className = "", ...props }: any) => (
+const ToolbarButton = ({ children, isActive, onClick, className = "", ...props }: { children: React.ReactNode; isActive?: boolean; onClick?: () => void; className?: string; [key: string]: any } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
   <button
     onClick={onClick}
     className={cn(
@@ -786,12 +794,7 @@ const Toolbox = ({
                 {mode.isSvg && typeof mode.icon === 'string' ? (
                   <ReactSVG src={mode.icon} className={cn("w-10 h-10")} />
                 ) : (
-                  <mode.icon className={cn(
-                    "w-4 h-4",
-                    currentDrawingMode === mode.id && mode.id === DrawingMode.FILL
-                      ? "text-indigo-300"
-                      : ""
-                  )} />
+                  <span>icons</span>
                 )}
                 <span className="text-[10px] mt-1 font-medium">{mode.label}</span>
                 
