@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect } from 'react';
@@ -29,9 +30,7 @@ import {
   Minus as LineIcon,
   MoveRight,
   RefreshCcw,
-  PenTool,
   PaintBucket,
-  Brush,
 } from 'lucide-react';
 import { SketchPicker } from 'react-color';
 import { cn } from '@/lib/utils';
@@ -46,15 +45,19 @@ import book8 from "@/assets/images/Books/12x9.png";
 import book9 from "@/assets/images/Books/Square.png";
 import { Button } from '@/components/ui/button';
 import BrushIcon from '@/assets/icons/BrushIcon.svg';
+import paint_bucket_icon from '@/assets/icons/paint-bucket-icon.svg';
+import eraser_color_icon from '@/assets/icons/eraser-color-icon.svg';
 import { ReactSVG } from 'react-svg';
 
-export enum DrawingMode {
-  BRUSH = 'brush',
-  FILL = 'fill',
-  ERASER = 'eraser',
-}
+export const DrawingMode = {
+  BRUSH: 'brush',
+  FILL: 'fill',
+  ERASER: 'eraser',
+} as const;
 
+export type DrawingMode = typeof DrawingMode[keyof typeof DrawingMode];
 
+// This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
 const BOOK_SIZES = [
   { id: 1, label: "5 x 7", image: book1 },
   { id: 2, label: "6 x 4", image: book2 },
@@ -99,36 +102,6 @@ const ToolbarButton = ({ children, isActive, onClick, className = "", ...props }
   </button>
 );
 
-const ToolItem = ({ isActive, label, icon, onClick }: any) => {
-  return (
-    <div 
-      onClick={onClick}
-      className={`group flex flex-col items-center gap-2 cursor-pointer relative transition-all duration-300 ${isActive ? '-translate-y-1' : ''}`}
-    >
-      {/* Icon Container with Glow effect if active */}
-      <div className={`relative p-2 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}>
-        {isActive && (
-          <div className="absolute inset-0 bg-indigo-500/20 blur-lg rounded-full" />
-        )}
-        <div className="relative z-10">
-          {icon}
-        </div>
-      </div>
-
-      {/* Label */}
-      <span className={`text-[10px] font-medium tracking-wide transition-colors ${isActive ? 'text-indigo-100' : 'text-slate-400 group-hover:text-slate-200'}`}>
-        {label}
-      </span>
-
-      {/* Active Indicator Underline */}
-      <div 
-        className={`h-0.5 w-6 rounded-full transition-all duration-300 mx-auto mt-1
-          ${isActive ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-transparent w-0'}
-        `}
-      />
-    </div>
-  );
-};
 
 // Helper function to convert rgba to hex
 const rgbaToHex = (rgba: string): string => {
@@ -225,7 +198,6 @@ const Toolbox = ({
   currentPageIndex = 0,
   onAdvancedTextChange,
   onDrawingModeChange,
-  onBrushOptionChange,
   onFillAction,
   onBackgroundChange,
   drawingMode
@@ -245,7 +217,7 @@ const Toolbox = ({
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const [opacity, setOpacity] = useState(100);
   const [textAlignment, setTextAlignment] = useState<'left' | 'center' | 'right'>('left');
-  const [isBrushMode, setIsBrushMode] = useState(true);
+  const [, setIsBrushMode] = useState(true);
   const [textTransform, setTextTransform] = useState<'none' | 'uppercase' | 'lowercase' | 'capitalize'>('none');
 
   // Brush specific states
@@ -316,11 +288,6 @@ const Toolbox = ({
     onFontSizeChange?.(newSize);
   };
 
-  const handleBrushSizeChange = (delta: number) => {
-    const newSize = Math.max(1, Math.min(50, brushSize + delta));
-    setBrushSize(newSize);
-    onStrokeWidthChange?.(newSize);
-  };
 
   const handleColorChange = (color: any) => { // color is from react-color
     const alpha = color.rgb.a !== undefined ? color.rgb.a : 1;
@@ -344,11 +311,6 @@ const Toolbox = ({
     onStrokeColorChange?.(newRgba);
   };
 
-  const handleBrushColorChange = (color: any) => {
-    const rgbaColor = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${brushOpacity / 100})`;
-    setBrushColor(rgbaColor);
-    onStrokeColorChange?.(rgbaColor);
-  };
 
   const handleBookSelect = (bookId: number, label: string) => {
     setSelectedBook(bookId);
@@ -739,9 +701,9 @@ const Toolbox = ({
 
   const renderBrushPanel = () => {
     const drawingModes = [
-      { id: DrawingMode.BRUSH, label: 'Brush', icon: <ReactSVG src={BrushIcon}/>, description: 'Size: 1-300px' },
-      { id: DrawingMode.FILL, label: 'Fill', icon: PaintBucket, description: 'Full page (3000px)' },
-      { id: DrawingMode.ERASER, label: 'Eraser', icon: Eraser, description: 'Size: 0-300px' },
+      { id: DrawingMode.BRUSH, label: 'Brush', icon: BrushIcon, isSvg: true,  },
+      { id: DrawingMode.FILL, label: 'Fill', icon: paint_bucket_icon, isSvg: true,  },
+      { id: DrawingMode.ERASER, label: 'Eraser', icon: eraser_color_icon, isSvg: true,  },
     ];
  
     // ENHANCED: Better mode change handler
@@ -821,14 +783,17 @@ const Toolbox = ({
                 )}
                 title={mode.label}
               >
-                <mode.icon className={cn(
-                  "w-4 h-4",
-                  currentDrawingMode === mode.id && mode.id === DrawingMode.FILL
-                    ? "text-indigo-300"
-                    : ""
-                )} />
+                {mode.isSvg && typeof mode.icon === 'string' ? (
+                  <ReactSVG src={mode.icon} className={cn("w-10 h-10")} />
+                ) : (
+                  <mode.icon className={cn(
+                    "w-4 h-4",
+                    currentDrawingMode === mode.id && mode.id === DrawingMode.FILL
+                      ? "text-indigo-300"
+                      : ""
+                  )} />
+                )}
                 <span className="text-[10px] mt-1 font-medium">{mode.label}</span>
-                <span className="text-[8px] text-zinc-400 mt-0.5">{mode.description}</span>
                 
                 {/* Visual indicator for active mode */}
                 {currentDrawingMode === mode.id && (
