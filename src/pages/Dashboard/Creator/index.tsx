@@ -9,17 +9,37 @@ import { SiteHeader } from "@/components/Dashboard/DashboardHeader";
 
 export default function Creator() {
   const [activeTool, setActiveTool] = useState("Book Size");
+  const [activeSubTool, setActiveSubTool] = useState("select");
   const [selectedBookSize, setSelectedBookSize] = useState("6 x 4");
   const [strokeColor, setStrokeColor] = useState("#000000");
   const [strokeWidth, setStrokeWidth] = useState(5);
   const [fontSize, setFontSize] = useState(24);
   const [fontFamily, setFontFamily] = useState("Roboto");
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(DrawingMode.BRUSH);
+  const [zoom, setZoom] = useState(1);
   const bookRef = useRef<any>(null);
 
   const handleAdvancedTextChange = (property: string, value: any) => {
     if ((window as any).__handleAdvancedTextChange) {
       (window as any).__handleAdvancedTextChange(property, value);
+    }
+  };
+
+  const handleImageUpload = (file: File) => {
+    if (bookRef.current?.handleImageUpload) {
+      bookRef.current.handleImageUpload(file);
+    }
+  };
+
+  const handlePenOptionChange = (property: string, value: any) => {
+    if (bookRef.current?.handlePenOptionChange) {
+      bookRef.current.handlePenOptionChange(property, value);
+    }
+  };
+
+  const handlePenAction = (action: string) => {
+    if (bookRef.current?.handlePenAction) {
+      bookRef.current.handlePenAction(action);
     }
   };
 
@@ -34,6 +54,8 @@ export default function Creator() {
         <div className="w-[63.8%]">
           <Toolbox 
             activeTool={activeTool} 
+            activeSubTool={activeSubTool}
+            onToolChange={setActiveSubTool}
             onBookSizeChange={setSelectedBookSize}
             onStrokeColorChange={setStrokeColor}
             onStrokeWidthChange={setStrokeWidth}
@@ -50,10 +72,16 @@ export default function Creator() {
             onAdvancedTextChange={handleAdvancedTextChange}
             drawingMode={drawingMode}
             onDrawingModeChange={setDrawingMode}
+            onZoomChange={setZoom}
+            currentZoom={zoom}
+            onImageUpload={handleImageUpload}
+            onPenOptionChange={handlePenOptionChange}
+            onPenAction={handlePenAction}
           />
           <Book
             ref={bookRef}
             activeTool={activeTool}
+            activeSubTool={activeSubTool}
             selectedBookSize={selectedBookSize}
             strokeColor={strokeColor}
             strokeWidth={strokeWidth}
@@ -61,6 +89,7 @@ export default function Creator() {
             fontFamily={fontFamily}
             onAdvancedTextChange={handleAdvancedTextChange}
             drawingMode={drawingMode}
+            zoom={zoom}
           />
         </div>
         <div className="w-[10.2%] bg-white">

@@ -1,12 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   RotateCw, 
   Undo2, 
   Redo2, 
   ChevronDown, 
+  ChevronLeft,
   Minus, 
   Plus, 
   Bold, 
@@ -20,9 +21,6 @@ import {
   List,
   ListOrdered,
   Eraser,
-  MousePointer2,
-  Hand,
-  Pipette,
   Square,
   Circle,
   Triangle,
@@ -31,6 +29,8 @@ import {
   MoveRight,
   RefreshCcw,
   PaintBucket,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import { SketchPicker } from 'react-color';
 import { cn } from '@/lib/utils';
@@ -48,12 +48,13 @@ import BrushIcon from '@/assets/icons/BrushIcon.svg';
 import paint_bucket_icon from '@/assets/icons/paint-bucket-icon.svg';
 import eraser_color_icon from '@/assets/icons/eraser-color-icon.svg';
 // icons for the tools
+import select from '@/assets/icons/select.svg';
 import hand from '@/assets/icons/hand.svg';
 import import_image from '@/assets/icons/import_image.svg';
 import Pen_tool from '@/assets/icons/Pen_tool.svg';
 import Sticky_note from '@/assets/icons/Sticky_note.svg';
-import table from '@/assets/icons/table.svg';
-import zoom_lens from '@/assets/icons/zoom_lens.svg';
+import TableIcon from '@/assets/icons/table.svg';
+// import zoom_lens from '@/assets/icons/zoom_lens.svg';
 // icons for the tools
 import { ReactSVG } from 'react-svg';
 
@@ -162,6 +163,7 @@ const ColorSwatch = ({ color, isSelected, onClick }: { color: string, isSelected
 
 interface ToolboxProps {
   activeTool: string;
+  activeSubTool?: string;
   onBookSizeChange?: (size: string) => void;
   onStrokeColorChange?: (color: string) => void;
   onStrokeWidthChange?: (width: number) => void;
@@ -184,10 +186,17 @@ interface ToolboxProps {
   onBrushOptionChange?: (option: string, value: any) => void;
   onFillAction?: (color: string) => void;
   onBackgroundChange?: (color: string) => void;
+  onZoomChange?: (zoom: number) => void;
+  currentZoom?: number;
+  onImageUpload?: (file: File) => void;
+  onTableChange?: (property: string, value: any) => void;
+  onPenOptionChange?: (property: string, value: any) => void;
+  onPenAction?: (action: string) => void;
 }
 
 const Toolbox = ({ 
   activeTool, 
+  activeSubTool,
   onBookSizeChange,
   onStrokeColorChange,
   onStrokeWidthChange,
@@ -208,7 +217,13 @@ const Toolbox = ({
   onDrawingModeChange,
   onFillAction,
   onBackgroundChange,
-  drawingMode
+  drawingMode,
+  onZoomChange,
+  currentZoom = 1,
+  onImageUpload,
+  onTableChange,
+  onPenOptionChange,
+  onPenAction,
 }: ToolboxProps) => {
   const [selectedBook, setSelectedBook] = useState(2);
   const [fontSize, setFontSize] = useState(24);
@@ -217,16 +232,31 @@ const Toolbox = ({
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [customColors, setCustomColors] = useState(['rgba(96, 165, 250, 1)']);
   const [selectedShape, setSelectedShape] = useState('square');
-  const [selectedTool, setSelectedTool] = useState('select');
   const [brushSize, setBrushSize] = useState(strokeWidth);
   const [textColor, setTextColor] = useState('rgba(0, 0, 0, 1)');
   const [brushColor, setBrushColor] = useState(strokeColor);
+  const currentSubTool = activeSubTool || 'select';
   const [shapeColor, setShapeColor] = useState(strokeColor);
-  const [backgroundColor, setBackgroundColor] = useState('#ffffff');
+  const [backgroundColor, setBackgroundColor] = useState('#CCCCCC');
   const [opacity, setOpacity] = useState(100);
   const [textAlignment, setTextAlignment] = useState<'left' | 'center' | 'right'>('left');
   const [, setIsBrushMode] = useState(true);
   const [textTransform, setTextTransform] = useState<'none' | 'uppercase' | 'lowercase' | 'capitalize'>('none');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Pen Tool specific states
+  const [penMode, setPenMode] = useState<'polygon' | 'freehand'>('polygon');
+  const [penFillColor, setPenFillColor] = useState('rgba(255, 255, 255, 0)');
+  const [penFillOpacity, setPenFillOpacity] = useState(0);
+  const [penSnapDistance, setPenSnapDistance] = useState(20);
+  const [showFillPicker, setShowFillPicker] = useState(false);
+
+  // Table specific states
+  const [tableRows, setTableRows] = useState(3);
+  const [tableCols, setTableCols] = useState(3);
+  const [tableBorderColor, setTableBorderColor] = useState('#000000');
+  const [tableFillColor, setTableFillColor] = useState('#ffffff');
+  const [tableColorTarget, setTableColorTarget] = useState<'border' | 'fill'>('border');
 
   // Brush specific states
   const [internalDrawingMode, setInternalDrawingMode] = useState<DrawingMode>(DrawingMode.BRUSH);
@@ -357,6 +387,12 @@ const Toolbox = ({
     } else if (activeTool === 'Color') {
       setOpacity(100);
       onStrokeColorChange?.('rgba(0, 0, 0, 1)');
+    } else if (activeTool === 'Table') {
+      setTableRows(3);
+      setTableCols(3);
+      setTableBorderColor('#000000');
+      setTableFillColor('#ffffff');
+      onTableChange?.('reset', null);
     }
   };
 
@@ -383,7 +419,6 @@ const Toolbox = ({
   };
 
   const handleToolSelect = (tool: string) => {
-    setSelectedTool(tool);
     onToolChange?.(tool);
   };
 
@@ -394,6 +429,23 @@ const Toolbox = ({
 
   const handleListToggle = (type: 'bullet' | 'number') => {
     onAdvancedTextChange?.('listType', type);
+  };
+
+  const handleTablePropertyChange = (prop: 'rows' | 'cols', value: number) => {
+    if (prop === 'rows') setTableRows(value);
+    if (prop === 'cols') setTableCols(value);
+    onTableChange?.(prop, value);
+  };
+
+  const handleTableColorChange = (color: any, target: 'border' | 'fill') => {
+    const hex = color.hex;
+    if (target === 'border') {
+      setTableBorderColor(hex);
+      onTableChange?.('borderColor', hex);
+    } else {
+      setTableFillColor(hex);
+      onTableChange?.('fill', hex);
+    }
   };
 
 
@@ -1076,15 +1128,37 @@ const Toolbox = ({
   };
 
   const renderToolPanel = () => {
-    const tools = [
-      { id: 'select', icon: MousePointer2, label: 'Select' },
-      { id: 'hand', icon: Hand, label: 'Pan' },
-      { id: 'pipette', icon: Pipette, label: 'Picker' },
-      { id: 'eraser', icon: Eraser, label: 'Eraser' },
+    const tools: { id: string; icon: any; label: string }[] = [
+      { id: 'select', icon: select, label: 'Select' },
+      { id: 'hand', icon: hand, label: 'Hand' },
+      { id: 'pen', icon: Pen_tool, label: 'Pen' },
+      { id: 'sticky_note', icon: Sticky_note, label: 'Sticky Note' },
+      { id: 'table', icon: TableIcon, label: 'Table' },
+      { id: 'eraser', icon: eraser_color_icon, label: 'Eraser' },
     ];
+
+    const handleImageClick = () => {
+      fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file && onImageUpload) {
+        onImageUpload(file);
+      }
+      if (e.target.value) e.target.value = '';
+    };
 
     return (
       <>
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          className="hidden" 
+          accept="image/*"
+          onChange={handleFileChange}
+        />
+
         <div 
           onClick={handleRefresh}
           className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
@@ -1095,22 +1169,172 @@ const Toolbox = ({
 
         <Divider />
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 overflow-x-auto w-full max-w-[750px]">
           {tools.map((t) => (
             <div
               key={t.id}
               className={cn(
-                "flex flex-col items-center gap-1 cursor-pointer group p-2 rounded-md transition-all",
-                selectedTool === t.id ? "bg-white/10" : "hover:bg-white/5"
+                "flex flex-col items-center gap-1 cursor-pointer group p-2 rounded-md transition-all min-w-[100px]",
+                currentSubTool === t.id ? "bg-white/10" : "hover:bg-white/5"
               )}
               onClick={() => handleToolSelect(t.id)}
             >
-              <t.icon className={cn("w-5 h-5", selectedTool === t.id ? "text-primary" : "text-gray-300")} />
-              <span className={cn("text-[9px]", selectedTool === t.id ? "text-white" : "text-gray-400")}>{t.label}</span>
-              {selectedTool === t.id && <div className="h-0.5 w-4 bg-primary rounded-full mt-0.5"></div>}
+              {typeof t.icon === 'string' ? (
+                 <img src={t.icon} alt={t.label} className="w-10 h-10" />
+              ) : (
+                 <t.icon size={40} className={cn(currentSubTool === t.id ? "text-primary" : "text-gray-300")} />
+              )}
+              <span className={cn("text-[9px]", currentSubTool === t.id ? "text-white" : "text-gray-400")}>{t.label}</span>
+              {currentSubTool === t.id && <div className="h-0.5 w-10 bg-primary rounded-full mt-0.5"></div>}
             </div>
           ))}
+          
+          <div
+              className="flex flex-col items-center gap-1 cursor-pointer group p-2 rounded-md hover:bg-white/5 min-w-[100px]"
+              onClick={handleImageClick}
+            >
+              <img src={import_image} alt="Import" className="w-10 h-10" />
+              <span className="text-[9px] text-gray-400 group-hover:text-white">Image</span>
+            </div>
         </div>
+        
+        <Divider />
+
+        <div className="flex items-center gap-2">
+           <button 
+             onClick={() => onZoomChange?.(Math.max(0.5, (currentZoom || 1) - 0.1))}
+             className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"
+             title="Zoom Out"
+           >
+             <ZoomOut className="w-5 h-5" />
+           </button>
+           <span className="text-xs text-zinc-400 w-8 text-center">{Math.round((currentZoom || 1) * 100)}%</span>
+           <button 
+             onClick={() => onZoomChange?.(Math.min(3, (currentZoom || 1) + 0.1))}
+             className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"
+             title="Zoom In"
+           >
+             <ZoomIn className="w-5 h-5" />
+           </button>
+        </div>
+
+        <div className="flex-grow" />
+
+        <div className="flex items-center gap-4 ml-4 px-4 border-l border-zinc-700">
+          <div className="flex flex-col items-center group cursor-pointer">
+            <Button 
+              size="icon" 
+              variant="secondary" 
+              className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
+              onClick={() => {
+                const undoTexts = undo?.();
+                if (undoTexts) updatePageData?.(currentPageIndex, 'texts', undoTexts);
+              }}
+              disabled={!canUndo}
+            >
+              <Undo2 className="w-5 h-5" />
+            </Button>
+            <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Undo</span>
+          </div>
+          <div className="flex flex-col items-center group cursor-pointer">
+            <Button 
+              size="icon" 
+              variant="secondary" 
+              className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
+              onClick={() => {
+                const redoTexts = redo?.();
+                if (redoTexts) updatePageData?.(currentPageIndex, 'texts', redoTexts);
+              }}
+              disabled={!canRedo}
+            >
+              <Redo2 className="w-5 h-5" />
+            </Button>
+            <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Redo</span>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  const renderTablePanel = () => {
+    return (
+      <>
+        <div 
+          onClick={handleRefresh}
+          className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
+        >
+          <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
+          <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
+        </div>
+        <Divider />
+        
+        {/* Rows & Cols */}
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] text-zinc-400 mb-1">Rows</span>
+            <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700">
+              <button onClick={() => handleTablePropertyChange('rows', Math.max(1, tableRows - 1))} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg">
+                <Minus className="w-3 h-3" />
+              </button>
+              <div className="w-8 text-center text-xs font-medium text-zinc-200 font-mono">{tableRows}</div>
+              <button onClick={() => handleTablePropertyChange('rows', tableRows + 1)} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg">
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] text-zinc-400 mb-1">Cols</span>
+            <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700">
+              <button onClick={() => handleTablePropertyChange('cols', Math.max(1, tableCols - 1))} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg">
+                <Minus className="w-3 h-3" />
+              </button>
+              <div className="w-8 text-center text-xs font-medium text-zinc-200 font-mono">{tableCols}</div>
+              <button onClick={() => handleTablePropertyChange('cols', tableCols + 1)} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg">
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <Divider />
+
+        {/* Border Color */}
+        <div className="relative flex flex-col items-center gap-1">
+           <span className="text-[9px] text-zinc-400">Border</span>
+           <div 
+            onClick={() => {
+              setTableColorTarget('border');
+              setShowColorPicker(!showColorPicker || tableColorTarget !== 'border');
+            }}
+            className="w-8 h-8 rounded-md cursor-pointer hover:scale-110 transition-transform shadow-lg ring-1 ring-white/10" 
+            style={{ backgroundColor: tableBorderColor }}
+            title="Border Color"
+          />
+        </div>
+
+        {/* Fill Color */}
+        <div className="relative flex flex-col items-center gap-1 ml-2">
+           <span className="text-[9px] text-zinc-400">Fill</span>
+           <div 
+            onClick={() => {
+              setTableColorTarget('fill');
+              setShowColorPicker(!showColorPicker || tableColorTarget !== 'fill');
+            }}
+            className="w-8 h-8 rounded-md cursor-pointer hover:scale-110 transition-transform shadow-lg ring-1 ring-white/10" 
+            style={{ backgroundColor: tableFillColor }}
+            title="Fill Color"
+          />
+        </div>
+
+        {showColorPicker && (tableColorTarget === 'border' || tableColorTarget === 'fill') && (
+          <div className="absolute top-16 left-20 z-50">
+            <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
+            <SketchPicker 
+              color={tableColorTarget === 'border' ? tableBorderColor : tableFillColor} 
+              onChange={(color) => handleTableColorChange(color, tableColorTarget)} 
+            />
+          </div>
+        )}
 
         <div className="flex-grow" />
 
@@ -1245,6 +1469,177 @@ const Toolbox = ({
     );
   };
 
+  const renderPenPanel = () => {
+    return (
+      <div className="w-full flex items-center gap-4 px-2">
+        <div 
+            onClick={() => onToolChange?.('select')}
+            className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group border-r border-zinc-700 pr-4"
+        >
+            <ChevronLeft className="w-5 h-5 text-zinc-400 group-hover:text-white transition-all" />
+            <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Back</span>
+        </div>
+
+        {/* Mode Selection */}
+        <div className="flex items-center gap-2">
+            <span className="text-[10px] text-zinc-400">Mode:</span>
+            <div className="flex gap-1">
+            <ToolbarButton 
+                isActive={penMode === 'polygon'}
+                onClick={() => {
+                    setPenMode('polygon');
+                    onPenOptionChange?.('mode', 'polygon');
+                }}
+                className="text-[10px] px-2 h-7"
+            >
+                Polygon
+            </ToolbarButton>
+            <ToolbarButton 
+                isActive={penMode === 'freehand'}
+                onClick={() => {
+                    setPenMode('freehand');
+                    onPenOptionChange?.('mode', 'freehand');
+                }}
+                className="text-[10px] px-2 h-7"
+            >
+                Freehand
+            </ToolbarButton>
+            </div>
+        </div>
+
+        <Divider />
+
+        {/* Stroke Settings */}
+        <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-1 w-24">
+                <div className="flex justify-between">
+                    <span className="text-[9px] text-zinc-400">Stroke</span>
+                    <span className="text-[9px] text-zinc-300">{strokeWidth}px</span>
+                </div>
+                <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    value={strokeWidth}
+                    onChange={(e) => onStrokeWidthChange?.(parseInt(e.target.value))}
+                    className="w-full h-1 bg-zinc-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                />
+            </div>
+            
+            <div className="relative">
+                <div 
+                    onClick={() => setShowColorPicker(!showColorPicker)}
+                    className="w-7 h-7 rounded-full cursor-pointer border border-white/20 hover:scale-110 transition-transform"
+                    style={{ backgroundColor: strokeColor }}
+                    title="Stroke Color"
+                />
+                {showColorPicker && !showFillPicker && (
+                    <div className="absolute top-10 left-0 z-50">
+                        <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
+                        <SketchPicker 
+                            color={strokeColor} 
+                            onChange={(color) => {
+                                const rgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${color.rgb.a ?? 1})`;
+                                onStrokeColorChange?.(rgba);
+                            }} 
+                        />
+                    </div>
+                )}
+            </div>
+        </div>
+
+        <Divider />
+
+        {/* Fill Settings */}
+        <div className="flex items-center gap-3">
+            <div className="flex flex-col items-center gap-1">
+                <span className="text-[9px] text-zinc-400">Fill</span>
+                <div 
+                    className="w-7 h-7 rounded border border-white/20 cursor-pointer hover:scale-110 transition-transform"
+                    style={{ backgroundColor: penFillColor }}
+                    onClick={() => {
+                        setShowFillPicker(!showFillPicker);
+                        setShowColorPicker(false);
+                    }}
+                    title="Fill Color"
+                />
+                {showFillPicker && (
+                    <div className="absolute top-full mt-2 z-50">
+                        <div className="fixed inset-0" onClick={() => setShowFillPicker(false)} />
+                        <SketchPicker 
+                            color={penFillColor} 
+                            onChange={(color) => {
+                                const rgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${color.rgb.a ?? 1})`;
+                                setPenFillColor(rgba);
+                                onPenOptionChange?.('fillColor', rgba);
+                            }} 
+                        />
+                    </div>
+                )}
+            </div>
+            <div className="flex flex-col gap-1 w-20">
+                 <div className="flex justify-between">
+                    <span className="text-[9px] text-zinc-400">Opacity</span>
+                    <span className="text-[9px] text-zinc-300">{penFillOpacity}%</span>
+                </div>
+                <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={penFillOpacity}
+                    onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        setPenFillOpacity(val);
+                        onPenOptionChange?.('fillOpacity', val);
+                    }}
+                    className="w-full h-1 bg-zinc-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                />
+            </div>
+        </div>
+
+        <Divider />
+
+        {/* Snap Settings */}
+        <div className="flex flex-col gap-1 w-20">
+            <div className="flex justify-between">
+                <span className="text-[9px] text-zinc-400">Snap</span>
+                <span className="text-[9px] text-zinc-300">{penSnapDistance}px</span>
+            </div>
+            <input
+                type="range"
+                min="5"
+                max="50"
+                value={penSnapDistance}
+                onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setPenSnapDistance(val);
+                    onPenOptionChange?.('snapDistance', val);
+                }}
+                className="w-full h-1 bg-zinc-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+            />
+        </div>
+
+        <div className="flex-grow" />
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+            <ToolbarButton 
+                onClick={() => onPenAction?.('reset')} 
+                className="text-[10px] px-2 h-8 bg-red-500/20 text-red-200 hover:bg-red-500/30 hover:text-red-100"
+            >
+                Reset
+            </ToolbarButton>
+            <ToolbarButton 
+                onClick={() => onPenAction?.('complete')} 
+                className="text-[10px] px-2 h-8 bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 hover:text-indigo-100"
+            >
+                Complete
+            </ToolbarButton>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (activeTool) {
       case 'Book Size':
@@ -1256,9 +1651,12 @@ const Toolbox = ({
       case 'Brush':
         return renderBrushPanel();
       case 'Tool':
+        if (activeSubTool === 'pen') return renderPenPanel();
         return renderToolPanel();
       case 'Shapes':
         return renderShapesPanel();
+      case 'Table':
+        return renderTablePanel();
       default:
         return (
           <div className="text-gray-400 text-sm pl-4">

@@ -1,20 +1,61 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useCallback, forwardRef, useEffect, useImperativeHandle } from 'react';
-import { Stage, Layer, Line, Text as KonvaText, Rect, Circle, Transformer } from 'react-konva';
+import { Stage, Layer, Line, Text as KonvaText, Rect, Circle, Transformer, Image as KonvaImage, Group } from 'react-konva';
 import Konva from 'konva';
 import HTMLFlipBook from 'react-pageflip';
 import { Plus, Minus, Maximize, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import bookBG from "@/assets/images/Books/mainBookbg.png"
-import type { TextType, ShapeType, PageData } from './types';
+import type { TextType, ShapeType, PageData as BasePageData } from './types';
 import { FloatingTextToolbar } from './FloatingTextToolbar';
 import { TextContextMenu } from './TextContextMenu';
 import { InPlaceTextEditor } from './InPlaceTextEditor';
 import { useTextHistory } from './useTextHistory';
 
 // --- Types ---
+export interface ImageType {
+  id: string;
+  type: 'image';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  src: string;
+}
+
+export interface StickyNoteType {
+  id: string;
+  type: 'sticky-note';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+  color: string;
+}
+
+export interface TableType {
+  id: string;
+  type: 'table';
+  x: number;
+  y: number;
+  rows: number;
+  cols: number;
+  cellWidth: number;
+  cellHeight: number;
+  data: string[][];
+}
+
+export interface PageData extends BasePageData {
+  images: ImageType[];
+  stickyNotes: StickyNoteType[];
+  tables: TableType[];
+}
+
 interface BookProps {
   activeTool?: string;
+  activeSubTool?: string;
   strokeColor?: string;
   strokeWidth?: number;
   selectedBookSize?: string;
@@ -22,6 +63,7 @@ interface BookProps {
   fontFamily?: string;
   onAdvancedTextChange?: (property: string, value: any) => void;
   drawingMode?: string;
+  zoom?: number;
 }
 
 // --- Constants ---
@@ -40,7 +82,10 @@ const BOOK_SIZE_MAP: Record<string, { width: number; height: number }> = {
 const INITIAL_PAGES: PageData[] = Array(10).fill(null).map(() => ({
   lines: [],
   texts: [],
-  shapes: []
+  shapes: [],
+  images: [],
+  stickyNotes: [],
+  tables: []
 }));
 
 // Setup Cover
@@ -55,11 +100,56 @@ INITIAL_PAGES[0].texts.push({
 });
 INITIAL_PAGES[0].background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
 
+// --- Custom Hook for Images ---
+const useImage = (url: string) => {
+  const [image, setImage] = useState<HTMLImageElement | undefined>(undefined);
+  useEffect(() => {
+    if (!url) return;
+    const img = new window.Image();
+    img.src = url;
+    img.onload = () => setImage(img);
+  }, [url]);
+  return [image];
+};
+
+// --- Helper Components ---
+const URLImage = ({ image, isSelected, onSelect, isSelectMode }: any) => {
+  const [img] = useImage(image.src);
+  const imageRef = useRef<Konva.Image>(null);
+  const trRef = useRef<Konva.Transformer>(null);
+
+  useEffect(() => {
+    if (isSelected && trRef.current && imageRef.current && isSelectMode) {
+      trRef.current.nodes([imageRef.current]);
+      trRef.current.getLayer()?.batchDraw();
+    }
+  }, [isSelected]);
+
+  return (
+    <>
+      <KonvaImage
+        ref={imageRef}
+        image={img}
+        x={image.x}
+        y={image.y}
+        width={image.width}
+        height={image.height}
+        rotation={image.rotation}
+        draggable={isSelectMode}
+        onClick={onSelect}
+      />
+      {isSelected && <Transformer ref={trRef} />}
+    </>
+  );
+};
+
 // --- Page Component (Required for react-pageflip) ---
 interface BookPageProps {
   pageIndex: number;
   data: PageData;
   activeTool: string;
+  isSelectMode: boolean;
+  isPenMode: boolean;
   width: number;
   height: number;
   onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>, index: number) => void;
@@ -68,16 +158,17 @@ interface BookPageProps {
   onTextDblClick: (e: Konva.KonvaEventObject<MouseEvent>, index: number, item: TextType) => void;
   selectedTextId: string | null;
   onTextSelect: (id: string | null) => void;
+  currentPoints: number[];
 }
 
 const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({ 
-  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onTextDblClick, selectedTextId, onTextSelect 
+  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onTextDblClick, selectedTextId, onTextSelect, currentPoints, isSelectMode, isPenMode
 }, ref) => {
   const transformerRef = useRef<Konva.Transformer>(null);
   const textRefs = useRef<{ [key: string]: Konva.Text }>({});
 
   useEffect(() => {
-    if (selectedTextId && transformerRef.current) {
+    if (selectedTextId && transformerRef.current && isSelectMode) {
       const node = textRefs.current[selectedTextId];
       if (node) {
         transformerRef.current.nodes([node]);
@@ -87,7 +178,7 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
       transformerRef.current.nodes([]);
       transformerRef.current.getLayer()?.batchDraw();
     }
-  }, [selectedTextId]);
+  }, [selectedTextId, isSelectMode]);
   
   const getKonvaFontStyle = (style?: string) => {
     if (!style || style === 'normal') return 'normal';
@@ -121,21 +212,85 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
           <Layer>
             {data.shapes.map((shape, i) => (
               shape.type === 'rect' ? 
-              <Rect key={i} x={shape.x} y={shape.y} width={50} height={50} fill={shape.fill} draggable={activeTool === 'Tool'} /> :
-              <Circle key={i} x={shape.x} y={shape.y} radius={30} fill={shape.fill} draggable={activeTool === 'Tool'} />
+              <Rect key={i} x={shape.x} y={shape.y} width={50} height={50} fill={shape.fill} draggable={isSelectMode} /> :
+              <Circle key={i} x={shape.x} y={shape.y} radius={30} fill={shape.fill} draggable={isSelectMode} />
             ))}
 
+            {/* Lines and Custom Shapes */}
             {data.lines.map((line, i) => (
               <Line
                 key={i}
                 points={line.points}
-                stroke={line.color}
-                strokeWidth={line.width}
+                stroke={line.color || (line as any).stroke}
+                strokeWidth={line.width || (line as any).strokeWidth}
                 tension={0.5}
                 lineCap="round"
                 lineJoin="round"
+                closed={(line as any).closed}
                 globalCompositeOperation={line.tool === 'Eraser' ? 'destination-out' : 'source-over'}
               />
+            ))}
+
+            {/* Drawing Preview for Pen Tool */}
+            {isPenMode && currentPoints.length > 0 && (
+               <Line points={currentPoints} stroke="red" strokeWidth={2} />
+            )}
+
+            {/* Images */}
+            {data.images?.map((img) => (
+               <URLImage 
+                  key={img.id} 
+                  image={img} 
+                  isSelectMode={isSelectMode}
+                  isSelected={selectedTextId === img.id}
+                  onSelect={() => onTextSelect(img.id)}
+               />
+            ))}
+
+            {/* Sticky Notes */}
+            {data.stickyNotes?.map((note) => (
+               <Group 
+                  key={note.id} 
+                  x={note.x} 
+                  y={note.y} 
+                  draggable={isSelectMode}
+                  onClick={() => onTextSelect(note.id)}
+               >
+                  <Rect width={150} height={150} fill={note.color} shadowBlur={5} shadowColor="black" shadowOpacity={0.2} />
+                  <KonvaText 
+                     x={10} y={10} 
+                     width={130} 
+                     text={note.text} 
+                     fontFamily="Roboto" 
+                     fontSize={14} 
+                     fill="#000"
+                  />
+               </Group>
+            ))}
+
+            {/* Tables */}
+            {data.tables?.map((table) => (
+               <Group 
+                  key={table.id} 
+                  x={table.x} 
+                  y={table.y} 
+                  draggable={isSelectMode}
+               >
+                  {Array.from({ length: table.rows + 1 }).map((_, i) => (
+                     <Line 
+                       key={`r${i}`} 
+                       points={[0, i * table.cellHeight, table.cols * table.cellWidth, i * table.cellHeight]} 
+                       stroke="black" strokeWidth={1} 
+                     />
+                  ))}
+                  {Array.from({ length: table.cols + 1 }).map((_, i) => (
+                     <Line 
+                       key={`c${i}`} 
+                       points={[i * table.cellWidth, 0, i * table.cellWidth, table.rows * table.cellHeight]} 
+                       stroke="black" strokeWidth={1} 
+                     />
+                  ))}
+               </Group>
             ))}
 
             {data.texts.map((textItem) => (
@@ -166,7 +321,7 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                 shadowOpacity={textItem.shadowOpacity || 1}
                 stroke={textItem.stroke}
                 strokeWidth={textItem.strokeWidth || 0}
-                draggable={activeTool === 'Tool'}
+                draggable={isSelectMode}
                 onClick={() => onTextSelect(textItem.id)}
                 onDblClick={(e) => onTextDblClick(e, pageIndex, textItem)}
                 onTransform={(e) => {
@@ -202,9 +357,9 @@ BookPage.displayName = 'BookPage';
 
 // --- Main Book Component ---
 
-const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWidth = 5, selectedBookSize = '6 x 4', fontSize = 16, fontFamily = 'Roboto', onAdvancedTextChange, drawingMode }: BookProps, ref: any) => {
+const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeColor = '#000000', strokeWidth = 5, selectedBookSize = '6 x 4', fontSize = 16, fontFamily = 'Roboto', onAdvancedTextChange, drawingMode, zoom: externalZoom }: BookProps, ref: any) => {
   const [pages, setPages] = useState<PageData[]>(INITIAL_PAGES);
-  const [zoom, setZoom] = useState(1);
+  const [internalZoom, setInternalZoom] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [pagesToAdd, setPagesToAdd] = useState('2');
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
@@ -213,6 +368,15 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
   const bookDimensions = BOOK_SIZE_MAP[selectedBookSize] || BOOK_SIZE_MAP['6 x 4'];
   const WIDTH = bookDimensions.width;
   const HEIGHT = bookDimensions.height;
+
+  const isToolCategoryActive = activeTool === 'Tool';
+  const isSelectMode = isToolCategoryActive && activeSubTool === 'select';
+  const isHandMode = isToolCategoryActive && activeSubTool === 'hand';
+  const isPenMode = isToolCategoryActive && activeSubTool === 'pen';
+  const isStickyNoteMode = isToolCategoryActive && activeSubTool === 'sticky_note';
+  const isTableMode = isToolCategoryActive && activeSubTool === 'table';
+
+  const zoom = externalZoom ?? internalZoom;
   
   // Text Editing State
   const [editingTextItem, setEditingTextItem] = useState<TextType | null>(null);
@@ -220,6 +384,12 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
   const [toolbarPos, setToolbarPos] = useState({ x: 0, y: 0 });
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [clipboard, setClipboard] = useState<TextType | null>(null);
+
+  // Hand Tool & Pen Tool State
+  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [currentPoints, setCurrentPoints] = useState<number[]>([]);
   
   const bookRef = useRef<any>(null);
   const isDrawing = useRef(false);
@@ -231,6 +401,7 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
     canUndo,
     canRedo,
     updatePageData,
+    handleImageUpload,
     currentPageIndex
   }));
 
@@ -282,7 +453,8 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
         } else if (property === 'listType') {
           const lines = textItem.text.split('\n');
           const newLines = lines.map((line, index) => {
-            let cleanLine = line.replace(/^[•\-\*]\s+/, '').replace(/^\d+\.\s+/, '');
+            // eslint-disable-next-line prefer-const
+            let cleanLine = line.replace(/^[•\-*]\s+/, '').replace(/^\d+\.\s+/, '');
             if (value === 'bullet') return `• ${cleanLine}`;
             if (value === 'number') return `${index + 1}. ${cleanLine}`;
             return cleanLine;
@@ -299,6 +471,45 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
       (window as any).__handleAdvancedTextChange = handleAdvancedChange;
     }
   }, [selectedTextId, currentPageIndex, pages, onAdvancedTextChange]);
+
+  // --- Hand Tool Logic ---
+  const handleContainerMouseDown = (e: React.MouseEvent) => {
+    if (isHandMode) {
+      setIsPanning(true);
+      setDragStart({ x: e.clientX - panPosition.x, y: e.clientY - panPosition.y });
+    }
+  };
+
+  const handleContainerMouseMove = (e: React.MouseEvent) => {
+    if (isPanning && isHandMode) {
+      setPanPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleContainerMouseUp = () => {
+    setIsPanning(false);
+  };
+
+  // --- Image Upload Logic ---
+  const handleImageUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const newImage: ImageType = {
+        id: Date.now().toString(),
+        type: 'image',
+        x: 100, y: 100, width: 200, height: 200,
+        rotation: 0,
+        src: reader.result as string
+      };
+      // Add to current page
+      const currentImages = pages[currentPageIndex].images || [];
+      updatePageData(currentPageIndex, 'images', [...currentImages, newImage]);
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -369,6 +580,69 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
       setContextMenu(null);
     }
     
+    // 1. PEN TOOL (Click-to-draw Polyline)
+    if (isPenMode) {
+      const pos = e.target.getStage()?.getPointerPosition();
+      if (!pos) return;
+      
+      const newPoints = [...currentPoints, pos.x, pos.y];
+      setCurrentPoints(newPoints);
+      isDrawing.current = true;
+      
+      // Close shape logic (if near start point, close it)
+      if (newPoints.length > 4) {
+         const dx = newPoints[0] - pos.x;
+         const dy = newPoints[1] - pos.y;
+         if (Math.sqrt(dx*dx + dy*dy) < 20) { // Snapping distance
+             const newShape = {
+                 id: Date.now().toString(),
+                 type: 'custom_shape',
+                 points: newPoints,
+                 stroke: strokeColor,
+                 strokeWidth: strokeWidth,
+                 closed: true,
+                 tool: 'pen',
+                 color: strokeColor,
+                 width: strokeWidth
+             };
+             updatePageData(pageIndex, 'lines', [...pages[pageIndex].lines, newShape]);
+             setCurrentPoints([]);
+             isDrawing.current = false;
+         }
+      }
+      return; 
+    }
+
+    // 2. STICKY NOTE TOOL
+    if (isStickyNoteMode) {
+      const pos = e.target.getStage()?.getPointerPosition();
+      if (!pos) return;
+      const newNote = {
+        id: Date.now().toString(),
+        type: 'sticky-note',
+        x: pos.x, y: pos.y, width: 150, height: 150,
+        text: "Double click to edit", color: "#fef3c7"
+      };
+      const currentNotes = pages[pageIndex].stickyNotes || [];
+      updatePageData(pageIndex, 'stickyNotes', [...currentNotes, newNote]);
+      return;
+    }
+
+    // 3. TABLE TOOL
+    if (isTableMode) {
+      const pos = e.target.getStage()?.getPointerPosition();
+      if (!pos) return;
+      const newTable = {
+        id: Date.now().toString(),
+        type: 'table',
+        x: pos.x, y: pos.y, rows: 3, cols: 3, cellWidth: 60, cellHeight: 30,
+        data: [['Header','H','H'], ['','',''], ['','','']]
+      };
+      const currentTables = pages[pageIndex].tables || [];
+      updatePageData(pageIndex, 'tables', [...currentTables, newTable]);
+      return;
+    }
+
     if (isDrawingMode) {
       isDrawing.current = true;
       const pos = e.target.getStage()?.getPointerPosition();
@@ -527,7 +801,7 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
     if (selectedTextId) {
       const textItem = pages[currentPageIndex]?.texts.find(t => t.id === selectedTextId);
       if (textItem) {
-        let updatedText = { ...textItem };
+        const updatedText = { ...textItem };
         if (format === 'bold') {
           const current = textItem.fontStyle || 'normal';
           updatedText.fontStyle = current.includes('bold') 
@@ -553,7 +827,10 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
         const newPages = Array(num).fill(null).map(() => ({
             lines: [],
             texts: [],
-            shapes: []
+            shapes: [],
+            images: [],
+            stickyNotes: [],
+            tables: []
         }));
         setPages(prev => [...prev, ...newPages]);
         setShowAddModal(false);
@@ -576,8 +853,15 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
   const onFlip = useCallback((e: { data: number }) => {
     setCurrentPageIndex(e.data);
   }, []);
+
   return (
-    <div style={{ backgroundImage: `url(${bookBG})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat'}} className="relative flex flex-col items-center justify-center h-[calc(100vh-140px)] w-full bg-transparent overflow-hidden">
+    <div 
+      style={{ backgroundImage: `url(${bookBG})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', cursor: isHandMode ? (isPanning ? 'grabbing' : 'grab') : 'default'}} 
+      className="relative flex flex-col items-center justify-center h-[calc(100vh-140px)] w-full bg-transparent overflow-hidden"
+      onMouseDown={handleContainerMouseDown}
+      onMouseMove={handleContainerMouseMove}
+      onMouseUp={handleContainerMouseUp}
+    >
       
       {/* Undo/Redo Controls */}
       
@@ -585,8 +869,8 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
       {/* Zoom / View Controls */}
       <div className="absolute right-4 bottom-4 flex flex-col gap-2 z-50">
         <div className="bg-[#2B2B2B] rounded-lg p-1 flex flex-col gap-1">
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/20" onClick={() => setZoom(z => Math.min(z + 0.1, 2))}><Plus size={16} /></Button>
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/20" onClick={() => setZoom(z => Math.max(z - 0.1, 0.5))}><Minus size={16} /></Button>
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/20" onClick={() => setInternalZoom(z => Math.min(z + 0.1, 2))}><Plus size={16} /></Button>
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/20" onClick={() => setInternalZoom(z => Math.max(z - 0.1, 0.5))}><Minus size={16} /></Button>
         </div>
         <Button size="icon" variant="secondary" className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-primary hover:bg-[#333] border-none"><Maximize size={18} /></Button>
         <div className="bg-primary text-white text-xs px-2 py-1 rounded text-center">{pages.length} Pages</div>
@@ -619,7 +903,10 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
           - useMouseEvents: Disabled when drawing to prevent accidental page turns
           - showCover: Makes the first page single
       */}
-      <div style={{ transform: `scale(${zoom})`, transition: 'transform 0.2s' }}>
+      <div style={{ 
+          transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoom})`, 
+          transition: isPanning ? 'none' : 'transform 0.2s' 
+      }}>
         <HTMLFlipBook
             key={`${WIDTH}-${HEIGHT}`}
             width={WIDTH}
@@ -653,6 +940,8 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
                     pageIndex={index}
                     data={pageData}
                     activeTool={activeTool}
+                    isSelectMode={isSelectMode}
+                    isPenMode={isPenMode}
                     width={WIDTH}
                     height={HEIGHT}
                     onMouseDown={handleMouseDown}
@@ -661,6 +950,7 @@ const BookComponent = ({ activeTool = 'Tool', strokeColor = '#000000', strokeWid
                     onTextDblClick={handleTextDblClick}
                     selectedTextId={selectedTextId}
                     onTextSelect={handleTextSelect}
+                    currentPoints={currentPoints}
                 />
             ))}
         </HTMLFlipBook>
