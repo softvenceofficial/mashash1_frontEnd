@@ -1619,6 +1619,17 @@ const Toolbox = ({
             />
         </div>
 
+        <Divider />
+
+        {/* Instructions */}
+        <div className="text-[10px] text-zinc-400 px-2 max-w-[200px]">
+          {penMode === 'polygon' ? (
+            <>Click to add points • Click start to close • ESC to cancel</>
+          ) : (
+            <>Click and drag to draw • Release to finish</>
+          )}
+        </div>
+
         <div className="flex-grow" />
 
         {/* Actions */}
