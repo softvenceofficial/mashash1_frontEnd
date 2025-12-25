@@ -155,18 +155,22 @@ interface BookPageProps {
   onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>, index: number) => void;
   onMouseMove: (e: Konva.KonvaEventObject<MouseEvent>, index: number) => void;
   onMouseUp: () => void;
+  onStageDoubleClick: (e: Konva.KonvaEventObject<MouseEvent>, index: number) => void;
   onTextDblClick: (e: Konva.KonvaEventObject<MouseEvent>, index: number, item: TextType) => void;
   selectedTextId: string | null;
   onTextSelect: (id: string | null) => void;
-  penState: { points: number[]; isDrawing: boolean };
+  penState: { points: number[]; isDrawing: boolean; mode: 'polygon' | 'freehand' };
   snapToStart: boolean;
   mousePos: { x: number; y: number } | null;
   strokeColor: string;
   strokeWidth: number;
+  penFillColor: string;
+  penFillOpacity: number;
+  penMode: 'polygon' | 'freehand';
 }
 
 const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({ 
-  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onTextDblClick, selectedTextId, onTextSelect, penState, snapToStart, mousePos, strokeColor, strokeWidth, isSelectMode, isPenMode
+  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onStageDoubleClick, onTextDblClick, selectedTextId, onTextSelect, penState, snapToStart, mousePos, strokeColor, strokeWidth, penFillColor, penFillOpacity, penMode, isSelectMode, isPenMode
 }, ref) => {
   const transformerRef = useRef<Konva.Transformer>(null);
   const textRefs = useRef<{ [key: string]: Konva.Text }>({});
@@ -210,7 +214,7 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
           onMouseDown={(e) => onMouseDown(e, pageIndex)}
           onMouseMove={(e) => onMouseMove(e, pageIndex)}
           onMouseUp={onMouseUp}
-          // Only allow Konva to capture pointer if we are in an editing tool
+          onDblClick={(e) => onStageDoubleClick(e, pageIndex)}
           className={activeTool !== 'Book Size' ? 'cursor-crosshair' : 'cursor-default'}
         >
           <Layer>
@@ -221,35 +225,57 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
             ))}
 
             {/* Lines and Custom Shapes */}
-            {data.lines.map((line, i) => (
-              <Line
-                key={i}
-                points={line.points}
-                stroke={line.color || (line as any).stroke}
-                strokeWidth={line.width || (line as any).strokeWidth}
-                tension={0.5}
-                lineCap="round"
-                lineJoin="round"
-                closed={(line as any).closed}
-                globalCompositeOperation={line.tool === 'Eraser' ? 'destination-out' : 'source-over'}
-              />
-            ))}
+            {data.lines.map((line, i) => {
+              if (line.type === 'custom-shape' && (line as any).draggable) {
+                return (
+                  <Line
+                    key={i}
+                    points={line.points}
+                    stroke={line.color || (line as any).stroke}
+                    strokeWidth={line.width || (line as any).strokeWidth}
+                    fill={(line as any).fill}
+                    tension={(line as any).tension || 0}
+                    lineCap="round"
+                    lineJoin="round"
+                    closed={(line as any).closed}
+                    draggable={isSelectMode}
+                    onClick={() => isSelectMode && onTextSelect((line as any).id)}
+                    globalCompositeOperation={line.tool === 'Eraser' ? 'destination-out' : 'source-over'}
+                  />
+                );
+              }
+              return (
+                <Line
+                  key={i}
+                  points={line.points}
+                  stroke={line.color || (line as any).stroke}
+                  strokeWidth={line.width || (line as any).strokeWidth}
+                  tension={0.5}
+                  lineCap="round"
+                  lineJoin="round"
+                  closed={(line as any).closed}
+                  globalCompositeOperation={line.tool === 'Eraser' ? 'destination-out' : 'source-over'}
+                />
+              );
+            })}
 
             {/* Drawing Preview for Pen Tool */}
             {isPenMode && penState.points.length > 0 && (
               <>
-                {/* Main polyline */}
                 <Line
                   points={penState.points}
                   stroke={strokeColor}
                   strokeWidth={strokeWidth}
+                  fill={penFillOpacity > 0 ? penFillColor : undefined}
+                  closed={penMode === 'polygon' && snapToStart}
                   dash={[5, 5]}
                   lineCap="round"
                   lineJoin="round"
+                  tension={penMode === 'freehand' ? 0.5 : 0}
+                  opacity={0.7}
                 />
 
-                {/* Draw points as circles */}
-                {penState.points.filter((_, i) => i % 2 === 0).map((x, i) => {
+                {penMode === 'polygon' && penState.points.filter((_, i) => i % 2 === 0).map((x, i) => {
                   const y = penState.points[i * 2 + 1];
                   const isFirst = i === 0;
 
@@ -278,8 +304,7 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                   );
                 })}
 
-                {/* Live preview line from last point to cursor */}
-                {penState.points.length >= 2 && mousePos && (
+                {penMode === 'polygon' && penState.points.length >= 2 && mousePos && (
                   <Line
                     points={[
                       penState.points[penState.points.length - 2],
@@ -473,13 +498,15 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   const [isPanning, setIsPanning] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [penDrawingState, setPenDrawingState] = useState<{
-    [pageIndex: number]: { points: number[]; isDrawing: boolean };
+    [pageIndex: number]: { points: number[]; isDrawing: boolean; mode: 'polygon' | 'freehand' };
   }>({});
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [snapToStart, setSnapToStart] = useState(false);
   const [penMode, setPenMode] = useState<'polygon' | 'freehand'>('polygon');
   const [penFillColor, setPenFillColor] = useState('rgba(255, 255, 255, 0)');
+  const [penFillOpacity, setPenFillOpacity] = useState(0);
   const [penSnapDistance, setPenSnapDistance] = useState(20);
+  const activeDrawingPage = useRef<number | null>(null);
   
   const bookRef = useRef<any>(null);
   const isDrawing = useRef(false);
@@ -496,6 +523,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     handlePenOptionChange: (property: string, value: any) => {
       if (property === 'mode') setPenMode(value);
       if (property === 'fillColor') setPenFillColor(value);
+      if (property === 'fillOpacity') setPenFillOpacity(value);
       if (property === 'snapDistance') setPenSnapDistance(value);
     },
     handlePenAction: (action: string) => {
@@ -512,8 +540,16 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   }));
 
   const getCurrentPenState = (pageIndex: number) => {
-    return penDrawingState[pageIndex] || { points: [], isDrawing: false };
+    return penDrawingState[pageIndex] || { points: [], isDrawing: false, mode: penMode };
   };
+
+  useEffect(() => {
+    if (activeDrawingPage.current !== null && activeDrawingPage.current !== currentPageIndex) {
+      setMousePos(null);
+      setSnapToStart(false);
+    }
+    activeDrawingPage.current = currentPageIndex;
+  }, [currentPageIndex]);
 
   const updatePageData = useCallback((pageIndex: number, key: keyof PageData, data: any) => {
     setPages(prev => {
@@ -621,33 +657,34 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     reader.readAsDataURL(file);
   };
 
-  // Pen tool keyboard shortcuts
   useEffect(() => {
     if (!isPenMode) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      const penState = getCurrentPenState(currentPageIndex);
+      if (activeDrawingPage.current === null) return;
+      const penState = getCurrentPenState(activeDrawingPage.current);
 
       switch (e.key) {
         case 'Escape':
           setPenDrawingState(prev => ({
             ...prev,
-            [currentPageIndex]: { points: [], isDrawing: false }
+            [activeDrawingPage.current!]: { points: [], isDrawing: false, mode: penMode }
           }));
+          activeDrawingPage.current = null;
           break;
         case 'Enter':
-          if (penState.points.length >= 6) {
-            completePenShape(currentPageIndex, penState.points);
+          if (penMode === 'polygon' && penState.points.length >= 6) {
+            completePenShape(activeDrawingPage.current, penState.points, true);
           }
           break;
         case 'Backspace':
         case 'Delete':
           e.preventDefault();
-          if (penState.points.length >= 2) {
+          if (penMode === 'polygon' && penState.points.length >= 2) {
             const newPoints = penState.points.slice(0, -2);
             setPenDrawingState(prev => ({
               ...prev,
-              [currentPageIndex]: { ...prev[currentPageIndex], points: newPoints }
+              [activeDrawingPage.current!]: { ...prev[activeDrawingPage.current!], points: newPoints }
             }));
           }
           break;
@@ -656,7 +693,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPenMode, currentPageIndex, penDrawingState]);
+  }, [isPenMode, penMode, penDrawingState]);
 
   // Text keyboard shortcuts
   useEffect(() => {
@@ -718,27 +755,42 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   // Disable all mouse-based page flipping - only arrow buttons allowed
   const isDrawingMode = ['Brush', 'Eraser'].includes(activeTool);
 
-  const completePenShape = (pageIndex: number, points: number[]) => {
+  const completePenShape = (pageIndex: number, points: number[], closed: boolean) => {
+    const fillMatch = penFillColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([0-9.]+)\)/);
+    const fillOpacity = fillMatch ? parseFloat(fillMatch[4]) : 0;
+
     const newShape = {
       id: Date.now().toString(),
-      type: 'polygon',
+      type: 'custom-shape',
       points: points,
       stroke: strokeColor,
       strokeWidth: strokeWidth,
-      fill: penFillColor,
-      closed: true,
+      fill: fillOpacity > 0 ? penFillColor : undefined,
+      closed: closed,
       tool: 'pen',
       color: strokeColor,
-      width: strokeWidth
+      width: strokeWidth,
+      draggable: true,
+      tension: penMode === 'freehand' ? 0.5 : 0,
     };
 
     updatePageData(pageIndex, 'lines', [...pages[pageIndex].lines, newShape]);
     setPenDrawingState(prev => ({
       ...prev,
-      [pageIndex]: { points: [], isDrawing: false }
+      [pageIndex]: { points: [], isDrawing: false, mode: penMode }
     }));
     setMousePos(null);
     setSnapToStart(false);
+    activeDrawingPage.current = null;
+  };
+
+  const handleStageDoubleClick = (e: Konva.KonvaEventObject<MouseEvent>, pageIndex: number) => {
+    if (!isPenMode) return;
+    const penState = getCurrentPenState(pageIndex);
+    if (penState.points.length >= 6) {
+      e.cancelBubble = true;
+      completePenShape(pageIndex, penState.points, penMode === 'polygon');
+    }
   };
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>, pageIndex: number) => {
@@ -749,7 +801,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       setContextMenu(null);
     }
     
-    // 1. PEN TOOL (Click-to-draw Polyline)
+    // 1. PEN TOOL
     if (isPenMode) {
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
@@ -757,36 +809,47 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       const penState = getCurrentPenState(pageIndex);
       const points = penState.points;
 
-      // First click - start drawing
-      if (points.length === 0) {
+      if (penMode === 'polygon') {
+        if (points.length === 0) {
+          setPenDrawingState(prev => ({
+            ...prev,
+            [pageIndex]: { points: [pos.x, pos.y], isDrawing: true, mode: 'polygon' }
+          }));
+          activeDrawingPage.current = pageIndex;
+          return;
+        }
+
+        if (points.length > 4) {
+          const dx = points[0] - pos.x;
+          const dy = points[1] - pos.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < penSnapDistance) {
+            completePenShape(pageIndex, points, true);
+            return;
+          }
+        }
+
         setPenDrawingState(prev => ({
           ...prev,
-          [pageIndex]: { points: [pos.x, pos.y], isDrawing: true }
+          [pageIndex]: {
+            ...prev[pageIndex],
+            points: [...points, pos.x, pos.y],
+            mode: 'polygon'
+          }
         }));
         return;
       }
 
-      // Check for completion (click near start)
-      if (points.length > 4) {
-        const dx = points[0] - pos.x;
-        const dy = points[1] - pos.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < penSnapDistance) {
-          completePenShape(pageIndex, points);
-          return;
-        }
+      if (penMode === 'freehand') {
+        isDrawing.current = true;
+        activeDrawingPage.current = pageIndex;
+        setPenDrawingState(prev => ({
+          ...prev,
+          [pageIndex]: { points: [pos.x, pos.y], isDrawing: true, mode: 'freehand' }
+        }));
+        return;
       }
-
-      // Add new point
-      setPenDrawingState(prev => ({
-        ...prev,
-        [pageIndex]: {
-          ...prev[pageIndex],
-          points: [...points, pos.x, pos.y]
-        }
-      }));
-      return;
     }
 
     // 2. STICKY NOTE TOOL
@@ -880,20 +943,26 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     const pos = e.target.getStage()?.getPointerPosition();
     if (!pos) return;
 
-    // Pen tool mouse tracking
     if (isPenMode) {
       setMousePos(pos);
       const penState = getCurrentPenState(pageIndex);
       const points = penState.points;
 
-      // Check if near starting point for snap
-      if (points.length > 4) {
+      if (penMode === 'polygon' && points.length > 4) {
         const dx = points[0] - pos.x;
         const dy = points[1] - pos.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         setSnapToStart(distance < penSnapDistance);
       } else {
         setSnapToStart(false);
+      }
+
+      if (penMode === 'freehand' && isDrawing.current && pageIndex === activeDrawingPage.current) {
+        const newPoints = [...points, pos.x, pos.y];
+        setPenDrawingState(prev => ({
+          ...prev,
+          [pageIndex]: { ...prev[pageIndex], points: newPoints }
+        }));
       }
       return;
     }
@@ -912,7 +981,19 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   };
 
   const handleMouseUp = () => {
+    if (isPenMode && penMode === 'freehand' && isDrawing.current && activeDrawingPage.current !== null) {
+      const penState = getCurrentPenState(activeDrawingPage.current);
+      if (penState.points.length >= 6) {
+        completePenShape(activeDrawingPage.current, penState.points, false);
+      } else {
+        setPenDrawingState(prev => ({
+          ...prev,
+          [activeDrawingPage.current!]: { points: [], isDrawing: false, mode: penMode }
+        }));
+      }
+    }
     isDrawing.current = false;
+    activeDrawingPage.current = null;
   };
 
   // --- Text Editing ---
@@ -1148,6 +1229,10 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
                     mousePos={mousePos}
                     strokeColor={strokeColor}
                     strokeWidth={strokeWidth}
+                    penFillColor={penFillColor}
+                    penFillOpacity={penFillOpacity}
+                    penMode={penMode}
+                    onStageDoubleClick={handleStageDoubleClick}
                 />
             ))}
         </HTMLFlipBook>

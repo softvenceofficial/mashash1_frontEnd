@@ -1552,8 +1552,27 @@ const Toolbox = ({
 
         {/* Fill Settings */}
         <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="enableFill"
+                checked={penFillOpacity > 0}
+                onChange={(e) => {
+                  const newOpacity = e.target.checked ? 50 : 0;
+                  setPenFillOpacity(newOpacity);
+                  onPenOptionChange?.('fillOpacity', newOpacity);
+                  const match = penFillColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
+                  if (match) {
+                    const newFill = `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${newOpacity / 100})`;
+                    setPenFillColor(newFill);
+                    onPenOptionChange?.('fillColor', newFill);
+                  }
+                }}
+                className="w-4 h-4 rounded border-zinc-600 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="enableFill" className="text-[10px] text-zinc-300 cursor-pointer">Fill</label>
+            </div>
             <div className="flex flex-col items-center gap-1">
-                <span className="text-[9px] text-zinc-400">Fill</span>
                 <div 
                     className="w-7 h-7 rounded border border-white/20 cursor-pointer hover:scale-110 transition-transform"
                     style={{ backgroundColor: penFillColor }}
@@ -1569,7 +1588,7 @@ const Toolbox = ({
                         <SketchPicker 
                             color={penFillColor} 
                             onChange={(color) => {
-                                const rgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${color.rgb.a ?? 1})`;
+                                const rgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${penFillOpacity / 100})`;
                                 setPenFillColor(rgba);
                                 onPenOptionChange?.('fillColor', rgba);
                             }} 
@@ -1591,6 +1610,12 @@ const Toolbox = ({
                         const val = parseInt(e.target.value);
                         setPenFillOpacity(val);
                         onPenOptionChange?.('fillOpacity', val);
+                        const match = penFillColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
+                        if (match) {
+                          const newFill = `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${val / 100})`;
+                          setPenFillColor(newFill);
+                          onPenOptionChange?.('fillColor', newFill);
+                        }
                     }}
                     className="w-full h-1 bg-zinc-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
                 />
@@ -1624,9 +1649,9 @@ const Toolbox = ({
         {/* Instructions */}
         <div className="text-[10px] text-zinc-400 px-2 max-w-[200px]">
           {penMode === 'polygon' ? (
-            <>Click to add points • Click start to close • ESC to cancel</>
+            <>Click to add points • Double-click or Enter to finish • Click near start to close • ESC to cancel • Backspace to undo point</>
           ) : (
-            <>Click and drag to draw • Release to finish</>
+            <>Click and drag to draw • Release to finish • ESC to cancel</>
           )}
         </div>
 
