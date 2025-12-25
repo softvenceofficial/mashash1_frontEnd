@@ -41,6 +41,24 @@ export interface ShapeType {
   fill: string;
 }
 
+export interface StickyNoteType {
+  id: string;
+  type: 'sticky-note';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  collapsedWidth: number;
+  collapsedHeight: number;
+  isExpanded: boolean;
+  text: string;
+  color: string;
+  textColor: string;
+  fontSize: number;
+  fontFamily: string;
+  rotation?: number;
+}
+
 export interface PageData {
   lines: LineType[];
   texts: TextType[];

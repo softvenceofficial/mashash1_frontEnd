@@ -158,9 +158,6 @@ const ColorSwatch = ({ color, isSelected, onClick }: { color: string, isSelected
   </button>
 );
 
-
-
-
 interface ToolboxProps {
   activeTool: string;
   activeSubTool?: string;
@@ -1624,25 +1621,7 @@ const Toolbox = ({
 
         <Divider />
 
-        {/* Snap Settings */}
-        <div className="flex flex-col gap-1 w-20">
-            <div className="flex justify-between">
-                <span className="text-[9px] text-zinc-400">Snap</span>
-                <span className="text-[9px] text-zinc-300">{penSnapDistance}px</span>
-            </div>
-            <input
-                type="range"
-                min="5"
-                max="50"
-                value={penSnapDistance}
-                onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    setPenSnapDistance(val);
-                    onPenOptionChange?.('snapDistance', val);
-                }}
-                className="w-full h-1 bg-zinc-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-            />
-        </div>
+      
 
         <Divider />
 
@@ -1657,21 +1636,7 @@ const Toolbox = ({
 
         <div className="flex-grow" />
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-            <ToolbarButton 
-                onClick={() => onPenAction?.('reset')} 
-                className="text-[10px] px-2 h-8 bg-red-500/20 text-red-200 hover:bg-red-500/30 hover:text-red-100"
-            >
-                Reset
-            </ToolbarButton>
-            <ToolbarButton 
-                onClick={() => onPenAction?.('complete')} 
-                className="text-[10px] px-2 h-8 bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 hover:text-indigo-100"
-            >
-                Complete
-            </ToolbarButton>
-        </div>
+        
       </div>
     );
   };

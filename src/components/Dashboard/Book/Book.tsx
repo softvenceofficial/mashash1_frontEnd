@@ -6,11 +6,13 @@ import HTMLFlipBook from 'react-pageflip';
 import { Plus, Minus, Maximize, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import bookBG from "@/assets/images/Books/mainBookbg.png"
-import type { TextType, ShapeType, PageData as BasePageData } from './types';
+import type { TextType, ShapeType, PageData as BasePageData, StickyNoteType } from './types';
 import { FloatingTextToolbar } from './FloatingTextToolbar';
 import { TextContextMenu } from './TextContextMenu';
 import { InPlaceTextEditor } from './InPlaceTextEditor';
 import { useTextHistory } from './useTextHistory';
+import StickyNote from './StickyNote';
+import InlineStickyNoteEditor from './InlineStickyNoteEditor';
 
 // --- Types ---
 export interface ImageType {
@@ -22,17 +24,6 @@ export interface ImageType {
   height: number;
   rotation: number;
   src: string;
-}
-
-export interface StickyNoteType {
-  id: string;
-  type: 'sticky-note';
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  text: string;
-  color: string;
 }
 
 export interface TableType {
@@ -167,10 +158,13 @@ interface BookPageProps {
   penFillColor: string;
   penFillOpacity: number;
   penMode: 'polygon' | 'freehand';
+  handleStickyNoteDoubleClick: (pageIndex: number, note: StickyNoteType) => void;
+  handleStickyNoteUpdate: (pageIndex: number, updatedNote: StickyNoteType) => void;
+  handleStickyNoteDelete: (pageIndex: number, noteId: string) => void;
 }
 
 const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({ 
-  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onStageDoubleClick, onTextDblClick, selectedTextId, onTextSelect, penState, snapToStart, mousePos, strokeColor, strokeWidth, penFillColor, penFillOpacity, penMode, isSelectMode, isPenMode
+  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onStageDoubleClick, onTextDblClick, selectedTextId, onTextSelect, penState, snapToStart, mousePos, strokeColor, strokeWidth, penFillColor, penFillOpacity, penMode, handleStickyNoteDoubleClick, handleStickyNoteUpdate, handleStickyNoteDelete, isSelectMode, isPenMode
 }, ref) => {
   const transformerRef = useRef<Konva.Transformer>(null);
   const textRefs = useRef<{ [key: string]: Konva.Text }>({});
@@ -357,23 +351,16 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
 
             {/* Sticky Notes */}
             {data.stickyNotes?.map((note) => (
-               <Group 
-                  key={note.id} 
-                  x={note.x} 
-                  y={note.y} 
-                  draggable={isSelectMode}
-                  onClick={() => onTextSelect(note.id)}
-               >
-                  <Rect width={150} height={150} fill={note.color} shadowBlur={5} shadowColor="black" shadowOpacity={0.2} />
-                  <KonvaText 
-                     x={10} y={10} 
-                     width={130} 
-                     text={note.text} 
-                     fontFamily="Roboto" 
-                     fontSize={14} 
-                     fill="#000"
-                  />
-               </Group>
+               <StickyNote
+                  key={note.id}
+                  note={note}
+                  isSelected={selectedTextId === note.id}
+                  isSelectMode={isSelectMode}
+                  onSelect={onTextSelect}
+                  onDoubleClick={(note) => handleStickyNoteDoubleClick(pageIndex, note)}
+                  onUpdate={(updatedNote) => handleStickyNoteUpdate(pageIndex, updatedNote)}
+                  onDelete={(id) => handleStickyNoteDelete(pageIndex, id)}
+               />
             ))}
 
             {/* Tables */}
@@ -488,6 +475,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   
   // Text Editing State
   const [editingTextItem, setEditingTextItem] = useState<TextType | null>(null);
+  const [editingStickyNote, setEditingStickyNote] = useState<StickyNoteType | null>(null);
   const [showToolbar, setShowToolbar] = useState(false);
   const [toolbarPos, setToolbarPos] = useState({ x: 0, y: 0 });
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -526,17 +514,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       if (property === 'fillOpacity') setPenFillOpacity(value);
       if (property === 'snapDistance') setPenSnapDistance(value);
     },
-    handlePenAction: (action: string) => {
-      const penState = getCurrentPenState(currentPageIndex);
-      if (action === 'complete' && penState.points.length >= 6) {
-        completePenShape(currentPageIndex, penState.points);
-      } else if (action === 'reset') {
-        setPenDrawingState(prev => ({
-          ...prev,
-          [currentPageIndex]: { points: [], isDrawing: false }
-        }));
-      }
-    }
+    
   }));
 
   const getCurrentPenState = (pageIndex: number) => {
@@ -752,6 +730,31 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedTextId, currentPageIndex]);
 
+  const handleStickyNoteUpdate = (pageIndex: number, updatedNote: StickyNoteType) => {
+    setPages(prev => {
+      const newPages = [...prev];
+      const page = newPages[pageIndex];
+      page.stickyNotes = page.stickyNotes.map(note => 
+        note.id === updatedNote.id ? updatedNote : note
+      );
+      return newPages;
+    });
+  };
+
+  const handleStickyNoteDelete = (pageIndex: number, noteId: string) => {
+    setPages(prev => {
+      const newPages = [...prev];
+      newPages[pageIndex].stickyNotes = newPages[pageIndex].stickyNotes.filter(note => note.id !== noteId);
+      return newPages;
+    });
+    setSelectedTextId(null);
+  };
+
+  const handleStickyNoteDoubleClick = (pageIndex: number, note: StickyNoteType) => {
+    setCurrentPageIndex(pageIndex);
+    setEditingStickyNote(note);
+  };
+
   // Disable all mouse-based page flipping - only arrow buttons allowed
   const isDrawingMode = ['Brush', 'Eraser'].includes(activeTool);
 
@@ -856,11 +859,21 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     if (isStickyNoteMode) {
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
-      const newNote = {
+      const newNote: StickyNoteType = {
         id: Date.now().toString(),
         type: 'sticky-note',
-        x: pos.x, y: pos.y, width: 150, height: 150,
-        text: "Double click to edit", color: "#fef3c7"
+        x: pos.x,
+        y: pos.y,
+        width: 200,
+        height: 200,
+        collapsedWidth: 30,
+        collapsedHeight: 30,
+        isExpanded: false,
+        text: '',
+        color: '#fef3c7',
+        textColor: '#000000',
+        fontSize: 14,
+        fontFamily: 'Roboto'
       };
       const currentNotes = pages[pageIndex].stickyNotes || [];
       updatePageData(pageIndex, 'stickyNotes', [...currentNotes, newNote]);
@@ -1233,6 +1246,9 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
                     penFillOpacity={penFillOpacity}
                     penMode={penMode}
                     onStageDoubleClick={handleStageDoubleClick}
+                    handleStickyNoteDoubleClick={handleStickyNoteDoubleClick}
+                    handleStickyNoteUpdate={handleStickyNoteUpdate}
+                    handleStickyNoteDelete={handleStickyNoteDelete}
                 />
             ))}
         </HTMLFlipBook>
@@ -1277,6 +1293,18 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
             </div>
           </div>
         </div>
+      )}
+
+      {/* Inline Sticky Note Editor */}
+      {editingStickyNote && (
+        <InlineStickyNoteEditor
+          note={editingStickyNote}
+          onUpdate={(updatedNote) => {
+            handleStickyNoteUpdate(currentPageIndex, updatedNote);
+            setEditingStickyNote(null);
+          }}
+          onBlur={() => setEditingStickyNote(null)}
+        />
       )}
 
       {/* In-Place Text Editor */}
