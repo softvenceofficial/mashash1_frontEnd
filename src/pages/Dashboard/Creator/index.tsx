@@ -17,7 +17,21 @@ export default function Creator() {
   const [fontFamily, setFontFamily] = useState("Roboto");
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(DrawingMode.BRUSH);
   const [zoom, setZoom] = useState(1);
+  const [tableProperties, setTableProperties] = useState<any>(null);
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const bookRef = useRef<any>(null);
+
+  // Update table properties when table selection changes
+  const updateTableProperties = () => {
+    if (bookRef.current?.getSelectedTableProperties) {
+      const props = bookRef.current.getSelectedTableProperties();
+      setTableProperties(props);
+    }
+    if (bookRef.current?.getSelectedTableId) {
+      const id = bookRef.current.getSelectedTableId();
+      setSelectedTableId(id);
+    }
+  };
 
   const handleAdvancedTextChange = (property: string, value: any) => {
     if ((window as any).__handleAdvancedTextChange) {
@@ -46,6 +60,8 @@ export default function Creator() {
   const handleTableChange = (property: string, value: any) => {
     if (bookRef.current?.handleTableChange) {
       bookRef.current.handleTableChange(property, value);
+      // Update local state after change
+      setTimeout(updateTableProperties, 50);
     }
   };
 
@@ -84,6 +100,8 @@ export default function Creator() {
             onPenOptionChange={handlePenOptionChange}
             onPenAction={handlePenAction}
             onTableChange={handleTableChange}
+            tableProperties={tableProperties}
+            selectedTableId={selectedTableId}
           />
           <Book
             ref={bookRef}

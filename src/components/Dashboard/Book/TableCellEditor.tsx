@@ -78,7 +78,8 @@ const TableCellEditor: React.FC<TableCellEditorProps> = ({
         style={{
           minHeight: `${Math.max(height - 10, 20)}px`,
           fontSize: `${cell.fontSize}px`,
-          fontFamily: cell.fontFamily
+          fontFamily: cell.fontFamily,
+          color: "#000000",
         }}
       />
     </div>

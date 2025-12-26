@@ -189,6 +189,14 @@ interface ToolboxProps {
   onTableChange?: (property: string, value: any) => void;
   onPenOptionChange?: (property: string, value: any) => void;
   onPenAction?: (action: string) => void;
+  tableProperties?: {
+    rows: number;
+    cols: number;
+    borderColor: string;
+    fillColor: string;
+    borderWidth: number;
+  };
+  selectedTableId?: string | null;
 }
 
 const Toolbox = ({ 
@@ -220,6 +228,8 @@ const Toolbox = ({
   onImageUpload,
   onTableChange,
   onPenOptionChange,
+  tableProperties,
+  selectedTableId,
 }: ToolboxProps) => {
   const [selectedBook, setSelectedBook] = useState(2);
   const [fontSize, setFontSize] = useState(24);
@@ -247,10 +257,11 @@ const Toolbox = ({
   const [showFillPicker, setShowFillPicker] = useState(false);
 
   // Table specific states
-  const [tableRows, setTableRows] = useState(3);
-  const [tableCols, setTableCols] = useState(3);
-  const [tableBorderColor, setTableBorderColor] = useState('#000000');
-  const [tableFillColor, setTableFillColor] = useState('#ffffff');
+  const [tableRows, setTableRows] = useState(tableProperties?.rows || 3);
+  const [tableCols, setTableCols] = useState(tableProperties?.cols || 3);
+  const [tableBorderColor, setTableBorderColor] = useState(tableProperties?.borderColor || '#000000');
+  const [tableFillColor, setTableFillColor] = useState(tableProperties?.fillColor || '#ffffff');
+  const [tableBorderWidth, setTableBorderWidth] = useState(tableProperties?.borderWidth || 1);
   const [tableColorTarget, setTableColorTarget] = useState<'border' | 'fill'>('border');
   const [activeTableTab, setActiveTableTab] = useState<'layout' | 'design'>('layout');
 
@@ -258,6 +269,17 @@ const Toolbox = ({
   const [internalDrawingMode, setInternalDrawingMode] = useState<DrawingMode>(DrawingMode.BRUSH);
   const currentDrawingMode = drawingMode ?? internalDrawingMode;
   const [brushOpacity, setBrushOpacity] = useState(100);
+
+  // Sync table properties when they change from Book component
+  useEffect(() => {
+    if (tableProperties && selectedTableId) {
+      setTableRows(tableProperties.rows);
+      setTableCols(tableProperties.cols);
+      setTableBorderColor(tableProperties.borderColor);
+      setTableFillColor(tableProperties.fillColor);
+      setTableBorderWidth(tableProperties.borderWidth);
+    }
+  }, [tableProperties, selectedTableId]);
 
   // Helper to extract opacity for the slider when switching
   const parseOpacity = (rgbaString: string) => {
@@ -388,6 +410,8 @@ const Toolbox = ({
       setTableCols(3);
       setTableBorderColor('#000000');
       setTableFillColor('#ffffff');
+      setTableBorderWidth(1);
+      setActiveTableTab('layout');
       onTableChange?.('reset', null);
     }
   };
@@ -428,9 +452,15 @@ const Toolbox = ({
   };
 
   const handleTablePropertyChange = (prop: 'rows' | 'cols', value: number) => {
-    if (prop === 'rows') setTableRows(value);
-    if (prop === 'cols') setTableCols(value);
-    onTableChange?.(prop, value);
+    const newValue = Math.max(1, value);
+    if (prop === 'rows') {
+      setTableRows(newValue);
+      onTableChange?.(prop, newValue);
+    }
+    if (prop === 'cols') {
+      setTableCols(newValue);
+      onTableChange?.(prop, newValue);
+    }
   };
 
   const handleTableColorChange = (color: any, target: 'border' | 'fill') => {
@@ -1291,11 +1321,18 @@ const Toolbox = ({
             <div className="flex flex-col items-center">
               <span className="text-[9px] text-zinc-400 mb-1">Rows</span>
               <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700">
-                <button onClick={() => handleTablePropertyChange('rows', Math.max(1, tableRows - 1))} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg">
+                <button 
+                  onClick={() => handleTablePropertyChange('rows', tableRows - 1)} 
+                  className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg"
+                  disabled={tableRows <= 1}
+                >
                   <Minus className="w-3 h-3" />
                 </button>
                 <div className="w-8 text-center text-xs font-medium text-zinc-200 font-mono">{tableRows}</div>
-                <button onClick={() => handleTablePropertyChange('rows', tableRows + 1)} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg">
+                <button 
+                  onClick={() => handleTablePropertyChange('rows', tableRows + 1)} 
+                  className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg"
+                >
                   <Plus className="w-3 h-3" />
                 </button>
               </div>
@@ -1304,11 +1341,18 @@ const Toolbox = ({
             <div className="flex flex-col items-center">
               <span className="text-[9px] text-zinc-400 mb-1">Cols</span>
               <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700">
-                <button onClick={() => handleTablePropertyChange('cols', Math.max(1, tableCols - 1))} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg">
+                <button 
+                  onClick={() => handleTablePropertyChange('cols', tableCols - 1)} 
+                  className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg"
+                  disabled={tableCols <= 1}
+                >
                   <Minus className="w-3 h-3" />
                 </button>
                 <div className="w-8 text-center text-xs font-medium text-zinc-200 font-mono">{tableCols}</div>
-                <button onClick={() => handleTablePropertyChange('cols', tableCols + 1)} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg">
+                <button 
+                  onClick={() => handleTablePropertyChange('cols', tableCols + 1)} 
+                  className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg"
+                >
                   <Plus className="w-3 h-3" />
                 </button>
               </div>
@@ -1348,13 +1392,20 @@ const Toolbox = ({
             <Divider />
 
             <div className="flex flex-col gap-1 w-20">
-              <span className="text-[9px] text-zinc-400">Border Width</span>
+              <div className="flex justify-between">
+                <span className="text-[9px] text-zinc-400">Border Width</span>
+                <span className="text-[9px] text-zinc-300">{tableBorderWidth}px</span>
+              </div>
               <input
                 type="range"
                 min="1"
                 max="10"
-                value={1}
-                onChange={(e) => onTableChange?.('borderWidth', parseInt(e.target.value))}
+                value={tableBorderWidth}
+                onChange={(e) => {
+                  const width = parseInt(e.target.value);
+                  setTableBorderWidth(width);
+                  onTableChange?.('borderWidth', width);
+                }}
                 className="w-full h-1.5 bg-zinc-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
               />
             </div>

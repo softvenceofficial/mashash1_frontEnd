@@ -161,6 +161,7 @@ const TableCellComponent = memo(({
         }}
         onContextMenu={(e) => {
           e.evt.preventDefault();
+          e.evt.stopPropagation();
           e.cancelBubble = true;
           onCellContextMenu(e.evt, table.id, rowIndex, colIndex);
         }}
@@ -663,6 +664,19 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     updatePageData,
     handleImageUpload,
     currentPageIndex,
+    getSelectedTableProperties: () => {
+      if (!selectedTableId || !pages[currentPageIndex]) return null;
+      const table = pages[currentPageIndex].tables.find(t => t.id === selectedTableId);
+      if (!table) return null;
+      return {
+        rows: table.rows,
+        cols: table.cols,
+        borderColor: table.borderColor,
+        fillColor: table.fillColor,
+        borderWidth: table.borderWidth
+      };
+    },
+    getSelectedTableId: () => selectedTableId,
     handlePenOptionChange: (property: string, value: any) => {
       if (property === 'mode') setPenMode(value);
       if (property === 'fillColor') setPenFillColor(value);
@@ -824,14 +838,20 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       const tableIndex = page.tables.findIndex(t => t.id === tableId);
       
       if (tableIndex !== -1) {
-        const currentSelection = page.tables[tableIndex].selectedCell;
-        if (!currentSelection || currentSelection.row !== row || currentSelection.col !== col) {
-          page.tables[tableIndex] = {
-            ...page.tables[tableIndex],
-            selectedCell: { row, col }
-          };
-          return updatedPages;
-        }
+        page.tables.forEach((t, idx) => {
+          if (idx === tableIndex) {
+            page.tables[idx] = {
+              ...t,
+              selectedCell: { row, col }
+            };
+          } else {
+            page.tables[idx] = {
+              ...t,
+              selectedCell: null
+            };
+          }
+        });
+        return updatedPages;
       }
       return prevPages;
     });
@@ -874,6 +894,24 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     row: number,
     col: number
   ) => {
+    evt.preventDefault();
+    setSelectedTableId(tableId);
+    
+    // Update selected cell for the table
+    setPages(prevPages => {
+      const updatedPages = [...prevPages];
+      const page = updatedPages[currentPageIndex];
+      const tableIndex = page.tables.findIndex(t => t.id === tableId);
+      
+      if (tableIndex !== -1) {
+        page.tables[tableIndex] = {
+          ...page.tables[tableIndex],
+          selectedCell: { row, col }
+        };
+      }
+      return updatedPages;
+    });
+    
     setTableContextMenu({
       x: evt.clientX,
       y: evt.clientY,
@@ -1038,24 +1076,20 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     if (!selectedCell) return;
     
     const { row, col } = selectedCell;
-    const newData = [...table.data];
-    const mainCell = newData[row][col];
+    const newData = table.data.map(r => r.map(c => ({ ...c })));
+    const mainCell = { ...newData[row][col] };
     
-    if (row + 1 < table.rows) {
-      newData[row + 1][col] = { ...createEmptyCell(), content: '' };
-    }
-    if (col + 1 < table.cols) {
-      newData[row][col + 1] = { ...createEmptyCell(), content: '' };
-    }
-    if (row + 1 < table.rows && col + 1 < table.cols) {
-      newData[row + 1][col + 1] = { ...createEmptyCell(), content: '' };
+    mainCell.rowSpan = (mainCell.rowSpan || 1) + 1;
+    mainCell.colSpan = (mainCell.colSpan || 1) + 1;
+    
+    for (let i = row; i < Math.min(row + 2, table.rows); i++) {
+      for (let j = col; j < Math.min(col + 2, table.cols); j++) {
+        if (i === row && j === col) continue;
+        newData[i][j] = { ...createEmptyCell(), content: '' };
+      }
     }
     
-    newData[row][col] = {
-      ...mainCell,
-      colSpan: 2,
-      rowSpan: 2
-    };
+    newData[row][col] = mainCell;
     
     page.tables[tableIndex] = {
       ...table,
@@ -1444,9 +1478,16 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
 
     // 3. TABLE TOOL
     if (isTableMode) {
-      const pos = e.target.getStage()?.getPointerPosition();
+      const stage = e.target.getStage();
+      if (!stage) return;
+      
+      const pos = stage.getPointerPosition();
       if (!pos) return;
-      const newTable = createDefaultTable(pos.x, pos.y);
+      
+      const adjustedX = (pos.x - panPosition.x) / zoom;
+      const adjustedY = (pos.y - panPosition.y) / zoom;
+      
+      const newTable = createDefaultTable(adjustedX, adjustedY);
       const currentTables = pages[pageIndex].tables || [];
       updatePageData(pageIndex, 'tables', [...currentTables, newTable]);
       setSelectedTableId(newTable.id);
@@ -1921,9 +1962,26 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
             x={tableContextMenu.x}
             y={tableContextMenu.y}
             onAction={(action, value) => {
-              if (bookRef.current?.handleTableChange) {
-                bookRef.current.handleTableChange(action, value);
+              const { tableId } = tableContextMenu;
+              
+              switch (action) {
+                case 'insertRow':
+                  handleTableInsertRow(tableId, value);
+                  break;
+                case 'insertColumn':
+                  handleTableInsertColumn(tableId, value);
+                  break;
+                case 'deleteRow':
+                  handleTableDeleteRow(tableId);
+                  break;
+                case 'deleteColumn':
+                  handleTableDeleteColumn(tableId);
+                  break;
+                case 'mergeCells':
+                  handleTableMergeCells(tableId);
+                  break;
               }
+              setTableContextMenu(null);
             }}
             onClose={() => setTableContextMenu(null)}
           />
