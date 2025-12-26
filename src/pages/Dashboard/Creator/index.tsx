@@ -43,6 +43,12 @@ export default function Creator() {
     }
   };
 
+  const handleTableChange = (property: string, value: any) => {
+    if (bookRef.current?.handleTableChange) {
+      bookRef.current.handleTableChange(property, value);
+    }
+  };
+
   return (
     <div>
       <SiteHeader />
@@ -77,6 +83,7 @@ export default function Creator() {
             onImageUpload={handleImageUpload}
             onPenOptionChange={handlePenOptionChange}
             onPenAction={handlePenAction}
+            onTableChange={handleTableChange}
           />
           <Book
             ref={bookRef}

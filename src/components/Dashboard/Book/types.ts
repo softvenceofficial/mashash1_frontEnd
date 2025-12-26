@@ -27,6 +27,7 @@ export interface TextType {
 }
 
 export interface LineType {
+  type: string;
   tool: string;
   points: number[];
   color: string;
@@ -57,6 +58,38 @@ export interface StickyNoteType {
   fontSize: number;
   fontFamily: string;
   rotation?: number;
+}
+
+export interface TableCell {
+  id: string;
+  content: string;
+  fontSize: number;
+  fontFamily: string;
+  fill: string;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  alignment: 'left' | 'center' | 'right';
+  verticalAlign: 'top' | 'middle' | 'bottom';
+  backgroundColor: string;
+  rowSpan?: number;
+  colSpan?: number;
+}
+
+export interface TableType {
+  id: string;
+  type: 'table';
+  x: number;
+  y: number;
+  rows: number;
+  cols: number;
+  cellWidth: number;
+  cellHeight: number;
+  borderWidth: number;
+  borderColor: string;
+  fillColor: string;
+  data: TableCell[][];
+  selectedCell: { row: number; col: number } | null;
 }
 
 export interface PageData {

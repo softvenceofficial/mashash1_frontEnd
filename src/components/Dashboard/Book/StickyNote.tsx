@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { Group, Rect, Text, Transformer } from 'react-konva';
 import Konva from 'konva';
-import { StickyNoteType } from './types';
+import type{ StickyNoteType } from './types';
 
 interface StickyNoteProps {
   note: StickyNoteType;
@@ -16,6 +16,8 @@ interface StickyNoteProps {
 const StickyNote = ({ note, isSelected, isSelectMode, onSelect, onDoubleClick, onUpdate, onDelete }: StickyNoteProps) => {
   const groupRef = useRef<Konva.Group>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
+  const clickCountRef = useRef(0);
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (isSelected && transformerRef.current && groupRef.current && isSelectMode && note.isExpanded) {
@@ -48,15 +50,36 @@ const StickyNote = ({ note, isSelected, isSelectMode, onSelect, onDoubleClick, o
     });
   };
 
-  const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (e.evt.detail === 2) {
+  const handleClick = () => {
+    clickCountRef.current++;
+    
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+    }
+
+    if (clickCountRef.current === 1) {
+      onSelect(note.id);
+      
+      clickTimerRef.current = setTimeout(() => {
+        clickCountRef.current = 0;
+      }, 300);
+    } else if (clickCountRef.current === 2) {
       if (!note.isExpanded) {
         onUpdate({ ...note, isExpanded: true });
       } else {
         onDoubleClick(note);
       }
-    } else {
-      onSelect(note.id);
+      clickCountRef.current = 0;
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+      }
+    }
+  };
+
+  const handleDeleteClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+    e.cancelBubble = true;
+    if (onDelete) {
+      onDelete(note.id);
     }
   };
 
@@ -65,8 +88,8 @@ const StickyNote = ({ note, isSelected, isSelectMode, onSelect, onDoubleClick, o
     : { width: note.collapsedWidth || 30, height: note.collapsedHeight || 30 };
 
   const content = note.isExpanded 
-    ? (note.text || 'Double click to edit')
-    : (note.text ? '📌' : '+');
+    ? (note.text?.trim() ? note.text.substring(0, 200) + (note.text.length > 200 ? '...' : '') : 'Double click to edit')
+    : (note.text?.trim() ? '📌' : 'X');
 
   return (
     <>
@@ -95,20 +118,20 @@ const StickyNote = ({ note, isSelected, isSelectMode, onSelect, onDoubleClick, o
         <Text
           x={10}
           y={10}
-          width={size.width - 20}
-          height={size.height - 20}
+          width={Math.max(20, size.width - 20)}
+          height={Math.max(20, size.height - 20)}
           text={content}
           fontFamily={note.fontFamily || 'Roboto'}
-          fontSize={note.isExpanded ? (note.fontSize || 14) : (size.width * 0.4)}
+          fontSize={note.isExpanded ? (note.fontSize || 14) : Math.max(8, size.width * 0.3)}
           fill={note.textColor || '#000'}
           align={note.isExpanded ? 'left' : 'center'}
           verticalAlign={note.isExpanded ? 'top' : 'middle'}
-          wrap="word"
+          wrap={note.isExpanded ? 'word' : 'none'}
           listening={false}
         />
         
         {isSelected && note.isExpanded && onDelete && (
-          <Group x={size.width - 20} y={5} onClick={() => onDelete(note.id)}>
+          <Group x={size.width - 20} y={5} onClick={handleDeleteClick} onTap={handleDeleteClick}>
             <Rect width={15} height={15} fill="#ef4444" cornerRadius={3} />
             <Text x={2} y={2} text="×" fontSize={12} fill="white" listening={false} />
           </Group>

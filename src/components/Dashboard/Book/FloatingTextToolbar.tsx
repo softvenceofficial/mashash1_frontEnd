@@ -78,7 +78,8 @@ export const FloatingTextToolbar = ({ textItem, onUpdate, position }: FloatingTe
     
     const newLines = lines.map((line, index) => {
       // Remove existing prefixes
-      let cleanLine = line.replace(/^[•\-\*]\s+/, '').replace(/^\d+\.\s+/, '');
+      const cleanLine = line.replace(/^[•\-*]\s+/, '').replace(/^\d+\.\s+/, '');
+  
       
       if (!isTypeActive) {
         if (type === 'bullet') return `• ${cleanLine}`;

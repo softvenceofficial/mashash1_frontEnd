@@ -220,7 +220,6 @@ const Toolbox = ({
   onImageUpload,
   onTableChange,
   onPenOptionChange,
-  onPenAction,
 }: ToolboxProps) => {
   const [selectedBook, setSelectedBook] = useState(2);
   const [fontSize, setFontSize] = useState(24);
@@ -245,7 +244,6 @@ const Toolbox = ({
   const [penMode, setPenMode] = useState<'polygon' | 'freehand'>('polygon');
   const [penFillColor, setPenFillColor] = useState('rgba(255, 255, 255, 0)');
   const [penFillOpacity, setPenFillOpacity] = useState(0);
-  const [penSnapDistance, setPenSnapDistance] = useState(20);
   const [showFillPicker, setShowFillPicker] = useState(false);
 
   // Table specific states
@@ -254,6 +252,7 @@ const Toolbox = ({
   const [tableBorderColor, setTableBorderColor] = useState('#000000');
   const [tableFillColor, setTableFillColor] = useState('#ffffff');
   const [tableColorTarget, setTableColorTarget] = useState<'border' | 'fill'>('border');
+  const [activeTableTab, setActiveTableTab] = useState<'layout' | 'design'>('layout');
 
   // Brush specific states
   const [internalDrawingMode, setInternalDrawingMode] = useState<DrawingMode>(DrawingMode.BRUSH);
@@ -1264,64 +1263,105 @@ const Toolbox = ({
           <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
         </div>
         <Divider />
-        
-        {/* Rows & Cols */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-col items-center">
-            <span className="text-[9px] text-zinc-400 mb-1">Rows</span>
-            <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700">
-              <button onClick={() => handleTablePropertyChange('rows', Math.max(1, tableRows - 1))} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg">
-                <Minus className="w-3 h-3" />
-              </button>
-              <div className="w-8 text-center text-xs font-medium text-zinc-200 font-mono">{tableRows}</div>
-              <button onClick={() => handleTablePropertyChange('rows', tableRows + 1)} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg">
-                <Plus className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="text-[9px] text-zinc-400 mb-1">Cols</span>
-            <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700">
-              <button onClick={() => handleTablePropertyChange('cols', Math.max(1, tableCols - 1))} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg">
-                <Minus className="w-3 h-3" />
-              </button>
-              <div className="w-8 text-center text-xs font-medium text-zinc-200 font-mono">{tableCols}</div>
-              <button onClick={() => handleTablePropertyChange('cols', tableCols + 1)} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg">
-                <Plus className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
+
+        {/* Table Tabs */}
+        <div className="flex gap-1">
+          <ToolbarButton 
+            isActive={activeTableTab === 'layout'}
+            onClick={() => setActiveTableTab('layout')}
+            className="text-[10px] px-2 h-7"
+          >
+            Layout
+          </ToolbarButton>
+          <ToolbarButton 
+            isActive={activeTableTab === 'design'}
+            onClick={() => setActiveTableTab('design')}
+            className="text-[10px] px-2 h-7"
+          >
+            Design
+          </ToolbarButton>
+
         </div>
 
         <Divider />
 
-        {/* Border Color */}
-        <div className="relative flex flex-col items-center gap-1">
-           <span className="text-[9px] text-zinc-400">Border</span>
-           <div 
-            onClick={() => {
-              setTableColorTarget('border');
-              setShowColorPicker(!showColorPicker || tableColorTarget !== 'border');
-            }}
-            className="w-8 h-8 rounded-md cursor-pointer hover:scale-110 transition-transform shadow-lg ring-1 ring-white/10" 
-            style={{ backgroundColor: tableBorderColor }}
-            title="Border Color"
-          />
-        </div>
+        {/* Layout Tab */}
+        {activeTableTab === 'layout' && (
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] text-zinc-400 mb-1">Rows</span>
+              <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700">
+                <button onClick={() => handleTablePropertyChange('rows', Math.max(1, tableRows - 1))} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg">
+                  <Minus className="w-3 h-3" />
+                </button>
+                <div className="w-8 text-center text-xs font-medium text-zinc-200 font-mono">{tableRows}</div>
+                <button onClick={() => handleTablePropertyChange('rows', tableRows + 1)} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg">
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] text-zinc-400 mb-1">Cols</span>
+              <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700">
+                <button onClick={() => handleTablePropertyChange('cols', Math.max(1, tableCols - 1))} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg">
+                  <Minus className="w-3 h-3" />
+                </button>
+                <div className="w-8 text-center text-xs font-medium text-zinc-200 font-mono">{tableCols}</div>
+                <button onClick={() => handleTablePropertyChange('cols', tableCols + 1)} className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg">
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* Fill Color */}
-        <div className="relative flex flex-col items-center gap-1 ml-2">
-           <span className="text-[9px] text-zinc-400">Fill</span>
-           <div 
-            onClick={() => {
-              setTableColorTarget('fill');
-              setShowColorPicker(!showColorPicker || tableColorTarget !== 'fill');
-            }}
-            className="w-8 h-8 rounded-md cursor-pointer hover:scale-110 transition-transform shadow-lg ring-1 ring-white/10" 
-            style={{ backgroundColor: tableFillColor }}
-            title="Fill Color"
-          />
-        </div>
+        {/* Design Tab */}
+        {activeTableTab === 'design' && (
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[9px] text-zinc-400">Border</span>
+              <div 
+                onClick={() => {
+                  setTableColorTarget('border');
+                  setShowColorPicker(!showColorPicker || tableColorTarget !== 'border');
+                }}
+                className="w-8 h-8 rounded-md cursor-pointer hover:scale-110 transition-transform shadow-lg ring-1 ring-white/10" 
+                style={{ backgroundColor: tableBorderColor }}
+                title="Border Color"
+              />
+            </div>
+
+            <div className="flex flex-col items-center gap-1 ml-2">
+              <span className="text-[9px] text-zinc-400">Fill</span>
+              <div 
+                onClick={() => {
+                  setTableColorTarget('fill');
+                  setShowColorPicker(!showColorPicker || tableColorTarget !== 'fill');
+                }}
+                className="w-8 h-8 rounded-md cursor-pointer hover:scale-110 transition-transform shadow-lg ring-1 ring-white/10" 
+                style={{ backgroundColor: tableFillColor }}
+                title="Fill Color"
+              />
+            </div>
+
+            <Divider />
+
+            <div className="flex flex-col gap-1 w-20">
+              <span className="text-[9px] text-zinc-400">Border Width</span>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={1}
+                onChange={(e) => onTableChange?.('borderWidth', parseInt(e.target.value))}
+                className="w-full h-1.5 bg-zinc-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+              />
+            </div>
+          </div>
+        )}
+
+
 
         {showColorPicker && (tableColorTarget === 'border' || tableColorTarget === 'fill') && (
           <div className="absolute top-16 left-20 z-50">
@@ -1636,7 +1676,6 @@ const Toolbox = ({
 
         <div className="flex-grow" />
 
-        
       </div>
     );
   };

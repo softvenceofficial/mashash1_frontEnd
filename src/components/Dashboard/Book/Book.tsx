@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useRef, useCallback, forwardRef, useEffect, useImperativeHandle } from 'react';
+import { useState, useRef, useCallback, forwardRef, useEffect, useImperativeHandle, memo } from 'react';
 import { Stage, Layer, Line, Text as KonvaText, Rect, Circle, Transformer, Image as KonvaImage, Group } from 'react-konva';
 import Konva from 'konva';
 import HTMLFlipBook from 'react-pageflip';
@@ -13,6 +13,8 @@ import { InPlaceTextEditor } from './InPlaceTextEditor';
 import { useTextHistory } from './useTextHistory';
 import StickyNote from './StickyNote';
 import InlineStickyNoteEditor from './InlineStickyNoteEditor';
+import TableCellEditor from './TableCellEditor';
+import TableContextMenu from './TableContextMenu';
 
 // --- Types ---
 export interface ImageType {
@@ -26,6 +28,22 @@ export interface ImageType {
   src: string;
 }
 
+export interface TableCell {
+  id: string;
+  content: string;
+  fontSize: number;
+  fontFamily: string;
+  fill: string;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  alignment: 'left' | 'center' | 'right';
+  verticalAlign: 'top' | 'middle' | 'bottom';
+  backgroundColor: string;
+  rowSpan?: number;
+  colSpan?: number;
+}
+
 export interface TableType {
   id: string;
   type: 'table';
@@ -35,7 +53,11 @@ export interface TableType {
   cols: number;
   cellWidth: number;
   cellHeight: number;
-  data: string[][];
+  borderWidth: number;
+  borderColor: string;
+  fillColor: string;
+  data: TableCell[][];
+  selectedCell: { row: number; col: number } | null;
 }
 
 export interface PageData extends BasePageData {
@@ -104,6 +126,82 @@ const useImage = (url: string) => {
 };
 
 // --- Helper Components ---
+const TableCellComponent = memo(({ 
+  table, 
+  cell, 
+  rowIndex, 
+  colIndex, 
+  xPos, 
+  yPos, 
+  cellWidth, 
+  cellHeight,
+  onCellClick,
+  onCellDoubleClick,
+  onCellContextMenu
+}: any) => {
+  if (!cell.content && cell.content !== '') return null;
+
+  return (
+    <Group key={`${rowIndex}-${colIndex}`}>
+      <Rect
+        x={xPos}
+        y={yPos}
+        width={cellWidth}
+        height={cellHeight}
+        fill={cell.backgroundColor || table.fillColor}
+        stroke={table.borderColor}
+        strokeWidth={table.borderWidth}
+        onClick={(e) => {
+          e.cancelBubble = true;
+          onCellClick(table.id, rowIndex, colIndex);
+        }}
+        onDblClick={(e) => {
+          e.cancelBubble = true;
+          onCellDoubleClick(table.id, rowIndex, colIndex, xPos, yPos, cellWidth, cellHeight);
+        }}
+        onContextMenu={(e) => {
+          e.evt.preventDefault();
+          e.cancelBubble = true;
+          onCellContextMenu(e.evt, table.id, rowIndex, colIndex);
+        }}
+      />
+      {table.selectedCell && 
+        table.selectedCell.row === rowIndex && 
+        table.selectedCell.col === colIndex && (
+        <Rect
+          x={xPos}
+          y={yPos}
+          width={cellWidth}
+          height={cellHeight}
+          stroke="#3b82f6"
+          strokeWidth={2}
+          dash={[4, 4]}
+          fill="transparent"
+          listening={false}
+        />
+      )}
+      <KonvaText
+        x={xPos + 5}
+        y={yPos + 5}
+        text={cell.content}
+        fontSize={cell.fontSize}
+        fontFamily={cell.fontFamily}
+        fill={cell.fill}
+        fontStyle={`${cell.bold ? 'bold' : ''} ${cell.italic ? 'italic' : ''}`}
+        textDecoration={cell.underline ? 'underline' : ''}
+        width={cellWidth - 10}
+        height={cellHeight - 10}
+        align={cell.alignment}
+        verticalAlign={cell.verticalAlign}
+        wrap="word"
+        listening={false}
+      />
+    </Group>
+  );
+});
+
+TableCellComponent.displayName = 'TableCellComponent';
+
 const URLImage = ({ image, isSelected, onSelect, isSelectMode }: any) => {
   const [img] = useImage(image.src);
   const imageRef = useRef<Konva.Image>(null);
@@ -161,10 +259,13 @@ interface BookPageProps {
   handleStickyNoteDoubleClick: (pageIndex: number, note: StickyNoteType) => void;
   handleStickyNoteUpdate: (pageIndex: number, updatedNote: StickyNoteType) => void;
   handleStickyNoteDelete: (pageIndex: number, noteId: string) => void;
+  handleTableCellClick: (tableId: string, row: number, col: number) => void;
+  handleTableCellDoubleClick: (tableId: string, row: number, col: number, x: number, y: number, width: number, height: number) => void;
+  handleTableContextMenu: (evt: MouseEvent, tableId: string, row: number, col: number) => void;
 }
 
 const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({ 
-  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onStageDoubleClick, onTextDblClick, selectedTextId, onTextSelect, penState, snapToStart, mousePos, strokeColor, strokeWidth, penFillColor, penFillOpacity, penMode, handleStickyNoteDoubleClick, handleStickyNoteUpdate, handleStickyNoteDelete, isSelectMode, isPenMode
+  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onStageDoubleClick, onTextDblClick, selectedTextId, onTextSelect, penState, snapToStart, mousePos, strokeColor, strokeWidth, penFillColor, penFillOpacity, penMode, handleStickyNoteDoubleClick, handleStickyNoteUpdate, handleStickyNoteDelete, isSelectMode, isPenMode, handleTableCellClick, handleTableCellDoubleClick, handleTableContextMenu
 }, ref) => {
   const transformerRef = useRef<Konva.Transformer>(null);
   const textRefs = useRef<{ [key: string]: Konva.Text }>({});
@@ -370,20 +471,57 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                   x={table.x} 
                   y={table.y} 
                   draggable={isSelectMode}
+                  onClick={() => onTextSelect(table.id)}
+                  onDragEnd={(e) => {
+                    const newX = e.target.x();
+                    const newY = e.target.y();
+                    handleStickyNoteUpdate(pageIndex, {
+                      ...table,
+                      x: newX,
+                      y: newY
+                    } as any);
+                  }}
                >
+                  {table.data.map((row, rowIndex) =>
+                    row.map((cell, colIndex) => {
+                      const xPos = colIndex * table.cellWidth;
+                      const yPos = rowIndex * table.cellHeight;
+                      const cellWidth = table.cellWidth * (cell.colSpan || 1);
+                      const cellHeight = table.cellHeight * (cell.rowSpan || 1);
+                      
+                      return (
+                        <TableCellComponent
+                          key={`${rowIndex}-${colIndex}`}
+                          table={table}
+                          cell={cell}
+                          rowIndex={rowIndex}
+                          colIndex={colIndex}
+                          xPos={xPos}
+                          yPos={yPos}
+                          cellWidth={cellWidth}
+                          cellHeight={cellHeight}
+                          onCellClick={handleTableCellClick}
+                          onCellDoubleClick={handleTableCellDoubleClick}
+                          onCellContextMenu={handleTableContextMenu}
+                        />
+                      );
+                    })
+                  )}
                   {Array.from({ length: table.rows + 1 }).map((_, i) => (
-                     <Line 
-                       key={`r${i}`} 
-                       points={[0, i * table.cellHeight, table.cols * table.cellWidth, i * table.cellHeight]} 
-                       stroke="black" strokeWidth={1} 
-                     />
+                    <Line 
+                      key={`h${i}`} 
+                      points={[0, i * table.cellHeight, table.cols * table.cellWidth, i * table.cellHeight]} 
+                      stroke={table.borderColor} 
+                      strokeWidth={table.borderWidth} 
+                    />
                   ))}
                   {Array.from({ length: table.cols + 1 }).map((_, i) => (
-                     <Line 
-                       key={`c${i}`} 
-                       points={[i * table.cellWidth, 0, i * table.cellWidth, table.rows * table.cellHeight]} 
-                       stroke="black" strokeWidth={1} 
-                     />
+                    <Line 
+                      key={`v${i}`} 
+                      points={[i * table.cellWidth, 0, i * table.cellWidth, table.rows * table.cellHeight]} 
+                      stroke={table.borderColor} 
+                      strokeWidth={table.borderWidth} 
+                    />
                   ))}
                </Group>
             ))}
@@ -459,6 +597,23 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   const [pagesToAdd, setPagesToAdd] = useState('2');
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [editingTableCell, setEditingTableCell] = useState<{
+    tableId: string;
+    row: number;
+    col: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [tableContextMenu, setTableContextMenu] = useState<{
+    x: number;
+    y: number;
+    tableId: string;
+    row: number;
+    col: number;
+  } | null>(null);
   
   const bookDimensions = BOOK_SIZE_MAP[selectedBookSize] || BOOK_SIZE_MAP['6 x 4'];
   const WIDTH = bookDimensions.width;
@@ -514,8 +669,401 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       if (property === 'fillOpacity') setPenFillOpacity(value);
       if (property === 'snapDistance') setPenSnapDistance(value);
     },
-    
+    handleTableChange: (property: string, value: any) => {
+      if (!selectedTableId || !pages[currentPageIndex]) return;
+      
+      const updatedPages = [...pages];
+      const page = updatedPages[currentPageIndex];
+      const tableIndex = page.tables.findIndex(t => t.id === selectedTableId);
+      
+      if (tableIndex === -1) return;
+      
+      const table = page.tables[tableIndex];
+      let updatedTable = { ...table };
+
+      switch (property) {
+        case 'rows':
+          updatedTable = handleTableRows(updatedTable, value);
+          break;
+        case 'cols':
+          updatedTable = handleTableCols(updatedTable, value);
+          break;
+        case 'borderColor':
+          updatedTable.borderColor = value;
+          break;
+        case 'borderWidth':
+          updatedTable.borderWidth = value;
+          break;
+        case 'fill':
+          updatedTable.fillColor = value;
+          break;
+        case 'insertRow':
+          handleTableInsertRow(selectedTableId, value);
+          return;
+        case 'insertColumn':
+          handleTableInsertColumn(selectedTableId, value);
+          return;
+        case 'deleteRow':
+          handleTableDeleteRow(selectedTableId);
+          return;
+        case 'deleteColumn':
+          handleTableDeleteColumn(selectedTableId);
+          return;
+        case 'mergeCells':
+          handleTableMergeCells(selectedTableId);
+          return;
+        case 'reset':
+          updatedTable = createDefaultTable(table.x, table.y);
+          break;
+      }
+
+      page.tables[tableIndex] = updatedTable;
+      setPages(updatedPages);
+    },
   }));
+
+  const createEmptyCell = (): TableCell => ({
+    id: Date.now().toString() + Math.random(),
+    content: '',
+    fontSize: 12,
+    fontFamily: 'Roboto',
+    fill: '#000000',
+    bold: false,
+    italic: false,
+    underline: false,
+    alignment: 'left',
+    verticalAlign: 'middle',
+    backgroundColor: '#ffffff'
+  });
+
+  const createDefaultTable = (x: number, y: number): TableType => {
+    const rows = 3;
+    const cols = 3;
+    const data: TableCell[][] = [];
+    
+    for (let i = 0; i < rows; i++) {
+      const row: TableCell[] = [];
+      for (let j = 0; j < cols; j++) {
+        row.push(createEmptyCell());
+      }
+      data.push(row);
+    }
+    
+    return {
+      id: Date.now().toString(),
+      type: 'table',
+      x,
+      y,
+      rows,
+      cols,
+      cellWidth: 80,
+      cellHeight: 40,
+      borderWidth: 1,
+      borderColor: '#000000',
+      fillColor: '#ffffff',
+      data,
+      selectedCell: null
+    };
+  };
+
+  const handleTableRows = (table: TableType, newRowCount: number): TableType => {
+    const currentRows = table.rows;
+    const diff = newRowCount - currentRows;
+    
+    if (diff > 0) {
+      const newRows = Array(diff).fill(null).map(() => 
+        Array(table.cols).fill(null).map(() => createEmptyCell())
+      );
+      return {
+        ...table,
+        rows: newRowCount,
+        data: [...table.data, ...newRows]
+      };
+    } else if (diff < 0) {
+      return {
+        ...table,
+        rows: newRowCount,
+        data: table.data.slice(0, newRowCount)
+      };
+    }
+    return table;
+  };
+
+  const handleTableCols = (table: TableType, newColCount: number): TableType => {
+    const currentCols = table.cols;
+    const diff = newColCount - currentCols;
+    
+    if (diff > 0) {
+      const newData = table.data.map(row => [
+        ...row,
+        ...Array(diff).fill(null).map(() => createEmptyCell())
+      ]);
+      return {
+        ...table,
+        cols: newColCount,
+        data: newData
+      };
+    } else if (diff < 0) {
+      const newData = table.data.map(row => row.slice(0, newColCount));
+      return {
+        ...table,
+        cols: newColCount,
+        data: newData
+      };
+    }
+    return table;
+  };
+
+  const handleTableCellClick = useCallback((tableId: string, row: number, col: number) => {
+    setSelectedTableId(tableId);
+    setSelectedTextId(null);
+    
+    setPages(prevPages => {
+      const updatedPages = [...prevPages];
+      const page = updatedPages[currentPageIndex];
+      const tableIndex = page.tables.findIndex(t => t.id === tableId);
+      
+      if (tableIndex !== -1) {
+        const currentSelection = page.tables[tableIndex].selectedCell;
+        if (!currentSelection || currentSelection.row !== row || currentSelection.col !== col) {
+          page.tables[tableIndex] = {
+            ...page.tables[tableIndex],
+            selectedCell: { row, col }
+          };
+          return updatedPages;
+        }
+      }
+      return prevPages;
+    });
+  }, [currentPageIndex]);
+
+  const handleTableCellDoubleClick = (
+    tableId: string, 
+    row: number, 
+    col: number, 
+    x: number, 
+    y: number, 
+    width: number, 
+    height: number
+  ) => {
+    const page = pages[currentPageIndex];
+    const table = page.tables.find(t => t.id === tableId);
+    
+    if (!table) return;
+    
+    const cell = table.data[row]?.[col];
+    if (!cell || cell.content === null) return;
+    
+    const screenX = table.x + x;
+    const screenY = table.y + y;
+    
+    setEditingTableCell({
+      tableId,
+      row,
+      col,
+      x: screenX,
+      y: screenY,
+      width: width - 10,
+      height: height - 10
+    });
+  };
+
+  const handleTableContextMenu = (
+    evt: MouseEvent,
+    tableId: string,
+    row: number,
+    col: number
+  ) => {
+    setTableContextMenu({
+      x: evt.clientX,
+      y: evt.clientY,
+      tableId,
+      row,
+      col
+    });
+  };
+
+  const handleTableCellSave = (content: string) => {
+    if (!editingTableCell) return;
+    
+    const { tableId, row, col } = editingTableCell;
+    const updatedPages = [...pages];
+    const page = updatedPages[currentPageIndex];
+    const tableIndex = page.tables.findIndex(t => t.id === tableId);
+    
+    if (tableIndex !== -1) {
+      const table = page.tables[tableIndex];
+      const newData = [...table.data];
+      
+      if (newData[row] && newData[row][col]) {
+        newData[row][col] = {
+          ...newData[row][col],
+          content: content
+        };
+        
+        page.tables[tableIndex] = {
+          ...table,
+          data: newData
+        };
+        
+        setPages(updatedPages);
+      }
+    }
+    
+    setEditingTableCell(null);
+  };
+
+  const handleTableInsertRow = useCallback((tableId: string, position: 'above' | 'below') => {
+    setPages(prevPages => {
+      const updatedPages = [...prevPages];
+      const page = updatedPages[currentPageIndex];
+      const tableIndex = page.tables.findIndex(t => t.id === tableId);
+      
+      if (tableIndex === -1) return prevPages;
+      
+      const table = page.tables[tableIndex];
+      const selectedRow = table.selectedCell?.row || 0;
+      const insertIndex = position === 'above' ? selectedRow : selectedRow + 1;
+      
+      const newRow = Array(table.cols).fill(null).map(() => createEmptyCell());
+      const newData = [
+        ...table.data.slice(0, insertIndex),
+        newRow,
+        ...table.data.slice(insertIndex)
+      ];
+      
+      page.tables[tableIndex] = {
+        ...table,
+        rows: table.rows + 1,
+        data: newData
+      };
+      
+      return updatedPages;
+    });
+  }, [currentPageIndex]);
+
+  const handleTableInsertColumn = useCallback((tableId: string, position: 'left' | 'right') => {
+    setPages(prevPages => {
+      const updatedPages = [...prevPages];
+      const page = updatedPages[currentPageIndex];
+      const tableIndex = page.tables.findIndex(t => t.id === tableId);
+      
+      if (tableIndex === -1) return prevPages;
+      
+      const table = page.tables[tableIndex];
+      const selectedCol = table.selectedCell?.col || 0;
+      const insertIndex = position === 'left' ? selectedCol : selectedCol + 1;
+      
+      const newData = table.data.map(row => {
+        const newRow = [...row];
+        newRow.splice(insertIndex, 0, createEmptyCell());
+        return newRow;
+      });
+      
+      page.tables[tableIndex] = {
+        ...table,
+        cols: table.cols + 1,
+        data: newData
+      };
+      
+      return updatedPages;
+    });
+  }, [currentPageIndex]);
+
+  const handleTableDeleteRow = useCallback((tableId: string) => {
+    setPages(prevPages => {
+      const updatedPages = [...prevPages];
+      const page = updatedPages[currentPageIndex];
+      const tableIndex = page.tables.findIndex(t => t.id === tableId);
+      
+      if (tableIndex === -1) return prevPages;
+      
+      const table = page.tables[tableIndex];
+      if (table.rows <= 1) return prevPages;
+      
+      const selectedRow = table.selectedCell?.row || 0;
+      const newData = [...table.data];
+      newData.splice(selectedRow, 1);
+      
+      page.tables[tableIndex] = {
+        ...table,
+        rows: table.rows - 1,
+        data: newData,
+        selectedCell: null
+      };
+      
+      return updatedPages;
+    });
+  }, [currentPageIndex]);
+
+  const handleTableDeleteColumn = useCallback((tableId: string) => {
+    setPages(prevPages => {
+      const updatedPages = [...prevPages];
+      const page = updatedPages[currentPageIndex];
+      const tableIndex = page.tables.findIndex(t => t.id === tableId);
+      
+      if (tableIndex === -1) return prevPages;
+      
+      const table = page.tables[tableIndex];
+      if (table.cols <= 1) return prevPages;
+      
+      const selectedCol = table.selectedCell?.col || 0;
+      const newData = table.data.map(row => {
+        const newRow = [...row];
+        newRow.splice(selectedCol, 1);
+        return newRow;
+      });
+      
+      page.tables[tableIndex] = {
+        ...table,
+        cols: table.cols - 1,
+        data: newData,
+        selectedCell: null
+      };
+      
+      return updatedPages;
+    });
+  }, [currentPageIndex]);
+
+  const handleTableMergeCells = (tableId: string) => {
+    const updatedPages = [...pages];
+    const page = updatedPages[currentPageIndex];
+    const tableIndex = page.tables.findIndex(t => t.id === tableId);
+    
+    if (tableIndex === -1) return;
+    
+    const table = page.tables[tableIndex];
+    const selectedCell = table.selectedCell;
+    
+    if (!selectedCell) return;
+    
+    const { row, col } = selectedCell;
+    const newData = [...table.data];
+    const mainCell = newData[row][col];
+    
+    if (row + 1 < table.rows) {
+      newData[row + 1][col] = { ...createEmptyCell(), content: '' };
+    }
+    if (col + 1 < table.cols) {
+      newData[row][col + 1] = { ...createEmptyCell(), content: '' };
+    }
+    if (row + 1 < table.rows && col + 1 < table.cols) {
+      newData[row + 1][col + 1] = { ...createEmptyCell(), content: '' };
+    }
+    
+    newData[row][col] = {
+      ...mainCell,
+      colSpan: 2,
+      rowSpan: 2
+    };
+    
+    page.tables[tableIndex] = {
+      ...table,
+      data: newData
+    };
+    
+    setPages(updatedPages);
+  };
 
   const getCurrentPenState = (pageIndex: number) => {
     return penDrawingState[pageIndex] || { points: [], isDrawing: false, mode: penMode };
@@ -678,6 +1226,18 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!selectedTextId) return;
 
+      const isStickyNoteSelected = pages[currentPageIndex]?.stickyNotes.some(n => n.id === selectedTextId);
+      
+      if (isStickyNoteSelected) {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault();
+          handleStickyNoteDelete(currentPageIndex, selectedTextId);
+        } else if (e.key === 'Escape' && editingStickyNote) {
+          setEditingStickyNote(null);
+        }
+        return;
+      }
+
       if (e.ctrlKey || e.metaKey) {
         switch (e.key.toLowerCase()) {
           case 'b':
@@ -728,7 +1288,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedTextId, currentPageIndex]);
+  }, [selectedTextId, currentPageIndex, pages, editingStickyNote]);
 
   const handleStickyNoteUpdate = (pageIndex: number, updatedNote: StickyNoteType) => {
     setPages(prev => {
@@ -752,6 +1312,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
 
   const handleStickyNoteDoubleClick = (pageIndex: number, note: StickyNoteType) => {
     setCurrentPageIndex(pageIndex);
+    setSelectedTextId(note.id);
     setEditingStickyNote(note);
   };
 
@@ -865,7 +1426,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
         x: pos.x,
         y: pos.y,
         width: 200,
-        height: 200,
+        height: 150,
         collapsedWidth: 30,
         collapsedHeight: 30,
         isExpanded: false,
@@ -877,6 +1438,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       };
       const currentNotes = pages[pageIndex].stickyNotes || [];
       updatePageData(pageIndex, 'stickyNotes', [...currentNotes, newNote]);
+      setSelectedTextId(newNote.id);
       return;
     }
 
@@ -884,14 +1446,10 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     if (isTableMode) {
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
-      const newTable = {
-        id: Date.now().toString(),
-        type: 'table',
-        x: pos.x, y: pos.y, rows: 3, cols: 3, cellWidth: 60, cellHeight: 30,
-        data: [['Header','H','H'], ['','',''], ['','','']]
-      };
+      const newTable = createDefaultTable(pos.x, pos.y);
       const currentTables = pages[pageIndex].tables || [];
       updatePageData(pageIndex, 'tables', [...currentTables, newTable]);
+      setSelectedTableId(newTable.id);
       return;
     }
 
@@ -1249,6 +1807,9 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
                     handleStickyNoteDoubleClick={handleStickyNoteDoubleClick}
                     handleStickyNoteUpdate={handleStickyNoteUpdate}
                     handleStickyNoteDelete={handleStickyNoteDelete}
+                    handleTableCellClick={handleTableCellClick}
+                    handleTableCellDoubleClick={handleTableCellDoubleClick}
+                    handleTableContextMenu={handleTableContextMenu}
                 />
             ))}
         </HTMLFlipBook>
@@ -1348,6 +1909,44 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
         className="absolute inset-0 pointer-events-none"
         style={{ zIndex: 1 }}
       />
+
+      {/* Table Context Menu */}
+      {tableContextMenu && (
+        <>
+          <div 
+            className="fixed inset-0 z-[999]"
+            onClick={() => setTableContextMenu(null)}
+          />
+          <TableContextMenu
+            x={tableContextMenu.x}
+            y={tableContextMenu.y}
+            onAction={(action, value) => {
+              if (bookRef.current?.handleTableChange) {
+                bookRef.current.handleTableChange(action, value);
+              }
+            }}
+            onClose={() => setTableContextMenu(null)}
+          />
+        </>
+      )}
+
+      {/* Table Cell Editor */}
+      {editingTableCell && (
+        <TableCellEditor
+          cell={(() => {
+            const page = pages[currentPageIndex];
+            const table = page.tables.find(t => t.id === editingTableCell.tableId);
+            if (!table) return createEmptyCell();
+            return table.data[editingTableCell.row]?.[editingTableCell.col] || createEmptyCell();
+          })()}
+          x={editingTableCell.x}
+          y={editingTableCell.y}
+          width={editingTableCell.width}
+          height={editingTableCell.height}
+          onSave={handleTableCellSave}
+          onClose={() => setEditingTableCell(null)}
+        />
+      )}
     </div>
   );
 };
