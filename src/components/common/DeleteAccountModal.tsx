@@ -12,24 +12,24 @@ export default function DeleteAccountModal() {
     }
   return (
     <div className="">
-      <h2 className="text-2xl font-semibold">Permanently delete account</h2>
+      <h2 className=" text-xl md:text-2xl font-semibold">Permanently delete account</h2>
       <Separator className="my-6 bg-gray-200 dark:bg-[#3B3B3B]" />
-      <p className="text-2xl">
+      <p className="text-base md:text-xl">
         You sure you want to delete this account permanently? You won’t be able to
         restore it.
       </p>
       <Separator className="my-6 bg-gray-200 dark:bg-[#3B3B3B]" />
-      <div className="gap-6 flex items-center justify-end">
+      <div className="gap-6 flex max-sm:flex-col items-center justify-end">
         <Button
           onClick={() => close(["modal"])}
-          className="text-2xl font-medium px-7 h-12 bg-white! text-black cursor-pointer"
+          className="text-base md:text-xl font-medium px-7 h-12 bg-white! text-black cursor-pointer max-sm:w-full"
         >
           Cancel
         </Button>
         <Button
           onClick={handleDelete}
           variant="destructive"
-          className="text-2xl font-medium px-7 h-12 bg-[#EF4444]! cursor-pointer"
+          className="text-base md:text-xl font-medium px-7 h-12 bg-[#EF4444]! cursor-pointer max-sm:w-full"
         >
           Permanently delete
         </Button>
