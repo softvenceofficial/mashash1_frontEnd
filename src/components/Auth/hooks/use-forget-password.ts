@@ -33,26 +33,32 @@ export default function useForgetPassword({
     toast.loading("Sending OTP...");
     const formData = new FormData();
     formData.append("email", values.email);
+
     try {
       const res = await forgotPassword(formData).unwrap();
       console.log("Forgot Password Response:", res);
-      if (res.code === 200) {
-        // Set OTP expire time in localStorage
+
+      // Handle success - API may return empty body, JSON, or status code
+      if (res?.code === 200 || res?.status === "success" || !res) {
         const expireAt = Date.now() + COUNTDOWN_DURATION * 1000;
         localStorage.setItem("otp_expire_at", expireAt.toString());
 
         toast.dismiss();
         toast.success("OTP sent to your email!");
-        setLoading(false);
         navigate({
           pathname: "/auth/verify-otp",
           search: `?email=${btoa(values.email)}`,
         });
+      } else {
+        toast.dismiss();
+        toast.error("Something went wrong. Please check the email.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Forgot Password Error:", error);
       toast.dismiss();
-      toast.error("Failed to send OTP. Please try again.");
+      const errorMessage = error?.data?.message || "Failed to send OTP. Please try again.";
+      toast.error(errorMessage);
+    } finally {
       setLoading(false);
     }
   }

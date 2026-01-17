@@ -11,9 +11,10 @@ interface StickyNoteProps {
   onDoubleClick: (note: StickyNoteType) => void;
   onUpdate: (updatedNote: StickyNoteType) => void;
   onDelete?: (id: string) => void;
+  onContextMenu?: (e: Konva.KonvaEventObject<PointerEvent>) => void;
 }
 
-const StickyNote = ({ note, isSelected, isSelectMode, onSelect, onDoubleClick, onUpdate, onDelete }: StickyNoteProps) => {
+const StickyNote = ({ note, isSelected, isSelectMode, onSelect, onDoubleClick, onUpdate, onDelete, onContextMenu }: StickyNoteProps) => {
   const groupRef = useRef<Konva.Group>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const clickCountRef = useRef(0);
@@ -102,6 +103,7 @@ const StickyNote = ({ note, isSelected, isSelectMode, onSelect, onDoubleClick, o
         onClick={handleClick}
         onDragEnd={handleDragEnd}
         onTransformEnd={handleTransformEnd}
+        onContextMenu={onContextMenu}
       >
         <Rect
           width={size.width}

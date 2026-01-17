@@ -147,7 +147,7 @@ const AIImageBox = () => {
   };
 
   return (
-    <div className="bg-background text-foreground p-4 font-sans selection:bg-primary selection:text-primary-foreground">
+    <div className="bg-background text-foreground p-4 pb-0 pt-2 font-sans selection:bg-primary selection:text-primary-foreground">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className={`relative rounded-xl transition-all duration-300 ${isListening ? 'bg-card' : 'bg-card'}`} style={{
           background: isListening ? '' : 'linear-gradient(160deg, rgba(255, 201, 9, 1) 0%, rgba(255, 93, 24, 1) 50%, rgba(255, 131, 39, 1) 100%)',
@@ -162,7 +162,7 @@ const AIImageBox = () => {
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Command what type of image you want..."
-                className="w-full bg-transparent border-none outline-none resize-none text-foreground placeholder-muted-foreground h-12 py-2"
+                className="w-full bg-transparent border-none outline-none resize-none text-foreground placeholder-muted-foreground h-10 py-2"
               />
               <div className="flex justify-end items-center gap-3">
                 <button 

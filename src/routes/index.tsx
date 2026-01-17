@@ -18,17 +18,6 @@ import { ProtectedRoute } from "./ProtectedRoute";
 import ViewProfilePage from "@/components/common/ViewProfilePage";
 
 const router = createBrowserRouter([
-  // {
-  //   path: "/",
-  //   element: <HomeLayout />,
-  //   errorElement: <NotFoundPage />,
-  //   children: [
-  //     {
-  //       index: true,
-  //       element: <HomePage />,
-  //     },
-  //   ],
-  // },
   {
     path: "/",
     element: <HomePage />,
@@ -36,11 +25,13 @@ const router = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    element: <ProtectedRoute> <DashboardLayout /></ProtectedRoute>,
+    // All dashboard routes are now protected
+    element: <ProtectedRoute><DashboardLayout /></ProtectedRoute>,
     errorElement: <NotFoundPage />,
     children: [
       {
         index: true,
+        // Redirects /dashboard to /dashboard/home
         element: <Navigate to="/dashboard/home" replace />,
       },
       {
@@ -67,7 +58,8 @@ const router = createBrowserRouter([
   },
   {
     path: "/Creator",
-    element: <Creator />,
+    // FIX: Moved Creator inside ProtectedRoute as requested
+    element: <ProtectedRoute><Creator /></ProtectedRoute>,
     errorElement: <NotFoundPage />,
   },
   {

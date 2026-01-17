@@ -14,12 +14,13 @@ export const authApi = baseApi.injectEndpoints({
       async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-
+          
+          // FIX: Updated paths based on your console log response
           dispatch(
             storeUserInfo({
-              token: data.tokens.access,
+              token: data.tokens.access,   // Correct path: data.tokens
               refresh: data.tokens.refresh,
-              user: data.data,
+              user: data.data,             // Correct path: data.data contains user info
             }),
           );
         } catch (error) {
@@ -83,9 +84,7 @@ export const authApi = baseApi.injectEndpoints({
       async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
-          dispatch(
-            removeUserInfo(),
-          );
+          dispatch(removeUserInfo());
         } catch (error) {
           console.log("Error during logout:", error);
         }

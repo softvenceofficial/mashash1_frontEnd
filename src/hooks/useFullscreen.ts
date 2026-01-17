@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type RefObject } from "react";
 
 type TFullscreenDocument = Document & {
   webkitExitFullscreen?: () => Promise<void>;
@@ -15,11 +15,13 @@ type TFullscreenElement = HTMLElement & {
   msRequestFullscreen?: () => Promise<void>;
 };
 
-export function useFullscreen() {
+export function useFullscreen(elementRef?: RefObject<HTMLElement | null>) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggleFullscreen = () => {
-    const element = document.documentElement as TFullscreenElement;
+    const el = elementRef?.current || document.documentElement;
+    if (!el) return;
+    const element = el as TFullscreenElement;
     const doc = document as TFullscreenDocument;
 
     if (!isFullscreen) {
@@ -49,14 +51,13 @@ export function useFullscreen() {
     const doc = document as TFullscreenDocument;
 
     const handleFullscreenChange = () => {
-      setIsFullscreen(
-        !!(
-          doc.fullscreenElement ||
-          doc.webkitFullscreenElement ||
-          doc.mozFullScreenElement ||
-          doc.msFullscreenElement
-        )
+      const isFull = !!(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
       );
+      setIsFullscreen(isFull);
     };
 
     doc.addEventListener("fullscreenchange", handleFullscreenChange);

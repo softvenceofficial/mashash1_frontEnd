@@ -1,20 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useCallback, forwardRef, useEffect, useImperativeHandle, memo } from 'react';
-import { Stage, Layer, Line, Text as KonvaText, Rect, Circle, Transformer, Image as KonvaImage, Group } from 'react-konva';
+import { Stage, Layer, Line, Text as KonvaText, Rect, Circle, Transformer, Image as KonvaImage, Group, RegularPolygon, Star as KonvaStar, Arrow } from 'react-konva';
 import Konva from 'konva';
 import HTMLFlipBook from 'react-pageflip';
-import { Plus, Minus, Maximize, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, X,  ArrowLeft, ArrowRight, Expand, SquarePlus, SquareMinus, RotateCcw, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import bookBG from "@/assets/images/Books/mainBookbg.png"
 import type { TextType, ShapeType, PageData as BasePageData, StickyNoteType } from './types';
 import { FloatingTextToolbar } from './FloatingTextToolbar';
 import { TextContextMenu } from './TextContextMenu';
 import { InPlaceTextEditor } from './InPlaceTextEditor';
-import { useTextHistory } from './useTextHistory';
+import { useBookHistory } from './useBookHistory';
+import { useFullscreen } from '@/hooks/useFullscreen';
 import StickyNote from './StickyNote';
 import InlineStickyNoteEditor from './InlineStickyNoteEditor';
 import TableCellEditor from './TableCellEditor';
 import TableContextMenu from './TableContextMenu';
+import { getLineGuideStops, getObjectSnappingEdges, getGuides, drawGuides } from '@/utils/snappingLogic';
+import { getMaxZIndex, getMinZIndex } from '@/utils/ZIndexManager';
 
 // --- Types ---
 export interface ImageType {
@@ -26,6 +29,7 @@ export interface ImageType {
   height: number;
   rotation: number;
   src: string;
+  zIndex?: number;
 }
 
 export interface TableCell {
@@ -58,9 +62,10 @@ export interface TableType {
   fillColor: string;
   data: TableCell[][];
   selectedCell: { row: number; col: number } | null;
+  zIndex?: number;
 }
 
-export interface PageData extends BasePageData {
+interface PageData extends BasePageData {
   images: ImageType[];
   stickyNotes: StickyNoteType[];
   tables: TableType[];
@@ -77,6 +82,13 @@ interface BookProps {
   onAdvancedTextChange?: (property: string, value: any) => void;
   drawingMode?: string;
   zoom?: number;
+  onZoomChange?: (zoom: number) => void;
+  selectedShape?: string;
+  shapeFillColor?: string;
+  shapeStrokeColor?: string;
+  shapeStrokeWidth?: number;
+  isFillTransparent?: boolean;
+  onToolChange?: (tool: string, subTool: string) => void;
 }
 
 // --- Constants ---
@@ -91,6 +103,7 @@ const BOOK_SIZE_MAP: Record<string, { width: number; height: number }> = {
   '12 x 9': { width: 672, height: 504 },
   'Square': { width: 500, height: 500 }
 };
+
 
 const INITIAL_PAGES: PageData[] = Array(10).fill(null).map(() => ({
   lines: [],
@@ -126,6 +139,44 @@ const useImage = (url: string) => {
 };
 
 // --- Helper Components ---
+// --- Helper Components ---
+const renderShape = (shape: ShapeType, isSelected: boolean, onSelect: () => void, onDragEnd: (x: number, y: number) => void, onTransformEnd: (node: any) => void, shapeRef: (node: any) => void) => {
+  const commonProps = {
+    name: 'object',
+    x: shape.x,
+    y: shape.y,
+    fill: shape.fill,
+    stroke: shape.stroke,
+    strokeWidth: shape.strokeWidth,
+    opacity: shape.opacity,
+    rotation: shape.rotation,
+    scaleX: shape.scaleX,
+    scaleY: shape.scaleY,
+    draggable: isSelected,
+    onClick: onSelect,
+    onDragEnd: (e: any) => onDragEnd(e.target.x(), e.target.y()),
+    onTransformEnd: (e: any) => onTransformEnd(e.target),
+    ref: shapeRef,
+  };
+
+  switch (shape.type) {
+    case 'rectangle':
+      return <Rect {...commonProps} width={shape.width} height={shape.height} cornerRadius={(shape as any).cornerRadius || 0} />;
+    case 'circle':
+      return <Circle {...commonProps} radius={(shape as any).radius} />;
+    case 'triangle':
+      return <RegularPolygon {...commonProps} sides={3} radius={Math.min(shape.width, shape.height) / 2} />;
+    case 'line':
+      return <Line {...commonProps} points={(shape as any).points} />;
+    case 'arrow':
+      return <Arrow {...commonProps} points={(shape as any).points} pointerLength={(shape as any).pointerLength || 15} pointerWidth={(shape as any).pointerWidth || 10} />;
+    case 'star':
+      return <KonvaStar {...commonProps} numPoints={(shape as any).numPoints} innerRadius={(shape as any).innerRadius} outerRadius={(shape as any).outerRadius} />;
+    default:
+      return null;
+  }
+};
+
 const TableCellComponent = memo(({ 
   table, 
   cell, 
@@ -139,8 +190,9 @@ const TableCellComponent = memo(({
   onCellDoubleClick,
   onCellContextMenu
 }: any) => {
-  if (!cell.content && cell.content !== '') return null;
-
+  const isSelected = table.selectedCell?.row === rowIndex && 
+                     table.selectedCell?.col === colIndex;
+  
   return (
     <Group key={`${rowIndex}-${colIndex}`}>
       <Rect
@@ -165,26 +217,14 @@ const TableCellComponent = memo(({
           e.cancelBubble = true;
           onCellContextMenu(e.evt, table.id, rowIndex, colIndex);
         }}
+        shadowColor={isSelected ? "#3b82f6" : "transparent"}
+        shadowBlur={isSelected ? 8 : 0}
+        shadowOpacity={isSelected ? 0.3 : 0}
       />
-      {table.selectedCell && 
-        table.selectedCell.row === rowIndex && 
-        table.selectedCell.col === colIndex && (
-        <Rect
-          x={xPos}
-          y={yPos}
-          width={cellWidth}
-          height={cellHeight}
-          stroke="#3b82f6"
-          strokeWidth={2}
-          dash={[4, 4]}
-          fill="transparent"
-          listening={false}
-        />
-      )}
       <KonvaText
         x={xPos + 5}
         y={yPos + 5}
-        text={cell.content}
+        text={cell.content || " "}
         fontSize={cell.fontSize}
         fontFamily={cell.fontFamily}
         fill={cell.fill}
@@ -203,7 +243,7 @@ const TableCellComponent = memo(({
 
 TableCellComponent.displayName = 'TableCellComponent';
 
-const URLImage = ({ image, isSelected, onSelect, isSelectMode }: any) => {
+const URLImage = ({ image, isSelected, onSelect, isSelectMode, onContextMenu }: any) => {
   const [img] = useImage(image.src);
   const imageRef = useRef<Konva.Image>(null);
   const trRef = useRef<Konva.Transformer>(null);
@@ -218,6 +258,7 @@ const URLImage = ({ image, isSelected, onSelect, isSelectMode }: any) => {
   return (
     <>
       <KonvaImage
+        name="object"
         ref={imageRef}
         image={img}
         x={image.x}
@@ -227,6 +268,7 @@ const URLImage = ({ image, isSelected, onSelect, isSelectMode }: any) => {
         rotation={image.rotation}
         draggable={isSelectMode}
         onClick={onSelect}
+        onContextMenu={onContextMenu}
       />
       {isSelected && <Transformer ref={trRef} />}
     </>
@@ -260,16 +302,61 @@ interface BookPageProps {
   handleStickyNoteDoubleClick: (pageIndex: number, note: StickyNoteType) => void;
   handleStickyNoteUpdate: (pageIndex: number, updatedNote: StickyNoteType) => void;
   handleStickyNoteDelete: (pageIndex: number, noteId: string) => void;
-  handleTableCellClick: (tableId: string, row: number, col: number) => void;
-  handleTableCellDoubleClick: (tableId: string, row: number, col: number, x: number, y: number, width: number, height: number) => void;
-  handleTableContextMenu: (evt: MouseEvent, tableId: string, row: number, col: number) => void;
+  handleTableCellClick: (tableId: string, row: number, col: number, pageIndex: number) => void;
+  handleTableCellDoubleClick: (tableId: string, row: number, col: number, x: number, y: number, width: number, height: number, pageIndex: number) => void;
+  handleTableContextMenu: (evt: MouseEvent, tableId: string, row: number, col: number, pageIndex: number) => void;
+  pages: PageData[];
+  shapeTransformerRef: React.RefObject<Konva.Transformer | null>;
+  setContextMenu: (menu: { x: number; y: number } | null) => void;
 }
 
 const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({ 
-  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onStageDoubleClick, onTextDblClick, selectedTextId, onTextSelect, penState, snapToStart, mousePos, strokeColor, strokeWidth, penFillColor, penFillOpacity, penMode, handleStickyNoteDoubleClick, handleStickyNoteUpdate, handleStickyNoteDelete, isSelectMode, isPenMode, handleTableCellClick, handleTableCellDoubleClick, handleTableContextMenu
+  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onStageDoubleClick, onTextDblClick, selectedTextId, onTextSelect, penState, snapToStart, mousePos, strokeColor, strokeWidth, penFillColor, penFillOpacity, penMode, handleStickyNoteDoubleClick, handleStickyNoteUpdate, handleStickyNoteDelete, isSelectMode, isPenMode, handleTableCellClick, handleTableCellDoubleClick, handleTableContextMenu, pages, shapeTransformerRef, setContextMenu
 }, ref) => {
   const transformerRef = useRef<Konva.Transformer>(null);
   const textRefs = useRef<{ [key: string]: Konva.Text }>({});
+
+  const handleDragMove = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    const layer = e.target.getLayer();
+    if (!layer) return;
+
+    layer.find('.guid-line').forEach((l) => l.destroy());
+
+    const lineGuideStops = getLineGuideStops(e.target, layer);
+    const itemBounds = getObjectSnappingEdges(e.target);
+    const guides = getGuides(lineGuideStops, itemBounds);
+
+    if (!guides.length) {
+      layer.batchDraw();
+      return;
+    }
+
+    drawGuides(guides, layer);
+
+    const absPos = e.target.absolutePosition();
+    guides.forEach((lg) => {
+      switch (lg.orientation) {
+        case 'V': {
+          absPos.x = lg.lineGuide + lg.offset;
+          break;
+        }
+        case 'H': {
+          absPos.y = lg.lineGuide + lg.offset;
+          break;
+        }
+      }
+    });
+    e.target.absolutePosition(absPos);
+    layer.batchDraw();
+  }, []);
+
+  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    const layer = e.target.getLayer();
+    if (layer) {
+      layer.find('.guid-line').forEach((l) => l.destroy());
+      layer.batchDraw();
+    }
+  }, []);
 
   useEffect(() => {
     if (selectedTextId && transformerRef.current && isSelectMode) {
@@ -300,7 +387,6 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
         {/* If it's the cover, center the text manually or use Konva */}
         {pageIndex === 0 && (
            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center text-white opacity-20 text-6xl font-bold tracking-widest">COVER</div>
            </div>
         )}
 
@@ -313,13 +399,10 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
           onDblClick={(e) => onStageDoubleClick(e, pageIndex)}
           className={activeTool !== 'Book Size' ? 'cursor-crosshair' : 'cursor-default'}
         >
-          <Layer>
-            {data.shapes.map((shape, i) => (
-              shape.type === 'rect' ? 
-              <Rect key={i} x={shape.x} y={shape.y} width={50} height={50} fill={shape.fill} draggable={isSelectMode} /> :
-              <Circle key={i} x={shape.x} y={shape.y} radius={30} fill={shape.fill} draggable={isSelectMode} />
-            ))}
-
+          <Layer
+            onDragMove={handleDragMove}
+            onDragEnd={handleDragEnd}
+          >
             {/* Lines and Custom Shapes */}
             {data.lines.map((line, i) => {
               if (line.type === 'custom-shape' && (line as any).draggable) {
@@ -354,6 +437,222 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                 />
               );
             })}
+
+            {/* Render all elements sorted by zIndex */}
+            {(() => {
+              const allElements: any[] = [
+                ...data.images.map(item => ({ ...item, _renderType: 'image' })),
+                ...data.texts.map(item => ({ ...item, _renderType: 'text' })),
+                ...data.shapes.map(item => ({ ...item, _renderType: 'shape' })),
+                ...data.tables.map(item => ({ ...item, _renderType: 'table' })),
+                ...data.stickyNotes.map(item => ({ ...item, _renderType: 'stickyNote' })),
+              ];
+
+              allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+              return allElements.map((element) => {
+                if (element._renderType === 'image') {
+                  return (
+                    <URLImage 
+                      key={element.id} 
+                      image={element} 
+                      isSelectMode={isSelectMode}
+                      isSelected={selectedTextId === element.id}
+                      onSelect={() => onTextSelect(element.id)}
+                      onContextMenu={(e: any) => {
+                        e.evt.preventDefault();
+                        onTextSelect(element.id);
+                        setContextMenu({ x: e.evt.clientX, y: e.evt.clientY });
+                      }}
+                    />
+                  );
+                }
+                
+                if (element._renderType === 'shape') {
+                  return (
+                    <Group 
+                      key={element.id}
+                      onContextMenu={(e: any) => {
+                        e.evt.preventDefault();
+                        onTextSelect(element.id);
+                        setContextMenu({ x: e.evt.clientX, y: e.evt.clientY });
+                      }}
+                    >
+                      {renderShape(
+                        element,
+                        selectedTextId === element.id,
+                        () => isSelectMode && onTextSelect(element.id),
+                        (x, y) => {
+                          const updatedPages = [...pages];
+                          const shapeIndex = updatedPages[pageIndex].shapes.findIndex(s => s.id === element.id);
+                          if (shapeIndex !== -1) {
+                            updatedPages[pageIndex].shapes[shapeIndex] = { ...element, x, y };
+                          }
+                        },
+                        (node) => {
+                          const updatedPages = [...pages];
+                          const shapeIndex = updatedPages[pageIndex].shapes.findIndex(s => s.id === element.id);
+                          if (shapeIndex !== -1) {
+                            updatedPages[pageIndex].shapes[shapeIndex] = {
+                              ...element,
+                              x: node.x(),
+                              y: node.y(),
+                              width: Math.max(5, node.width() * node.scaleX()),
+                              height: Math.max(5, node.height() * node.scaleY()),
+                              rotation: node.rotation(),
+                              scaleX: 1,
+                              scaleY: 1
+                            };
+                          }
+                        },
+                        (node) => {
+                          if (node) textRefs.current[element.id] = node;
+                        }
+                      )}
+                    </Group>
+                  );
+                }
+                
+                if (element._renderType === 'stickyNote') {
+                  return (
+                    <StickyNote
+                      key={element.id}
+                      note={element}
+                      isSelected={selectedTextId === element.id}
+                      isSelectMode={isSelectMode}
+                      onSelect={onTextSelect}
+                      onDoubleClick={(note) => handleStickyNoteDoubleClick(pageIndex, note)}
+                      onUpdate={(updatedNote) => handleStickyNoteUpdate(pageIndex, updatedNote)}
+                      onDelete={(id) => handleStickyNoteDelete(pageIndex, id)}
+                      onContextMenu={(e: any) => {
+                        e.evt.preventDefault();
+                        onTextSelect(element.id);
+                        setContextMenu({ x: e.evt.clientX, y: e.evt.clientY });
+                      }}
+                    />
+                  );
+                }
+                
+                if (element._renderType === 'table') {
+                  return (
+                    <Group 
+                      key={element.id} 
+                      x={element.x} 
+                      y={element.y} 
+                      draggable={isSelectMode}
+                      onClick={() => onTextSelect(element.id)}
+                      onContextMenu={(e: any) => {
+                        e.evt.preventDefault();
+                        onTextSelect(element.id);
+                        setContextMenu({ x: e.evt.clientX, y: e.evt.clientY });
+                      }}
+                      onDragEnd={(e) => {
+                        const newX = e.target.x();
+                        const newY = e.target.y();
+                        handleStickyNoteUpdate(pageIndex, {
+                          ...element,
+                          x: newX,
+                          y: newY
+                        } as any);
+                      }}
+                    >
+                      {element.data.map((row: any, rowIndex: number) =>
+                        row.map((cell: any, colIndex: number) => {
+                          const xPos = colIndex * element.cellWidth;
+                          const yPos = rowIndex * element.cellHeight;
+                          const cellWidth = element.cellWidth * (cell.colSpan || 1);
+                          const cellHeight = element.cellHeight * (cell.rowSpan || 1);
+                          
+                          return (
+                            <TableCellComponent
+                              key={`${rowIndex}-${colIndex}`}
+                              table={element}
+                              cell={cell}
+                              rowIndex={rowIndex}
+                              colIndex={colIndex}
+                              xPos={xPos}
+                              yPos={yPos}
+                              cellWidth={cellWidth}
+                              cellHeight={cellHeight}
+                              onCellClick={(tId: string, r: number, c: number) => handleTableCellClick(tId, r, c, pageIndex)}
+                              onCellDoubleClick={(tId: string, r: number, c: number, x: number, y: number, w: number, h: number) => handleTableCellDoubleClick(tId, r, c, x, y, w, h, pageIndex)}
+                              onCellContextMenu={(evt: MouseEvent, tId: string, r: number, c: number) => handleTableContextMenu(evt, tId, r, c, pageIndex)}
+                            />
+                          );
+                        })
+                      )}
+                      {Array.from({ length: element.rows + 1 }).map((_, i) => (
+                        <Line 
+                          key={`h${i}`} 
+                          points={[0, i * element.cellHeight, element.cols * element.cellWidth, i * element.cellHeight]} 
+                          stroke={element.borderColor} 
+                          strokeWidth={element.borderWidth} 
+                        />
+                      ))}
+                      {Array.from({ length: element.cols + 1 }).map((_, i) => (
+                        <Line 
+                          key={`v${i}`} 
+                          points={[i * element.cellWidth, 0, i * element.cellWidth, element.rows * element.cellHeight]} 
+                          stroke={element.borderColor} 
+                          strokeWidth={element.borderWidth} 
+                        />
+                      ))}
+                    </Group>
+                  );
+                }
+                
+                if (element._renderType === 'text') {
+                  return (
+                    <KonvaText
+                      name="object"
+                      key={element.id}
+                      ref={(node) => {
+                        if (node) textRefs.current[element.id] = node;
+                      }}
+                      x={element.x}
+                      y={element.y}
+                      text={element.text}
+                      fontSize={element.fontSize}
+                      fontFamily={element.fontFamily || 'Roboto'}
+                      fontStyle={getKonvaFontStyle(element.fontStyle)}
+                      textDecoration={element.textDecoration}
+                      align={element.textAlign}
+                      fill={element.fill}
+                      width={element.width}
+                      wrap="word"
+                      lineHeight={element.lineHeight || 1.2}
+                      letterSpacing={element.letterSpacing || 0}
+                      rotation={element.rotation || 0}
+                      opacity={element.opacity || 1}
+                      shadowColor={element.shadowColor}
+                      shadowBlur={element.shadowBlur || 0}
+                      shadowOffsetX={element.shadowOffsetX || 0}
+                      shadowOffsetY={element.shadowOffsetY || 0}
+                      shadowOpacity={element.shadowOpacity || 1}
+                      stroke={element.stroke}
+                      strokeWidth={element.strokeWidth || 0}
+                      draggable={isSelectMode}
+                      onClick={() => onTextSelect(element.id)}
+                      onDblClick={(e) => onTextDblClick(e, pageIndex, element)}
+                      onContextMenu={(e) => {
+                        e.evt.preventDefault();
+                        onTextSelect(element.id);
+                        setContextMenu({ x: e.evt.clientX, y: e.evt.clientY });
+                      }}
+                      onTransform={(e) => {
+                        const node = e.target as Konva.Text;
+                        const scaleX = node.scaleX();
+                        node.scaleX(1);
+                        node.scaleY(1);
+                        node.width(Math.max(30, node.width() * scaleX));
+                      }}
+                    />
+                  );
+                }
+                
+                return null;
+              });
+            })()}
 
             {/* Drawing Preview for Pen Tool */}
             {isPenMode && penState.points.length > 0 && (
@@ -439,134 +738,6 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                 )}
               </Group>
             )}
-
-            {/* Images */}
-            {data.images?.map((img) => (
-               <URLImage 
-                  key={img.id} 
-                  image={img} 
-                  isSelectMode={isSelectMode}
-                  isSelected={selectedTextId === img.id}
-                  onSelect={() => onTextSelect(img.id)}
-               />
-            ))}
-
-            {/* Sticky Notes */}
-            {data.stickyNotes?.map((note) => (
-               <StickyNote
-                  key={note.id}
-                  note={note}
-                  isSelected={selectedTextId === note.id}
-                  isSelectMode={isSelectMode}
-                  onSelect={onTextSelect}
-                  onDoubleClick={(note) => handleStickyNoteDoubleClick(pageIndex, note)}
-                  onUpdate={(updatedNote) => handleStickyNoteUpdate(pageIndex, updatedNote)}
-                  onDelete={(id) => handleStickyNoteDelete(pageIndex, id)}
-               />
-            ))}
-
-            {/* Tables */}
-            {data.tables?.map((table) => (
-               <Group 
-                  key={table.id} 
-                  x={table.x} 
-                  y={table.y} 
-                  draggable={isSelectMode}
-                  onClick={() => onTextSelect(table.id)}
-                  onDragEnd={(e) => {
-                    const newX = e.target.x();
-                    const newY = e.target.y();
-                    handleStickyNoteUpdate(pageIndex, {
-                      ...table,
-                      x: newX,
-                      y: newY
-                    } as any);
-                  }}
-               >
-                  {table.data.map((row, rowIndex) =>
-                    row.map((cell, colIndex) => {
-                      const xPos = colIndex * table.cellWidth;
-                      const yPos = rowIndex * table.cellHeight;
-                      const cellWidth = table.cellWidth * (cell.colSpan || 1);
-                      const cellHeight = table.cellHeight * (cell.rowSpan || 1);
-                      
-                      return (
-                        <TableCellComponent
-                          key={`${rowIndex}-${colIndex}`}
-                          table={table}
-                          cell={cell}
-                          rowIndex={rowIndex}
-                          colIndex={colIndex}
-                          xPos={xPos}
-                          yPos={yPos}
-                          cellWidth={cellWidth}
-                          cellHeight={cellHeight}
-                          onCellClick={handleTableCellClick}
-                          onCellDoubleClick={handleTableCellDoubleClick}
-                          onCellContextMenu={handleTableContextMenu}
-                        />
-                      );
-                    })
-                  )}
-                  {Array.from({ length: table.rows + 1 }).map((_, i) => (
-                    <Line 
-                      key={`h${i}`} 
-                      points={[0, i * table.cellHeight, table.cols * table.cellWidth, i * table.cellHeight]} 
-                      stroke={table.borderColor} 
-                      strokeWidth={table.borderWidth} 
-                    />
-                  ))}
-                  {Array.from({ length: table.cols + 1 }).map((_, i) => (
-                    <Line 
-                      key={`v${i}`} 
-                      points={[i * table.cellWidth, 0, i * table.cellWidth, table.rows * table.cellHeight]} 
-                      stroke={table.borderColor} 
-                      strokeWidth={table.borderWidth} 
-                    />
-                  ))}
-               </Group>
-            ))}
-
-            {data.texts.map((textItem) => (
-              <KonvaText
-                key={textItem.id}
-                ref={(node) => {
-                  if (node) textRefs.current[textItem.id] = node;
-                }}
-                x={textItem.x}
-                y={textItem.y}
-                text={textItem.text}
-                fontSize={textItem.fontSize}
-                fontFamily={textItem.fontFamily || 'Roboto'}
-                fontStyle={getKonvaFontStyle(textItem.fontStyle)}
-                textDecoration={textItem.textDecoration}
-                align={textItem.textAlign}
-                fill={textItem.fill}
-                width={textItem.width}
-                wrap="word"
-                lineHeight={textItem.lineHeight || 1.2}
-                letterSpacing={textItem.letterSpacing || 0}
-                rotation={textItem.rotation || 0}
-                opacity={textItem.opacity || 1}
-                shadowColor={textItem.shadowColor}
-                shadowBlur={textItem.shadowBlur || 0}
-                shadowOffsetX={textItem.shadowOffsetX || 0}
-                shadowOffsetY={textItem.shadowOffsetY || 0}
-                shadowOpacity={textItem.shadowOpacity || 1}
-                stroke={textItem.stroke}
-                strokeWidth={textItem.strokeWidth || 0}
-                draggable={isSelectMode}
-                onClick={() => onTextSelect(textItem.id)}
-                onDblClick={(e) => onTextDblClick(e, pageIndex, textItem)}
-                onTransform={(e) => {
-                  const node = e.target as Konva.Text;
-                  const scaleX = node.scaleX();
-                  node.scaleX(1);
-                  node.scaleY(1);
-                  node.width(Math.max(30, node.width() * scaleX));
-                }}
-              />
-            ))}
             <Transformer
               ref={transformerRef}
               boundBoxFunc={(oldBox, newBox) => {
@@ -575,6 +746,16 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
               }}
               enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-right', 'middle-left', 'bottom-left', 'bottom-center', 'bottom-right']}
             />
+            {selectedTextId && data.shapes.some(s => s.id === selectedTextId) && (
+              <Transformer
+                ref={shapeTransformerRef}
+                boundBoxFunc={(oldBox, newBox) => {
+                  if (newBox.width < 5 || newBox.height < 5) return oldBox;
+                  return newBox;
+                }}
+                enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+              />
+            )}
           </Layer>
         </Stage>
 
@@ -591,14 +772,20 @@ BookPage.displayName = 'BookPage';
 
 // --- Main Book Component ---
 
-const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeColor = '#000000', strokeWidth = 5, selectedBookSize = '6 x 4', fontSize = 16, fontFamily = 'Roboto', onAdvancedTextChange, drawingMode, zoom: externalZoom }: BookProps, ref: any) => {
+const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeColor = '#000000', strokeWidth = 5, selectedBookSize = '6 x 4', fontSize = 16, fontFamily = 'Roboto', onAdvancedTextChange, drawingMode, zoom: externalZoom, onZoomChange, selectedShape = 'rectangle', shapeFillColor = '#1e3a8a', shapeStrokeColor = '#60a5fa', shapeStrokeWidth = 2, isFillTransparent = false, onToolChange }: BookProps, ref: any) => {
   const [pages, setPages] = useState<PageData[]>(INITIAL_PAGES);
-  const [internalZoom, setInternalZoom] = useState(1);
+  const [currentZoom, setCurrentZoom] = useState(externalZoom ?? 1);
+  const bookContainerRef = useRef<HTMLDivElement>(null);
+  const { isFullscreen, toggleFullscreen } = useFullscreen(bookContainerRef);
   const [showAddModal, setShowAddModal] = useState(false);
   const [pagesToAdd, setPagesToAdd] = useState('2');
-  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [isSpacePanning, setIsSpacePanning] = useState(false);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [selectedTablePageIndex, setSelectedTablePageIndex] = useState<number>(-1);
+  const shapeTransformerRef = useRef<Konva.Transformer>(null);
+  const shapeRefs = useRef<{ [key: string]: any }>({});
   const [editingTableCell, setEditingTableCell] = useState<{
     tableId: string;
     row: number;
@@ -626,8 +813,42 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   const isPenMode = isToolCategoryActive && activeSubTool === 'pen';
   const isStickyNoteMode = isToolCategoryActive && activeSubTool === 'sticky_note';
   const isTableMode = isToolCategoryActive && activeSubTool === 'table';
+  const isShapesMode = activeTool === 'Shapes';
 
-  const zoom = externalZoom ?? internalZoom;
+  const zoom = currentZoom;
+
+  useEffect(() => {
+    if (externalZoom !== undefined) {
+      setCurrentZoom(externalZoom);
+    }
+  }, [externalZoom]);
+
+  const handleZoomIn = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
+    
+    const newZoom = Math.min(currentZoom + 0.1, 3);
+    setCurrentZoom(newZoom);
+    onZoomChange?.(newZoom);
+  };
+
+  const handleZoomOut = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
+
+    const newZoom = Math.max(currentZoom - 0.1, 0.1);
+    setCurrentZoom(newZoom);
+    onZoomChange?.(newZoom);
+  };
+
+  const handleZoomReset = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
+
+    const newZoom = 1;
+    setCurrentZoom(newZoom);
+    onZoomChange?.(newZoom);
+  };
   
   // Text Editing State
   const [editingTextItem, setEditingTextItem] = useState<TextType | null>(null);
@@ -635,7 +856,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   const [showToolbar, setShowToolbar] = useState(false);
   const [toolbarPos, setToolbarPos] = useState({ x: 0, y: 0 });
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
-  const [clipboard, setClipboard] = useState<TextType | null>(null);
+  const [clipboard, setClipboard] = useState<any[]>([]);
 
   // Hand Tool & Pen Tool State
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
@@ -654,7 +875,201 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   
   const bookRef = useRef<any>(null);
   const isDrawing = useRef(false);
-  const { saveState, undo, redo, canUndo, canRedo } = useTextHistory();
+  const { addToHistory, undo, redo, canUndo, canRedo } = useBookHistory();
+
+  const saveCurrentPageState = useCallback((overridePageIndex?: number) => {
+    const idx = overridePageIndex !== undefined ? overridePageIndex : currentPageIndex;
+    if (pages[idx]) {
+      addToHistory(idx, pages[idx]);
+    }
+  }, [addToHistory, currentPageIndex, pages]);
+
+  const selectedTextId = selectedIds.length === 1 ? selectedIds[0] : null;
+  const selectedShapeId = selectedIds.length === 1 ? selectedIds[0] : null;
+
+  const handleObjectSelect = useCallback((id: string, e?: any) => {
+    if (!isSelectMode) return;
+
+    const isCtrlPressed = e?.evt?.ctrlKey || e?.evt?.metaKey;
+    
+    setSelectedIds(prev => {
+      if (isCtrlPressed) {
+        return prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id];
+      }
+      return prev.includes(id) ? prev : [id];
+    });
+    
+    const isText = pages[currentPageIndex].texts.some(t => t.id === id);
+    if (!isCtrlPressed && isText) {
+      const textItem = pages[currentPageIndex].texts.find(t => t.id === id);
+      if (textItem) {
+        setToolbarPos({ x: textItem.x, y: textItem.y });
+        setShowToolbar(true);
+      }
+    } else {
+      setShowToolbar(false);
+    }
+  }, [isSelectMode, pages, currentPageIndex]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedIds.length === 0) return;
+
+    saveCurrentPageState();
+
+    const page = pages[currentPageIndex];
+    
+    const newTexts = page.texts.filter(t => !selectedIds.includes(t.id));
+    const newShapes = page.shapes.filter(s => !selectedIds.includes(s.id));
+    const newImages = page.images.filter(i => !selectedIds.includes(i.id));
+    const newStickyNotes = page.stickyNotes.filter(n => !selectedIds.includes(n.id));
+    const newTables = page.tables.filter(t => !selectedIds.includes(t.id));
+
+    const newPageData = {
+      ...page,
+      texts: newTexts,
+      shapes: newShapes,
+      images: newImages,
+      stickyNotes: newStickyNotes,
+      tables: newTables
+    };
+
+    setPages(prev => prev.map((p, i) => i === currentPageIndex ? newPageData : p));
+    setSelectedIds([]);
+    setShowToolbar(false);
+  }, [selectedIds, currentPageIndex, pages, saveCurrentPageState]);
+
+  const handleCopy = useCallback(() => {
+    if (selectedIds.length === 0) return;
+    const page = pages[currentPageIndex];
+    
+    const selectedItems = [
+      ...page.texts.filter(t => selectedIds.includes(t.id)).map(i => ({ ...i, _type: 'text' })),
+      ...page.shapes.filter(s => selectedIds.includes(s.id)).map(i => ({ ...i, _type: 'shape' })),
+      ...page.images.filter(i => selectedIds.includes(i.id)).map(i => ({ ...i, _type: 'image' })),
+      ...page.tables.filter(t => selectedIds.includes(t.id)).map(i => ({ ...i, _type: 'table' }))
+    ];
+
+    if (selectedItems.length > 0) {
+      setClipboard(selectedItems);
+    }
+    setContextMenu(null);
+  }, [selectedIds, currentPageIndex, pages]);
+
+  const handleCut = useCallback(() => {
+    handleCopy();
+    handleDeleteSelected();
+  }, [handleCopy, handleDeleteSelected]);
+
+  const handlePaste = useCallback(() => {
+    if (!clipboard || clipboard.length === 0) return;
+
+    saveCurrentPageState();
+
+    const newItems = clipboard.map(item => ({
+      ...item,
+      id: Date.now().toString() + Math.random(),
+      x: item.x + 20,
+      y: item.y + 20
+    }));
+
+    const page = pages[currentPageIndex];
+    const updatedPage = { ...page };
+
+    newItems.forEach((item: any) => {
+      if (item._type === 'text') updatedPage.texts = [...updatedPage.texts, item];
+      if (item._type === 'shape') updatedPage.shapes = [...updatedPage.shapes, item];
+      if (item._type === 'image') updatedPage.images = [...updatedPage.images, item];
+      if (item._type === 'table') updatedPage.tables = [...updatedPage.tables, item];
+    });
+
+    setPages(prev => prev.map((p, i) => i === currentPageIndex ? updatedPage : p));
+    setSelectedIds(newItems.map(i => i.id));
+    setContextMenu(null);
+  }, [clipboard, currentPageIndex, pages, saveCurrentPageState]);
+
+  const handleLayerAction = useCallback((action: 'front' | 'back' | 'forward' | 'backward') => {
+    if (selectedIds.length === 0) return;
+    const idToMove = selectedIds[0];
+    
+    setPages(prevPages => {
+      const newPages = [...prevPages];
+
+      // Find which page contains this object ID
+      let targetPageIndex = -1;
+      const pagesToCheck = [currentPageIndex];
+      if (currentPageIndex + 1 < newPages.length) {
+        pagesToCheck.push(currentPageIndex + 1);
+      }
+
+      for (const idx of pagesToCheck) {
+        const p = newPages[idx];
+        const exists = [
+          ...(p.texts || []), 
+          ...(p.images || []), 
+          ...(p.shapes || []),
+          ...(p.tables || []),
+          ...(p.stickyNotes || [])
+        ].some((item: any) => item.id === idToMove);
+        
+        if (exists) {
+          targetPageIndex = idx;
+          break;
+        }
+      }
+
+      if (targetPageIndex === -1) return prevPages;
+
+      const page = { ...newPages[targetPageIndex] };
+      
+      const updateItemZIndex = (list: any[], listName: string) => {
+        const idx = list.findIndex(item => item.id === idToMove);
+        if (idx === -1) return false;
+
+        const item = { ...list[idx] };
+        const currentZ = item.zIndex || 0;
+        
+        let newZ = currentZ;
+        const maxZ = getMaxZIndex(page);
+        const minZ = getMinZIndex(page);
+
+        if (action === 'front') newZ = maxZ + 1;
+        if (action === 'back') newZ = minZ - 1;
+        if (action === 'forward') newZ = currentZ + 1;
+        if (action === 'backward') newZ = currentZ - 1;
+
+        item.zIndex = newZ;
+        const newList = [...list];
+        newList[idx] = item;
+        
+        (page as any)[listName] = newList;
+        return true;
+      };
+
+      if (!updateItemZIndex(page.texts || [], 'texts')) {
+        if (!updateItemZIndex(page.images || [], 'images')) {
+          if (!updateItemZIndex(page.shapes || [], 'shapes')) {
+            if (!updateItemZIndex(page.tables || [], 'tables')) {
+              updateItemZIndex(page.stickyNotes || [], 'stickyNotes');
+            }
+          }
+        }
+      }
+
+      newPages[targetPageIndex] = page;
+      return newPages;
+    });
+    
+    saveCurrentPageState();
+  }, [selectedIds, currentPageIndex, saveCurrentPageState]);
+
+  const handlePageChange = useCallback((pageNumber: number) => {
+    if (!bookRef.current) return;
+    const pageFlip = bookRef.current.pageFlip();
+    if (!pageFlip) return;
+
+    const targetIndex = Math.max(0, Math.min(pageNumber - 1, pages.length - 1));
+    pageFlip.flip(targetIndex);
+  }, [pages.length]);
 
   useImperativeHandle(ref, () => ({
     undo,
@@ -662,11 +1077,12 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     canUndo,
     canRedo,
     updatePageData,
-    handleImageUpload,
+    handleImageUpload: (file: File, targetPage?: 'left' | 'right' | 'current') => handleImageUpload(file, targetPage),
     currentPageIndex,
     getSelectedTableProperties: () => {
-      if (!selectedTableId || !pages[currentPageIndex]) return null;
-      const table = pages[currentPageIndex].tables.find(t => t.id === selectedTableId);
+      const targetPageIndex = selectedTablePageIndex !== -1 ? selectedTablePageIndex : currentPageIndex;
+      if (!selectedTableId || !pages[targetPageIndex]) return null;
+      const table = pages[targetPageIndex].tables.find(t => t.id === selectedTableId);
       if (!table) return null;
       return {
         rows: table.rows,
@@ -684,10 +1100,11 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       if (property === 'snapDistance') setPenSnapDistance(value);
     },
     handleTableChange: (property: string, value: any) => {
-      if (!selectedTableId || !pages[currentPageIndex]) return;
+      const targetPageIndex = selectedTablePageIndex !== -1 ? selectedTablePageIndex : currentPageIndex;
+      if (!selectedTableId || !pages[targetPageIndex]) return;
       
       const updatedPages = [...pages];
-      const page = updatedPages[currentPageIndex];
+      const page = updatedPages[targetPageIndex];
       const tableIndex = page.tables.findIndex(t => t.id === selectedTableId);
       
       if (tableIndex === -1) return;
@@ -828,13 +1245,14 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     return table;
   };
 
-  const handleTableCellClick = useCallback((tableId: string, row: number, col: number) => {
+  const handleTableCellClick = useCallback((tableId: string, row: number, col: number, pageIndex: number) => {
     setSelectedTableId(tableId);
-    setSelectedTextId(null);
+    setSelectedTablePageIndex(pageIndex);
+    setSelectedIds([]);
     
     setPages(prevPages => {
       const updatedPages = [...prevPages];
-      const page = updatedPages[currentPageIndex];
+      const page = updatedPages[pageIndex];
       const tableIndex = page.tables.findIndex(t => t.id === tableId);
       
       if (tableIndex !== -1) {
@@ -855,7 +1273,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       }
       return prevPages;
     });
-  }, [currentPageIndex]);
+  }, []);
 
   const handleTableCellDoubleClick = (
     tableId: string, 
@@ -864,9 +1282,10 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     x: number, 
     y: number, 
     width: number, 
-    height: number
+    height: number,
+    pageIndex: number
   ) => {
-    const page = pages[currentPageIndex];
+    const page = pages[pageIndex];
     const table = page.tables.find(t => t.id === tableId);
     
     if (!table) return;
@@ -874,33 +1293,40 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     const cell = table.data[row]?.[col];
     if (!cell || cell.content === null) return;
     
-    const screenX = table.x + x;
-    const screenY = table.y + y;
-    
-    setEditingTableCell({
-      tableId,
-      row,
-      col,
-      x: screenX,
-      y: screenY,
-      width: width - 10,
-      height: height - 10
-    });
+    // Add a small delay to ensure click events are processed
+    setTimeout(() => {
+      const adjustedX = table.x + x + 5; // Add padding
+      const adjustedY = table.y + y + 5; // Add padding
+      const adjustedWidth = width - 10; // Account for padding
+      const adjustedHeight = height - 10; // Account for padding
+      
+      setEditingTableCell({
+        tableId,
+        row,
+        col,
+        x: adjustedX,
+        y: adjustedY,
+        width: adjustedWidth,
+        height: adjustedHeight
+      });
+    }, 50);
   };
 
   const handleTableContextMenu = (
     evt: MouseEvent,
     tableId: string,
     row: number,
-    col: number
+    col: number,
+    pageIndex: number
   ) => {
     evt.preventDefault();
     setSelectedTableId(tableId);
+    setSelectedTablePageIndex(pageIndex);
     
     // Update selected cell for the table
     setPages(prevPages => {
       const updatedPages = [...prevPages];
-      const page = updatedPages[currentPageIndex];
+      const page = updatedPages[pageIndex];
       const tableIndex = page.tables.findIndex(t => t.id === tableId);
       
       if (tableIndex !== -1) {
@@ -925,8 +1351,9 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     if (!editingTableCell) return;
     
     const { tableId, row, col } = editingTableCell;
+    const targetPageIndex = selectedTablePageIndex !== -1 ? selectedTablePageIndex : currentPageIndex;
     const updatedPages = [...pages];
-    const page = updatedPages[currentPageIndex];
+    const page = updatedPages[targetPageIndex];
     const tableIndex = page.tables.findIndex(t => t.id === tableId);
     
     if (tableIndex !== -1) {
@@ -952,9 +1379,10 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   };
 
   const handleTableInsertRow = useCallback((tableId: string, position: 'above' | 'below') => {
+    const targetPageIndex = selectedTablePageIndex !== -1 ? selectedTablePageIndex : currentPageIndex;
     setPages(prevPages => {
       const updatedPages = [...prevPages];
-      const page = updatedPages[currentPageIndex];
+      const page = updatedPages[targetPageIndex];
       const tableIndex = page.tables.findIndex(t => t.id === tableId);
       
       if (tableIndex === -1) return prevPages;
@@ -963,27 +1391,40 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       const selectedRow = table.selectedCell?.row || 0;
       const insertIndex = position === 'above' ? selectedRow : selectedRow + 1;
       
-      const newRow = Array(table.cols).fill(null).map(() => createEmptyCell());
+      // Create new row with proper cell structure
+      const newRow = Array(table.cols).fill(null).map((_, colIndex) => ({
+        ...createEmptyCell(),
+        id: `${Date.now()}-${insertIndex}-${colIndex}`
+      }));
+      
       const newData = [
         ...table.data.slice(0, insertIndex),
         newRow,
         ...table.data.slice(insertIndex)
       ];
       
+      // Update selected cell if needed
+      let newSelectedCell = table.selectedCell;
+      if (position === 'below' && newSelectedCell) {
+        newSelectedCell = { ...newSelectedCell, row: newSelectedCell.row + 1 };
+      }
+      
       page.tables[tableIndex] = {
         ...table,
         rows: table.rows + 1,
-        data: newData
+        data: newData,
+        selectedCell: newSelectedCell
       };
       
       return updatedPages;
     });
-  }, [currentPageIndex]);
+  }, [selectedTablePageIndex, currentPageIndex]);
 
   const handleTableInsertColumn = useCallback((tableId: string, position: 'left' | 'right') => {
+    const targetPageIndex = selectedTablePageIndex !== -1 ? selectedTablePageIndex : currentPageIndex;
     setPages(prevPages => {
       const updatedPages = [...prevPages];
-      const page = updatedPages[currentPageIndex];
+      const page = updatedPages[targetPageIndex];
       const tableIndex = page.tables.findIndex(t => t.id === tableId);
       
       if (tableIndex === -1) return prevPages;
@@ -1006,12 +1447,13 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       
       return updatedPages;
     });
-  }, [currentPageIndex]);
+  }, [selectedTablePageIndex, currentPageIndex]);
 
   const handleTableDeleteRow = useCallback((tableId: string) => {
+    const targetPageIndex = selectedTablePageIndex !== -1 ? selectedTablePageIndex : currentPageIndex;
     setPages(prevPages => {
       const updatedPages = [...prevPages];
-      const page = updatedPages[currentPageIndex];
+      const page = updatedPages[targetPageIndex];
       const tableIndex = page.tables.findIndex(t => t.id === tableId);
       
       if (tableIndex === -1) return prevPages;
@@ -1032,12 +1474,13 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       
       return updatedPages;
     });
-  }, [currentPageIndex]);
+  }, [selectedTablePageIndex, currentPageIndex]);
 
   const handleTableDeleteColumn = useCallback((tableId: string) => {
+    const targetPageIndex = selectedTablePageIndex !== -1 ? selectedTablePageIndex : currentPageIndex;
     setPages(prevPages => {
       const updatedPages = [...prevPages];
-      const page = updatedPages[currentPageIndex];
+      const page = updatedPages[targetPageIndex];
       const tableIndex = page.tables.findIndex(t => t.id === tableId);
       
       if (tableIndex === -1) return prevPages;
@@ -1061,11 +1504,12 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       
       return updatedPages;
     });
-  }, [currentPageIndex]);
+  }, [selectedTablePageIndex, currentPageIndex]);
 
   const handleTableMergeCells = (tableId: string) => {
+    const targetPageIndex = selectedTablePageIndex !== -1 ? selectedTablePageIndex : currentPageIndex;
     const updatedPages = [...pages];
-    const page = updatedPages[currentPageIndex];
+    const page = updatedPages[targetPageIndex];
     const tableIndex = page.tables.findIndex(t => t.id === tableId);
     
     if (tableIndex === -1) return;
@@ -1200,19 +1644,39 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   };
 
   // --- Image Upload Logic ---
-  const handleImageUpload = (file: File) => {
+  const handleImageUpload = (file: File, targetPage?: 'left' | 'right' | 'current') => {
     const reader = new FileReader();
     reader.onload = () => {
+      let targetPageIndex = currentPageIndex;
+      
+      const isSpread = currentPageIndex !== 0 && currentPageIndex % 2 !== 0;
+
+      if (isSpread) {
+        if (targetPage === 'right') {
+          targetPageIndex = currentPageIndex + 1;
+        } else if (targetPage === 'left') {
+          targetPageIndex = currentPageIndex;
+        }
+      }
+      
+      if (targetPageIndex >= pages.length) targetPageIndex = pages.length - 1;
+      if (targetPageIndex < 0) targetPageIndex = currentPageIndex;
+      
+      addToHistory(targetPageIndex, pages[targetPageIndex]);
+      
       const newImage: ImageType = {
-        id: Date.now().toString(),
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
         type: 'image',
-        x: 100, y: 100, width: 200, height: 200,
+        x: WIDTH * 0.1,
+        y: HEIGHT * 0.1,
+        width: WIDTH * 0.3,
+        height: HEIGHT * 0.3,
         rotation: 0,
         src: reader.result as string
       };
-      // Add to current page
-      const currentImages = pages[currentPageIndex].images || [];
-      updatePageData(currentPageIndex, 'images', [...currentImages, newImage]);
+
+      const currentImages = pages[targetPageIndex].images || [];
+      updatePageData(targetPageIndex, 'images', [...currentImages, newImage]);
     };
     reader.readAsDataURL(file);
   };
@@ -1255,74 +1719,107 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isPenMode, penMode, penDrawingState]);
 
-  // Text keyboard shortcuts
+  // Main keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedTextId) return;
-
-      const isStickyNoteSelected = pages[currentPageIndex]?.stickyNotes.some(n => n.id === selectedTextId);
-      
-      if (isStickyNoteSelected) {
-        if (e.key === 'Delete' || e.key === 'Backspace') {
-          e.preventDefault();
-          handleStickyNoteDelete(currentPageIndex, selectedTextId);
-        } else if (e.key === 'Escape' && editingStickyNote) {
-          setEditingStickyNote(null);
-        }
-        return;
+      if (e.code === 'Space' && !e.repeat && e.target === document.body) {
+        e.preventDefault();
+        setIsSpacePanning(true);
       }
 
-      if (e.ctrlKey || e.metaKey) {
-        switch (e.key.toLowerCase()) {
-          case 'b':
-            e.preventDefault();
-            handleFormat('bold');
-            break;
-          case 'i':
-            e.preventDefault();
-            handleFormat('italic');
-            break;
-          case 'u':
-            e.preventDefault();
-            handleFormat('underline');
-            break;
-          case 'c':
-            e.preventDefault();
-            handleCopy();
-            break;
-          case 'x':
-            e.preventDefault();
-            handleCut();
-            break;
-          case 'v':
-            e.preventDefault();
-            handlePaste();
-            break;
-          case 'z': {
-            e.preventDefault();
-            const undoTexts = undo();
-            if (undoTexts) updatePageData(currentPageIndex, 'texts', undoTexts);
-            break;
-          }
-          case 'y': {
-            e.preventDefault();
-            const redoTexts = redo();
-            if (redoTexts) updatePageData(currentPageIndex, 'texts', redoTexts);
-            break;
-          }
+      if (e.key === 'Escape') {
+        if (selectedIds.length > 0) {
+          setSelectedIds([]);
+          setShowToolbar(false);
+        } else if ((activeTool !== 'Tool' || activeSubTool !== 'select') && onToolChange) {
+          onToolChange('Tool', 'select');
         }
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      }
+
+      if (editingTextItem || editingStickyNote || editingTableCell) return;
+
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key.toLowerCase() === 'z') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            const result = redo(pages[currentPageIndex], currentPageIndex);
+            if (result) {
+              setPages(prev => prev.map((p, i) => i === result.pageIndex ? result.data : p));
+              setCurrentPageIndex(result.pageIndex);
+            }
+          } else {
+            const result = undo(pages[currentPageIndex], currentPageIndex);
+            if (result) {
+              setPages(prev => prev.map((p, i) => i === result.pageIndex ? result.data : p));
+              setCurrentPageIndex(result.pageIndex);
+            }
+          }
+        } else if (e.key.toLowerCase() === 'y') {
+          e.preventDefault();
+          const result = redo(pages[currentPageIndex], currentPageIndex);
+          if (result) {
+            setPages(prev => prev.map((p, i) => i === result.pageIndex ? result.data : p));
+            setCurrentPageIndex(result.pageIndex);
+          }
+        } else if (e.key.toLowerCase() === 'c') {
+          e.preventDefault();
+          handleCopy();
+        } else if (e.key.toLowerCase() === 'x') {
+          e.preventDefault();
+          handleCut();
+        } else if (e.key.toLowerCase() === 'v') {
+          e.preventDefault();
+          handlePaste();
+        }
+      }
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
+        if (!editingTextItem && !editingStickyNote && !editingTableCell) {
+          e.preventDefault();
+          handleDeleteSelected();
+        }
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setIsSpacePanning(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [selectedIds, currentPageIndex, pages, activeTool, activeSubTool, onToolChange, editingTextItem, editingStickyNote, editingTableCell, handleCopy, handleCut, handlePaste, handleDeleteSelected, undo, redo, updatePageData]);
+
+  // Fullscreen and zoom shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F11' || (e.ctrlKey && e.key === 'f')) {
         e.preventDefault();
-        handleDeleteText();
-      } else if (e.key === 'Escape') {
-        setSelectedTextId(null);
-        setShowToolbar(false);
+        toggleFullscreen();
+      }
+      
+      if (e.ctrlKey && (e.key === '+' || e.key === '=')) {
+        e.preventDefault();
+        handleZoomIn();
+      }
+      if (e.ctrlKey && e.key === '-') {
+        e.preventDefault();
+        handleZoomOut();
+      }
+      if (e.ctrlKey && e.key === '0') {
+        e.preventDefault();
+        handleZoomReset();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedTextId, currentPageIndex, pages, editingStickyNote]);
+  }, [zoom, onZoomChange, toggleFullscreen, handleZoomIn, handleZoomOut, handleZoomReset]);
 
   const handleStickyNoteUpdate = (pageIndex: number, updatedNote: StickyNoteType) => {
     setPages(prev => {
@@ -1341,17 +1838,107 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       newPages[pageIndex].stickyNotes = newPages[pageIndex].stickyNotes.filter(note => note.id !== noteId);
       return newPages;
     });
-    setSelectedTextId(null);
+    setSelectedIds([]);
   };
+
+  // const handleShapeDragEnd = useCallback((shapeId: string, x: number, y: number) => {
+  //   setPages(prevPages => {
+  //     const updatedPages = [...prevPages];
+  //     const page = updatedPages[currentPageIndex];
+  //     const shapeIndex = page.shapes.findIndex(s => s.id === shapeId);
+      
+  //     if (shapeIndex !== -1) {
+  //       page.shapes[shapeIndex] = {
+  //         ...page.shapes[shapeIndex],
+  //         x,
+  //         y
+  //       };
+  //     }
+  //     return updatedPages;
+  //   });
+  // }, [currentPageIndex]);
+
+  // const handleShapeTransformEnd = useCallback((shapeId: string, node: any) => {
+  //   setPages(prevPages => {
+  //     const updatedPages = [...prevPages];
+  //     const page = updatedPages[currentPageIndex];
+  //     const shapeIndex = page.shapes.findIndex(s => s.id === shapeId);
+      
+  //     if (shapeIndex !== -1) {
+  //       const shape = page.shapes[shapeIndex];
+  //       page.shapes[shapeIndex] = {
+  //         ...shape,
+  //         x: node.x(),
+  //         y: node.y(),
+  //         width: Math.max(5, node.width() * node.scaleX()),
+  //         height: Math.max(5, node.height() * node.scaleY()),
+  //         rotation: node.rotation(),
+  //         scaleX: 1,
+  //         scaleY: 1
+  //       };
+  //     }
+  //     return updatedPages;
+  //   });
+  // }, [currentPageIndex]);
 
   const handleStickyNoteDoubleClick = (pageIndex: number, note: StickyNoteType) => {
     setCurrentPageIndex(pageIndex);
-    setSelectedTextId(note.id);
+    setSelectedIds([note.id]);
     setEditingStickyNote(note);
   };
 
+  useEffect(() => {
+    if (selectedShapeId && shapeTransformerRef.current && isSelectMode) {
+      const node = shapeRefs.current[selectedShapeId];
+      if (node) {
+        shapeTransformerRef.current.nodes([node]);
+        shapeTransformerRef.current.getLayer()?.batchDraw();
+      }
+    } else if (shapeTransformerRef.current) {
+      shapeTransformerRef.current.nodes([]);
+      shapeTransformerRef.current.getLayer()?.batchDraw();
+    }
+  }, [selectedShapeId, isSelectMode]);
+
   // Disable all mouse-based page flipping - only arrow buttons allowed
   const isDrawingMode = ['Brush', 'Eraser'].includes(activeTool);
+
+  const createShapeAtPosition = (shapeType: string, pos: { x: number; y: number }): ShapeType => {
+    const baseShape = {
+      id: Date.now().toString(),
+      x: pos.x,
+      y: pos.y,
+      width: 100,
+      height: 100,
+      rotation: 0,
+      fill: isFillTransparent ? 'transparent' : shapeFillColor,
+      stroke: shapeStrokeColor,
+      strokeWidth: shapeStrokeWidth,
+      opacity: 1,
+      draggable: true,
+      scaleX: 1,
+      scaleY: 1,
+    };
+
+    switch (shapeType) {
+      case 'rectangle':
+      case 'square':
+        return { ...baseShape, type: 'rectangle', cornerRadius: 0 } as ShapeType;
+      case 'ellipse':
+      case 'circle':
+        return { ...baseShape, type: 'circle', radius: 50 } as ShapeType;
+      case 'triangle':
+        return { ...baseShape, type: 'triangle' } as ShapeType;
+      case 'line':
+        return { ...baseShape, type: 'line', points: [0, 0, 100, 0], width: 100, height: 2 } as ShapeType;
+      case 'arrow':
+        return { ...baseShape, type: 'arrow', points: [0, 0, 100, 0], pointerLength: 15, pointerWidth: 10, width: 100, height: 20 } as ShapeType;
+      case 'star':
+        return { ...baseShape, type: 'star', numPoints: 5, innerRadius: 30, outerRadius: 50, width: 100, height: 100 } as ShapeType;
+      default:
+        return { ...baseShape, type: 'rectangle' } as ShapeType;
+    }
+  };
 
   const completePenShape = (pageIndex: number, points: number[], closed: boolean) => {
     const fillMatch = penFillColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([0-9.]+)\)/);
@@ -1394,9 +1981,23 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>, pageIndex: number) => {
     const clickedOnEmpty = e.target === e.target.getStage();
     if (clickedOnEmpty) {
-      setSelectedTextId(null);
+      setSelectedIds([]);
       setShowToolbar(false);
       setContextMenu(null);
+    }
+    
+    // 1. SHAPES TOOL
+    if (isShapesMode && clickedOnEmpty) {
+      const pos = e.target.getStage()?.getPointerPosition();
+      if (!pos) return;
+      
+      saveCurrentPageState(pageIndex);
+      
+      const newShape = createShapeAtPosition(selectedShape, pos);
+      const currentShapes = pages[pageIndex].shapes || [];
+      updatePageData(pageIndex, 'shapes', [...currentShapes, newShape]);
+      setSelectedIds([newShape.id]);
+      return;
     }
     
     // 1. PEN TOOL
@@ -1409,6 +2010,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
 
       if (penMode === 'polygon') {
         if (points.length === 0) {
+          saveCurrentPageState(pageIndex);
           setPenDrawingState(prev => ({
             ...prev,
             [pageIndex]: { points: [pos.x, pos.y], isDrawing: true, mode: 'polygon' }
@@ -1440,6 +2042,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       }
 
       if (penMode === 'freehand') {
+        saveCurrentPageState(pageIndex);
         isDrawing.current = true;
         activeDrawingPage.current = pageIndex;
         setPenDrawingState(prev => ({
@@ -1454,6 +2057,9 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     if (isStickyNoteMode) {
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
+      
+      saveCurrentPageState(pageIndex);
+      
       const newNote: StickyNoteType = {
         id: Date.now().toString(),
         type: 'sticky-note',
@@ -1472,7 +2078,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       };
       const currentNotes = pages[pageIndex].stickyNotes || [];
       updatePageData(pageIndex, 'stickyNotes', [...currentNotes, newNote]);
-      setSelectedTextId(newNote.id);
+      setSelectedIds([newNote.id]);
       return;
     }
 
@@ -1483,6 +2089,8 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       
       const pos = stage.getPointerPosition();
       if (!pos) return;
+      
+      saveCurrentPageState(pageIndex);
       
       const adjustedX = (pos.x - panPosition.x) / zoom;
       const adjustedY = (pos.y - panPosition.y) / zoom;
@@ -1495,6 +2103,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     }
 
     if (isDrawingMode) {
+      saveCurrentPageState(pageIndex);
       isDrawing.current = true;
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
@@ -1513,9 +2122,11 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
 
       updatePageData(pageIndex, 'lines', newLines);
     } 
-    if (activeTool === 'Text') {
+    else if (activeTool === 'Text') {
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
+      
+      saveCurrentPageState(pageIndex);
       
       const newText: TextType = {
         id: Date.now().toString(),
@@ -1534,20 +2145,6 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       
       const newTexts = [...pages[pageIndex].texts, newText];
       updatePageData(pageIndex, 'texts', newTexts);
-      saveState(newTexts);
-    }
-    else if (activeTool === 'Shapes') {
-      const pos = e.target.getStage()?.getPointerPosition();
-      if (!pos) return;
-      
-      const newShape: ShapeType = {
-        id: Date.now().toString(),
-        type: Math.random() > 0.5 ? 'rect' : 'circle',
-        x: pos.x,
-        y: pos.y,
-        fill: strokeColor
-      };
-      updatePageData(pageIndex, 'shapes', [...pages[pageIndex].shapes, newShape]);
     }
   };
 
@@ -1616,13 +2213,14 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   };
 
   const handleTextUpdate = (updatedText: TextType) => {
+    saveCurrentPageState();
+    
     const newPages = pages.map((page, idx) => {
       if (idx === currentPageIndex) {
         const textIndex = page.texts.findIndex(t => t.id === updatedText.id);
         if (textIndex !== -1) {
           const newTexts = [...page.texts];
           newTexts[textIndex] = updatedText;
-          saveState(newTexts);
           return { ...page, texts: newTexts };
         }
       }
@@ -1632,77 +2230,45 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   };
 
   const handleTextSelect = (id: string | null) => {
-    setSelectedTextId(id);
-    if (id) {
-      const textItem = pages[currentPageIndex]?.texts.find(t => t.id === id);
-      if (textItem) {
-        setToolbarPos({ x: textItem.x, y: textItem.y });
-        setShowToolbar(true);
-      }
-    } else {
+    if (!id) {
+      setSelectedIds([]);
       setShowToolbar(false);
+      return;
     }
+    handleObjectSelect(id);
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
-    if (selectedTextId) {
+    if (selectedIds.length > 0) {
       e.preventDefault();
       setContextMenu({ x: e.clientX, y: e.clientY });
     }
   };
 
-  const handleCopy = () => {
-    const textItem = pages[currentPageIndex]?.texts.find(t => t.id === selectedTextId);
-    if (textItem) setClipboard(textItem);
-    setContextMenu(null);
-  };
-
-  const handleCut = () => {
-    handleCopy();
-    handleDeleteText();
-  };
-
-  const handlePaste = () => {
-    if (clipboard) {
-      const newText = { ...clipboard, id: Date.now().toString(), x: clipboard.x + 20, y: clipboard.y + 20 };
-      const newTexts = [...pages[currentPageIndex].texts, newText];
-      updatePageData(currentPageIndex, 'texts', newTexts);
-      saveState(newTexts);
-    }
-    setContextMenu(null);
-  };
-
   const handleDeleteText = () => {
-    if (selectedTextId) {
-      const newTexts = pages[currentPageIndex].texts.filter(t => t.id !== selectedTextId);
-      updatePageData(currentPageIndex, 'texts', newTexts);
-      saveState(newTexts);
-      setSelectedTextId(null);
-      setShowToolbar(false);
-    }
+    handleDeleteSelected();
     setContextMenu(null);
   };
 
   const handleFormat = (format: 'bold' | 'italic' | 'underline') => {
-    if (selectedTextId) {
-      const textItem = pages[currentPageIndex]?.texts.find(t => t.id === selectedTextId);
-      if (textItem) {
-        const updatedText = { ...textItem };
-        if (format === 'bold') {
-          const current = textItem.fontStyle || 'normal';
-          updatedText.fontStyle = current.includes('bold') 
-            ? (current.replace('bold', '').trim() || 'normal') as TextType['fontStyle']
-            : (current === 'italic' ? 'bold italic' : 'bold');
-        } else if (format === 'italic') {
-          const current = textItem.fontStyle || 'normal';
-          updatedText.fontStyle = current.includes('italic')
-            ? (current.replace('italic', '').trim() || 'normal') as TextType['fontStyle']
-            : (current === 'bold' ? 'bold italic' : 'italic');
-        } else if (format === 'underline') {
-          updatedText.textDecoration = textItem.textDecoration === 'underline' ? 'none' : 'underline';
-        }
-        handleTextUpdate(updatedText);
+    if (selectedIds.length !== 1) return;
+    const textItem = pages[currentPageIndex]?.texts.find(t => t.id === selectedIds[0]);
+    if (textItem) {
+      const updatedText = { ...textItem };
+      if (format === 'bold') {
+        const current = textItem.fontStyle || 'normal';
+        updatedText.fontStyle = current.includes('bold') 
+          ? (current.replace('bold', '').trim() || 'normal') as TextType['fontStyle']
+          : (current === 'italic' ? 'bold italic' : 'bold');
+      } else if (format === 'italic') {
+        const current = textItem.fontStyle || 'normal';
+        updatedText.fontStyle = current.includes('italic')
+          ? (current.replace('italic', '').trim() || 'normal') as TextType['fontStyle']
+          : (current === 'bold' ? 'bold italic' : 'italic');
+      } else if (format === 'underline') {
+        updatedText.textDecoration = textItem.textDecoration === 'underline' ? 'none' : 'underline';
       }
+      handleTextUpdate(updatedText);
     }
     setContextMenu(null);
   };
@@ -1742,8 +2308,22 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
 
   return (
     <div 
-      style={{ backgroundImage: `url(${bookBG})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', cursor: isHandMode ? (isPanning ? 'grabbing' : 'grab') : 'default'}} 
-      className="relative flex flex-col items-center justify-center h-[calc(100vh-140px)] w-full bg-transparent overflow-hidden"
+      ref={bookContainerRef}
+      style={{ 
+        ...(isFullscreen ? {} : { 
+          backgroundImage: `url(${bookBG})`, 
+          backgroundSize: 'contain', 
+          backgroundPosition: 'center', 
+          backgroundRepeat: 'no-repeat' 
+        }),
+        backgroundColor: isFullscreen ? '#000' : 'transparent',
+        cursor: isSpacePanning ? 'grab' : (isHandMode ? (isPanning ? 'grabbing' : 'grab') : 'default')
+      }} 
+      className={`relative flex flex-col items-center justify-center transition-all duration-300 ${
+        isFullscreen 
+          ? 'flex items-center justify-center w-full h-full' 
+          : 'h-[calc(100vh-210px)] w-full bg-transparent overflow-hidden'
+      }`}
       onMouseDown={handleContainerMouseDown}
       onMouseMove={handleContainerMouseMove}
       onMouseUp={handleContainerMouseUp}
@@ -1753,42 +2333,106 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       
 
       {/* Zoom / View Controls */}
-      <div className="absolute right-4 bottom-4 flex flex-col gap-2 z-50">
-        <div className="bg-[#2B2B2B] rounded-lg p-1 flex flex-col gap-1">
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/20" onClick={() => setInternalZoom(z => Math.min(z + 0.1, 2))}><Plus size={16} /></Button>
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/20" onClick={() => setInternalZoom(z => Math.max(z - 0.1, 0.5))}><Minus size={16} /></Button>
+      {!isFullscreen && (
+        <div 
+          className="absolute right-4 bottom-32 flex flex-col items-center gap-2 z-[100] pointer-events-auto"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+        <div className="bg-[#2B2B2B] w-max rounded-lg p-1 flex flex-col gap-1 shadow-xl">
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            className="h-8 w-8 text-white hover:bg-white/20" 
+            onClick={handleZoomIn}
+            title="Zoom In (Ctrl++)">
+            <SquarePlus size={16} />
+          </Button>
+          <div className="text-xs text-white text-center px-1 select-none">
+            {Math.round(zoom * 100)}%
+          </div>
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            className="h-8 w-8 text-white hover:bg-white/20" 
+            onClick={handleZoomOut}
+            title="Zoom Out (Ctrl+-)">
+            <SquareMinus size={16} />
+          </Button>
         </div>
-        <Button size="icon" variant="secondary" className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-primary hover:bg-[#333] border-none"><Maximize size={18} /></Button>
-        <div className="bg-primary text-white text-xs px-2 py-1 rounded text-center">{pages.length} Pages</div>
+        <Button 
+          size="icon" 
+          variant="secondary" 
+          className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-primary hover:bg-[#333] border-none shadow-xl"
+          onClick={handleZoomReset}
+          title="Reset Zoom (Ctrl+0)">
+          <RotateCcw size={18} />
+        </Button>
+        <Button 
+          size="icon" 
+          variant="secondary" 
+          className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-primary hover:bg-[#333] border-none shadow-xl"
+          onClick={toggleFullscreen}
+          title={isFullscreen ? "Exit Fullscreen (F11)" : "Enter Fullscreen (F11)"}>
+          {isFullscreen ? <Minimize size={18} /> : <Expand size={18} />}
+        </Button>
         <Button 
             size="sm" 
             variant="outline" 
-            className="text-xs h-7 bg-white/10 text-white hover:bg-white/20 border-none"
+            className="text-xs h-7 bg-white/10 text-white hover:bg-white/20 border-none shadow-xl"
             onClick={() => setShowAddModal(true)}
-        >
-            + Add Page
+            title="Add New Page">
+          <Plus size={14} />
+            Add Page
         </Button>
       </div>
+      )}
+
+      {/* Pagination Controls */}
+      {!isFullscreen && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-[#2B2B2B] px-4 py-2 rounded-xl border border-white/10 shadow-lg animate-in slide-in-from-bottom-5">
+        {currentPageIndex > 0 && (
+          <div 
+            onClick={flipPrev}
+            className="justify-start text-zinc-400 text-base font-medium font-sans leading-7 cursor-pointer hover:text-white transition-colors select-none"
+          >
+            {currentPageIndex}
+          </div>
+        )}
+        <div className="size-9 p-4 bg-white/10 rounded-lg flex justify-center items-center gap-3 border border-white/5">
+          <input 
+            type="text"
+            value={currentPageIndex + 1}
+            onChange={(e) => {
+              const val = parseInt(e.target.value);
+              if (!isNaN(val)) {
+                handlePageChange(val);
+              }
+            }}
+            className="w-8 bg-transparent text-white text-base font-medium font-sans leading-7 text-center focus:outline-none"
+          />
+        </div>
+        <div className="justify-start text-zinc-400 text-base font-medium font-sans leading-7 select-none">
+          of {pages.length} pages
+        </div>
+      </div>
+      )}
 
       {/* Navigation Buttons */}
       <button 
         onClick={flipPrev} 
         className="absolute left-4 z-50 p-3 bg-primary rounded-lg text-white shadow-lg hover:bg-primary/90 transition-all hover:scale-110 active:scale-95"
       >
-        <ChevronLeft size={24} />
+        <ArrowLeft size={24} />
       </button>
 
       <button 
         onClick={flipNext} 
         className="absolute right-4 z-50 p-3 bg-primary rounded-lg text-white shadow-lg hover:bg-primary/90 transition-all hover:scale-110 active:scale-95"
       >
-        <ChevronRight size={24} />
+        <ArrowRight size={24}/>
       </button>
-
-      {/* Main FlipBook Component 
-          - useMouseEvents: Disabled when drawing to prevent accidental page turns
-          - showCover: Makes the first page single
-      */}
+      
       <div style={{ 
           transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoom})`, 
           transition: isPanning ? 'none' : 'transform 0.2s' 
@@ -1851,6 +2495,9 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
                     handleTableCellClick={handleTableCellClick}
                     handleTableCellDoubleClick={handleTableCellDoubleClick}
                     handleTableContextMenu={handleTableContextMenu}
+                    pages={pages}
+                    shapeTransformerRef={shapeTransformerRef}
+                    setContextMenu={setContextMenu}
                 />
             ))}
         </HTMLFlipBook>
@@ -1941,6 +2588,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
           onDelete={handleDeleteText}
           onFormat={handleFormat}
           onClose={() => setContextMenu(null)}
+          onLayerAction={handleLayerAction}
         />
       )}
 

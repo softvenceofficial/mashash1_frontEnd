@@ -16,7 +16,7 @@ const Tools = ({ activeTool, setActiveTool }: ToolsProps) => {
     { icon: RxText, label: "Text" },
     { icon: IoColorPaletteOutline, label: "Color" },
     { icon: IoBrushOutline, label: "Brush" },
-    { icon: GiPencilBrush, label: "Tool" }, // Represents General Tools (Eraser, Picker, etc.)
+    { icon: GiPencilBrush, label: "Tool" },
     { icon: LiaShapesSolid, label: "Shapes" }
   ];
 

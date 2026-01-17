@@ -31,6 +31,7 @@ import {
   PaintBucket,
   ZoomIn,
   ZoomOut,
+  RectangleHorizontal,
 } from 'lucide-react';
 import { SketchPicker } from 'react-color';
 import { cn } from '@/lib/utils';
@@ -57,6 +58,7 @@ import TableIcon from '@/assets/icons/table.svg';
 // import zoom_lens from '@/assets/icons/zoom_lens.svg';
 // icons for the tools
 import { ReactSVG } from 'react-svg';
+import PageSelectionPopup from '../PageSelectionPopup';
 
 export const DrawingMode = {
   BRUSH: 'brush',
@@ -185,7 +187,7 @@ interface ToolboxProps {
   onBackgroundChange?: (color: string) => void;
   onZoomChange?: (zoom: number) => void;
   currentZoom?: number;
-  onImageUpload?: (file: File) => void;
+  onImageUpload?: (file: File, targetPage?: 'left' | 'right') => void;
   onTableChange?: (property: string, value: any) => void;
   onPenOptionChange?: (property: string, value: any) => void;
   onPenAction?: (action: string) => void;
@@ -197,6 +199,7 @@ interface ToolboxProps {
     borderWidth: number;
   };
   selectedTableId?: string | null;
+  onShapePropertiesChange?: (properties: any) => void;
 }
 
 const Toolbox = ({ 
@@ -230,6 +233,7 @@ const Toolbox = ({
   onPenOptionChange,
   tableProperties,
   selectedTableId,
+  onShapePropertiesChange,
 }: ToolboxProps) => {
   const [selectedBook, setSelectedBook] = useState(2);
   const [fontSize, setFontSize] = useState(24);
@@ -243,12 +247,20 @@ const Toolbox = ({
   const [brushColor, setBrushColor] = useState(strokeColor);
   const currentSubTool = activeSubTool || 'select';
   const [shapeColor, setShapeColor] = useState(strokeColor);
-  const [backgroundColor, setBackgroundColor] = useState('#CCCCCC');
+  const [shapeFillColor, setShapeFillColor] = useState('#1e3a8a');
+  const [shapeStrokeColor, setShapeStrokeColor] = useState('#60a5fa');
+  const [shapeStrokeWeight, setShapeStrokeWeight] = useState(2);
+  const [isFillTransparent, setIsFillTransparent] = useState(false);
+  const [showShapeFillPicker, setShowShapeFillPicker] = useState(false);
+  const [showShapeStrokePicker, setShowShapeStrokePicker] = useState(false);
+  const [backgroundColor, setBackgroundColor] = useState('#6C6BCF');
   const [opacity, setOpacity] = useState(100);
   const [textAlignment, setTextAlignment] = useState<'left' | 'center' | 'right'>('left');
   const [, setIsBrushMode] = useState(true);
   const [textTransform, setTextTransform] = useState<'none' | 'uppercase' | 'lowercase' | 'capitalize'>('none');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageTargetPage, setImageTargetPage] = useState<'left' | 'right'>('left');
+  const [showPageSelection, setShowPageSelection] = useState(false);
 
   // Pen Tool specific states
   const [penMode, setPenMode] = useState<'polygon' | 'freehand'>('polygon');
@@ -367,16 +379,15 @@ const Toolbox = ({
     onStrokeColorChange?.(newRgba);
   };
 
-
   const handleBookSelect = (bookId: number, label: string) => {
     setSelectedBook(bookId);
     onBookSizeChange?.(label);
   };
 
-  const handleShapeSelect = (shape: string) => {
-    setSelectedShape(shape);
-    onShapeChange?.(shape);
-  };
+  // const handleShapeSelect = (shape: string) => {
+  //   setSelectedShape(shape);
+  //   onShapeChange?.(shape);
+  // };
 
   const handleAddColor = () => {
     if (customColors.length < 14 && !customColors.includes(strokeColor)) {
@@ -473,7 +484,7 @@ const Toolbox = ({
       onTableChange?.('fill', hex);
     }
   };
-
+  
 
   const renderBookSizePanel = () => (
     <div className="flex items-center justify-around w-full gap-4 px-2">
@@ -974,7 +985,7 @@ const Toolbox = ({
                 </div>
               )}
             </div>
-
+            
             {/* Opacity Slider - Hide for Eraser mode */}
             {currentDrawingMode !== DrawingMode.ERASER && (
               <div className="flex flex-col gap-1 w-28">
@@ -1026,7 +1037,7 @@ const Toolbox = ({
                   ? "Eraser Size" 
                   : currentDrawingMode === DrawingMode.FILL 
                     ? "Fill Area (3000px)" 
-                    : "Brush Size"
+                    : "Brush Size" 
                 }
               </span>
               <span className="text-[10px] text-white font-mono">
@@ -1160,23 +1171,42 @@ const Toolbox = ({
       { id: 'pen', icon: Pen_tool, label: 'Pen' },
       { id: 'sticky_note', icon: Sticky_note, label: 'Sticky Note' },
       { id: 'table', icon: TableIcon, label: 'Table' },
-      { id: 'eraser', icon: eraser_color_icon, label: 'Eraser' },
     ];
 
     const handleImageClick = () => {
-      fileInputRef.current?.click();
+      setShowPageSelection(true);
+    };
+
+    const handlePageSelect = (page: 'left' | 'right' | 'current') => {
+      const target = page === 'current' ? 'left' : page;
+      setImageTargetPage(target);
+      setShowPageSelection(false);
+      
+      setTimeout(() => {
+        if (fileInputRef.current) {
+          fileInputRef.current.click();
+        }
+      }, 50);
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file && onImageUpload) {
-        onImageUpload(file);
+        onImageUpload(file, imageTargetPage);
       }
       if (e.target.value) e.target.value = '';
     };
 
     return (
       <>
+        <PageSelectionPopup
+          isOpen={showPageSelection}
+          onClose={() => setShowPageSelection(false)}
+          onSelect={handlePageSelect}
+          currentPageIndex={currentPageIndex || 0}
+          totalPages={10}
+        />
+
         <input 
           type="file" 
           ref={fileInputRef} 
@@ -1465,95 +1495,230 @@ const Toolbox = ({
   const renderShapesPanel = () => {
     const shapes = [
       { id: 'square', icon: Square, label: 'Square' },
-      { id: 'circle', icon: Circle, label: 'Circle' },
+      { id: 'rectangle', icon: RectangleHorizontal, label: 'Rectangle' },
+      { id: 'ellipse', icon: Circle, label: 'Ellipse' },
       { id: 'triangle', icon: Triangle, label: 'Triangle' },
       { id: 'star', icon: Star, label: 'Star' },
       { id: 'line', icon: LineIcon, label: 'Line' },
       { id: 'arrow', icon: MoveRight, label: 'Arrow' },
     ];
 
+    const ShapeToolButton = ({ icon: Icon, label, isActive, onClick }: { icon: any; label: string; isActive: boolean; onClick: () => void }) => (
+      <button
+        onClick={onClick}
+        className={cn(
+          "flex flex-col items-center justify-center gap-2 p-2 rounded-lg transition-all duration-200 relative group min-w-[64px]",
+          isActive ? 'text-indigo-400' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+        )}
+      >
+        <div className={cn(
+          "w-11 h-11 flex items-center justify-center rounded-lg transition-all",
+          isActive 
+            ? 'bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.3)]' 
+            : 'bg-zinc-700/50 group-hover:bg-zinc-700'
+        )}>
+          <Icon 
+            className={cn("w-6 h-6", isActive ? 'fill-current opacity-100' : 'opacity-80')} 
+            strokeWidth={1.5}
+          />
+        </div>
+        <span className="text-xs font-medium tracking-wide">{label}</span>
+        {isActive && (
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-indigo-500 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
+        )}
+      </button>
+    );
+
+    const handleShapeSelect = (shapeId: string) => {
+      setSelectedShape(shapeId);
+      onShapeChange?.(shapeId);
+    };
+
+    // const handleFillToggle = () => {
+    //   const newValue = !isFillTransparent;
+    //   setIsFillTransparent(newValue);
+    //   onShapePropertiesChange?.({ isFillTransparent: newValue });
+    // };
+
+    const handleWeightChange = (delta: number) => {
+      const newWeight = Math.min(10, Math.max(1, shapeStrokeWeight + delta));
+      setShapeStrokeWeight(newWeight);
+      onStrokeWidthChange?.(newWeight);
+      onShapePropertiesChange?.({ strokeWidth: newWeight });
+    };
+
     return (
-      <>
-        <div 
-          onClick={handleRefresh}
-          className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
-        >
-          <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
-          <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
+      <div className="w-full flex items-center gap-6 px-4">
+        {/* Left Actions */}
+        <div className="flex items-center gap-3 pr-2 self-center">
+          <div 
+            onClick={handleRefresh}
+            className="flex flex-col items-center gap-1 group cursor-pointer w-12"
+          >
+            <div className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+              <RotateCw className="w-4 h-4 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
+            </div>
+            <span className="text-[10px] text-zinc-500 font-medium group-hover:text-zinc-300">Refresh</span>
+          </div>
+          
         </div>
 
         <Divider />
 
-        <div className="flex items-center gap-3">
-          {shapes.map((s) => (
-            <button
-              key={s.id}
-              className={cn(
-                "h-10 w-10 p-2 rounded-md transition-all active:scale-95",
-                selectedShape === s.id
-                  ? "bg-primary text-white hover:bg-primary/90"
-                  : "text-gray-400 hover:text-white hover:bg-white/10"
-              )}
-              onClick={() => handleShapeSelect(s.id)}
-              title={s.label}
-            >
-              <s.icon className="w-full h-full" />
-            </button>
+        {/* Shape Tools */}
+        <div className="flex items-center gap-1 flex-1 justify-center">
+          {shapes.map((shape) => (
+            <ShapeToolButton
+              key={shape.id}
+              icon={shape.icon}
+              label={shape.label}
+              isActive={selectedShape === shape.id}
+              onClick={() => handleShapeSelect(shape.id)}
+            />
           ))}
         </div>
 
         <Divider />
 
-        <div className="relative">
-          <div 
-            onClick={() => setShowColorPicker(!showColorPicker)}
-            className="w-9 h-9 rounded-full cursor-pointer hover:scale-110 transition-transform shadow-lg ring-2 ring-transparent hover:ring-white/20" 
-            style={{ backgroundColor: shapeColor }}
-            title="Shape Color"
-          />
-          {showColorPicker && (
-            <div className="absolute top-12 left-0 z-50">
-              <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
-              <SketchPicker color={shapeColor} onChange={handleColorChange} />
+        {/* Style Properties */}
+        <div className="flex items-center gap-4 pl-2 self-center">
+          {/* Fill Color */}
+          <div className="flex flex-col items-center gap-2 cursor-pointer group relative">
+            <div 
+              className="w-11 h-11 rounded-lg border border-zinc-600 shadow-inner flex items-center justify-center hover:scale-105 transition-transform"
+              style={{ 
+                backgroundColor: isFillTransparent ? 'transparent' : shapeFillColor,
+                backgroundImage: isFillTransparent 
+                  ? 'linear-gradient(45deg, #ef4444 25%, transparent 25%), linear-gradient(-45deg, #ef4444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ef4444 75%), linear-gradient(-45deg, transparent 75%, #ef4444 75%)'
+                  : 'none',
+                backgroundSize: isFillTransparent ? '20px 20px' : 'auto',
+                backgroundPosition: isFillTransparent ? '0 0, 0 10px, 10px -10px, -10px 0px' : 'center'
+              }}
+              onClick={() => setShowShapeFillPicker(!showShapeFillPicker)}
+              title={isFillTransparent ? "Click to change fill color" : "Click to change fill color"}
+            >
+              {isFillTransparent && (
+                <div className="w-px h-full bg-red-500 rotate-45 transform origin-center" />
+              )}
             </div>
-          )}
-        </div>
-
-        <div className="flex-grow" />
-
-        <div className="flex items-center gap-4 ml-4 px-4 border-l border-zinc-700">
-          <div className="flex flex-col items-center group cursor-pointer">
-            <Button 
-              size="icon" 
-              variant="secondary" 
-              className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-              onClick={() => {
-                const undoTexts = undo?.();
-                if (undoTexts) updatePageData?.(currentPageIndex, 'texts', undoTexts);
-              }}
-              disabled={!canUndo}
-            >
-              <Undo2 className="w-5 h-5" />
-            </Button>
-            <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Undo</span>
+            <span className="text-xs text-zinc-400 font-medium group-hover:text-zinc-200">Fill</span>
+            
+            {showShapeFillPicker && (
+              <div className="absolute top-16 left-0 z-50">
+                <div className="fixed inset-0" onClick={() => setShowShapeFillPicker(false)} />
+                <div className="relative bg-zinc-800 rounded-lg shadow-2xl p-2 border border-zinc-700">
+                  <SketchPicker
+                    color={shapeFillColor}
+                    onChangeComplete={(color) => {
+                      setShapeFillColor(color.hex);
+                      setIsFillTransparent(false);
+                      onShapePropertiesChange?.({ fillColor: color.hex, isFillTransparent: false });
+                    }}
+                    disableAlpha={true}
+                  />
+                  <button
+                    onClick={() => {
+                      const newValue = !isFillTransparent;
+                      setIsFillTransparent(newValue);
+                      setShowShapeFillPicker(false);
+                      onShapePropertiesChange?.({ isFillTransparent: newValue });
+                    }}
+                    className="mt-2 w-full px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded text-xs text-white transition-colors"
+                  >
+                    {isFillTransparent ? 'Enable Fill' : 'Remove Fill'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex flex-col items-center group cursor-pointer">
-            <Button 
-              size="icon" 
-              variant="secondary" 
-              className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-              onClick={() => {
-                const redoTexts = redo?.();
-                if (redoTexts) updatePageData?.(currentPageIndex, 'texts', redoTexts);
-              }}
-              disabled={!canRedo}
-            >
-              <Redo2 className="w-5 h-5" />
-            </Button>
-            <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Redo</span>
+
+          {/* Stroke Color */}
+          <div className="flex flex-col items-center gap-2 cursor-pointer group relative">
+            <div 
+              className="w-11 h-11 rounded-lg border-4 shadow-inner flex items-center justify-center hover:scale-105 transition-transform bg-zinc-800"
+              style={{ borderColor: shapeStrokeColor }}
+              onClick={() => setShowShapeStrokePicker(!showShapeStrokePicker)}
+              title="Click to change stroke color"
+            />
+            <span className="text-xs text-zinc-400 font-medium group-hover:text-zinc-200">Stroke</span>
+            
+            {showShapeStrokePicker && (
+              <div className="absolute top-16 left-0 z-50">
+                <div className="fixed inset-0" onClick={() => setShowShapeStrokePicker(false)} />
+                <div className="relative bg-zinc-800 rounded-lg shadow-2xl p-2 border border-zinc-700">
+                  <SketchPicker
+                    color={shapeStrokeColor}
+                    onChangeComplete={(color) => {
+                      setShapeStrokeColor(color.hex);
+                      onStrokeColorChange?.(color.hex);
+                      onShapePropertiesChange?.({ strokeColor: color.hex });
+                    }}
+                    disableAlpha={true}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Weight Selector */}
+          <div className="flex flex-col items-center gap-2 cursor-pointer group relative">
+            <div className="w-24 h-11 bg-zinc-700/30 rounded-lg border border-zinc-700 flex items-center justify-between px-3 hover:bg-zinc-700/50 transition-colors">
+              <div className="flex flex-col gap-1.5 w-8">
+                <div className="w-full h-px bg-zinc-400 opacity-40" />
+                <div className="w-full h-[2px] bg-zinc-400 opacity-70" />
+                <div className="w-full h-[3px] bg-zinc-400" />
+              </div>
+              <span className="text-zinc-200 font-mono text-sm">{shapeStrokeWeight}px</span>
+            </div>
+            <span className="text-xs text-zinc-400 font-medium group-hover:text-zinc-200">Weight</span>
+            
+            <div className="absolute inset-0 flex">
+              <button 
+                className="flex-1 opacity-0"
+                onClick={() => handleWeightChange(1)}
+              />
+              <button 
+                className="flex-1 opacity-0"
+                onClick={() => handleWeightChange(-1)}
+              />
+            </div>
           </div>
         </div>
-      </>
+        <Divider/>
+          <div className="flex items-center gap-1 p-1 rounded-lg border border-zinc-800/50">
+            <div className="flex flex-col items-center gap-1 group cursor-pointer w-10">
+              <Button 
+                size="icon" 
+                variant="ghost"
+                className="h-8 w-8 p-0 bg-transparent hover:bg-transparent"
+                onClick={() => {
+                  const undoTexts = undo?.();
+                  if (undoTexts) updatePageData?.(currentPageIndex, 'texts', undoTexts);
+                }}
+                disabled={!canUndo}
+              >
+                <Undo2 className="w-4 h-4 text-zinc-400 group-hover:text-white" />
+              </Button>
+              <span className="text-[10px] text-zinc-500 font-medium group-hover:text-zinc-300">Undo</span>
+            </div>
+            
+            <div className="flex flex-col items-center gap-1 group cursor-pointer w-10">
+              <Button 
+                size="icon" 
+                variant="ghost"
+                className="h-8 w-8 p-0 bg-transparent hover:bg-transparent"
+                onClick={() => {
+                  const redoTexts = redo?.();
+                  if (redoTexts) updatePageData?.(currentPageIndex, 'texts', redoTexts);
+                }}
+                disabled={!canRedo}
+              >
+                <Redo2 className="w-4 h-4 text-zinc-400 group-hover:text-white" />
+              </Button>
+              <span className="text-[10px] text-zinc-500 font-medium group-hover:text-zinc-300">Redo</span>
+            </div>
+          </div>
+      </div>
     );
   };
 
@@ -1758,7 +1923,7 @@ const Toolbox = ({
   };
 
   return (
-    <div className="w-full h-[107px] bg-[#27272a] rounded-xl shadow-2xl border border-zinc-800 p-3 flex flex-wrap items-center gap-2 select-none relative z-10">
+    <div className="w-full h-[107px] bg-secondary  rounded-xl shadow-2xl  p-3 flex flex-wrap items-center gap-2 select-none relative z-10">
       {renderContent()}
     </div>
   );

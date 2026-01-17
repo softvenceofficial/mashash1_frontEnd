@@ -58,16 +58,18 @@ export default function useSignup({ setLoading }: { setLoading: (loading: boolea
     try {
       const response = await userSignUp(formData).unwrap();
       console.log("Signup Response:", response);
-      if (response.code === 201) {
+
+      if (response.code === 201 || response.status === 'success') {
         toast.dismiss();
-        toast.success(response.data.message || "Account created successfully!");
-        setLoading(false);
+        toast.success(response.message || "Account created successfully!");
         navigate("/auth/congrats");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Signup error:", error);
       toast.dismiss();
-      toast.error("Failed to create account. Please try again.");
+      const errMsg = error?.data?.message || "Failed to create account.";
+      toast.error(errMsg);
+    } finally {
       setLoading(false);
     }
   }

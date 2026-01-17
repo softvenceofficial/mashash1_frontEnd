@@ -1,4 +1,4 @@
-
+import { ArrowUp, ArrowDown } from 'lucide-react';
 
 interface TextContextMenuProps {
   x: number;
@@ -9,10 +9,11 @@ interface TextContextMenuProps {
   onDelete: () => void;
   onFormat: (format: 'bold' | 'italic' | 'underline') => void;
   onClose: () => void;
+  onLayerAction?: (action: 'front' | 'back' | 'forward' | 'backward') => void;
 }
 
 export const TextContextMenu = ({ 
-  x, y, onCopy, onCut, onPaste, onDelete, onFormat, onClose 
+  x, y, onCopy, onCut, onPaste, onDelete, onFormat, onClose, onLayerAction 
 }: TextContextMenuProps) => {
   return (
     <>
@@ -22,7 +23,7 @@ export const TextContextMenu = ({
       />
       <div 
         className="absolute bg-gray-800 border border-gray-700 rounded-lg shadow-2xl py-2 min-w-[180px] z-50"
-        style={{ left: x, top: y }}
+        style={{ left: `calc(${x}px - 150px)`, top: `calc(${y}px - 300px)` }}
       >
         <button onClick={onCopy} className="w-full px-4 py-2 text-left text-gray-300 hover:bg-gray-700">
           Copy (Ctrl+C)
@@ -43,6 +44,23 @@ export const TextContextMenu = ({
         <button onClick={() => onFormat('underline')} className="w-full px-4 py-2 text-left text-gray-300 hover:bg-gray-700">
           Underline (Ctrl+U)
         </button>
+        {onLayerAction && (
+          <>
+            <div className="h-px bg-gray-700 my-1" />
+            <button onClick={() => onLayerAction('front')} className="w-full px-4 py-2 text-left text-gray-300 hover:bg-gray-700 flex items-center gap-2">
+              <ArrowUp size={14} /> Bring to Front
+            </button>
+            <button onClick={() => onLayerAction('forward')} className="w-full px-4 py-2 text-left text-gray-300 hover:bg-gray-700 flex items-center gap-2">
+              <ArrowUp size={14} /> Bring Forward
+            </button>
+            <button onClick={() => onLayerAction('backward')} className="w-full px-4 py-2 text-left text-gray-300 hover:bg-gray-700 flex items-center gap-2">
+              <ArrowDown size={14} /> Send Backward
+            </button>
+            <button onClick={() => onLayerAction('back')} className="w-full px-4 py-2 text-left text-gray-300 hover:bg-gray-700 flex items-center gap-2">
+              <ArrowDown size={14} /> Send to Back
+            </button>
+          </>
+        )}
         <div className="h-px bg-gray-700 my-1" />
         <button onClick={onDelete} className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700">
           Delete (Del)

@@ -32,21 +32,37 @@ const TableCellEditor: React.FC<TableCellEditorProps> = ({
 
     const updatePosition = () => {
       if (containerRef.current) {
-        const bookElement = document.querySelector('.stf__wrapper');
-        if (bookElement) {
-          const bookRect = bookElement.getBoundingClientRect();
-          containerRef.current.style.left = `${bookRect.left + x}px`;
-          containerRef.current.style.top = `${bookRect.top + y}px`;
+        const bookContainer = document.querySelector('.stf__wrapper');
+        if (bookContainer) {
+          const bookRect = bookContainer.getBoundingClientRect();
+          const scrollX = window.scrollX || window.pageXOffset;
+          const scrollY = window.scrollY || window.pageYOffset;
+          
+          containerRef.current.style.left = `${bookRect.left + x + scrollX}px`;
+          containerRef.current.style.top = `${bookRect.top + y + scrollY}px`;
+        } else {
+          // Fallback positioning
+          const scrollX = window.scrollX || window.pageXOffset;
+          const scrollY = window.scrollY || window.pageYOffset;
+          containerRef.current.style.left = `${x + scrollX}px`;
+          containerRef.current.style.top = `${y + scrollY}px`;
         }
       }
     };
 
     updatePosition();
     window.addEventListener('resize', updatePosition);
-    return () => window.removeEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition);
+    
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition);
+    };
   }, [x, y]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
+    
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       onSave(value);
@@ -54,7 +70,6 @@ const TableCellEditor: React.FC<TableCellEditorProps> = ({
     } else if (e.key === 'Escape') {
       onClose();
     }
-    e.stopPropagation();
   };
 
   return (

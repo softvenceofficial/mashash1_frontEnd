@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useUserLoginMutation } from "@/redux/endpoints/authApi";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -8,7 +9,7 @@ import { z } from "zod";
 export const passwordValidation = z
   .string()
   .min(6, "Password must be at least 6 characters long")
-  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  // .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
   .regex(/[a-z]/, "Password must contain at least one lowercase letter")
   .regex(
     /[^A-Za-z0-9]/,
@@ -42,21 +43,22 @@ export default function useLogin({setLoading}: {setLoading: (loading: boolean) =
     const formData = new FormData();
     formData.append("email", values.email);
     formData.append("password", values.password);
-    console.log("Form Data:", formData.get("email"), formData.get("password"));
-    try{
-      const response = await userLogin(formData);
-      console.log("Login Response:", response);
-      if(response.data.code === 200){
-        toast.dismiss();
-        toast.success(response.data.message);
-        setLoading(false);
-        navigate("/dashboard");
-      }
 
-    } catch (error) {
+    try {
+      const response = await userLogin(formData).unwrap();
+      console.log("Login Response:", response);
+
+      if (response.code === 200 || response.status === 'success') {
+        toast.dismiss();
+        toast.success("Login Successful");
+        navigate("/dashboard/home");
+      }
+    } catch (error: any) {
       console.error("Login failed:", error);
       toast.dismiss();
-      toast.error("Login failed. Please check your credentials and try again.");
+      const errorMessage = error?.data?.message || "Invalid email or password.";
+      toast.error(errorMessage);
+    } finally {
       setLoading(false);
     }
   }

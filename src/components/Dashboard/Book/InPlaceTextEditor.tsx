@@ -22,6 +22,8 @@ export const InPlaceTextEditor = ({ textItem, onUpdate, onBlur }: InPlaceTextEdi
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
+    
     if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
       setText(prev => prev + '\n');
