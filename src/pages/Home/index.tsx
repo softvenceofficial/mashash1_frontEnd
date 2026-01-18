@@ -6,23 +6,26 @@ import ImaginationLab from "@/components/Home/ImaginationLab";
 import ImmigrationAutoDesignSection from "@/components/Home/ImmigrationAutoDesign/ImmigrationAutoDesignSection";
 import PricingSection from "@/components/Home/PricingSection/PricingSection";
 import StorybookShowcase from "@/components/Home/StoryBook";
+import SnowEffect from "@/components/Home/SnowEffect";
 
 export default function HomePage() {
 
-
   return (
-    <div className="bg-black">
-      <Banner />
-      <StorybookShowcase />
-      <ImaginationLab />
-      <DashboardSliders />
-      <ImmigrationAutoDesignSection />
-      <CreativeAiStudio />
-      <PricingSection />
-      <Footer />
-      {/* <div className="bg-black py-20 relative z-50">
-        fhdjh
-      </div> */}
+    <div className="relative min-h-screen bg-black">
+      
+      <SnowEffect />
+
+      <div className="relative z-10">
+        <Banner />
+        <StorybookShowcase />
+        <ImaginationLab />
+        <DashboardSliders />
+        <ImmigrationAutoDesignSection />
+        <CreativeAiStudio />
+        <PricingSection />
+        <Footer />
+      </div>
+      
     </div>
   );
 }

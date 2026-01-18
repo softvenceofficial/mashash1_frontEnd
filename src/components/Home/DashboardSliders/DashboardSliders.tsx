@@ -12,86 +12,81 @@ import { Pagination, Autoplay, Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import Icon from "@/components/common/Icon";
+import { LuxuryReveal } from "@/components/common/LuxuryReveal";
 
 export default function DashboardSliders() {
   return (
     <div className="py-14 bg-linear-to-b from-[#464466] via-[#4E4749] to-[##282729]">
-      <div className="relative mx-auto p-3 md:p-0">
-        {/* Dashboard-style container */}
-        <div className="relative">
-          <Swiper
-            modules={[Pagination, Autoplay, Navigation]}
-            navigation={{
-              nextEl: ".dashboard-next",
-              prevEl: ".dashboard-prev",
-            }}
-            slidesPerView={1.3}
-            centeredSlides={true}
-            pagination={{
-              clickable: true,
-              bulletClass: "swiper-pagination-bullet dashboard-bullet",
-              bulletActiveClass:
-                "swiper-pagination-bullet-active dashboard-bullet-active",
-            }}
-            autoplay={{
-              delay: 3000,
-              disableOnInteraction: false,
-            }}
-            loop={true}
-            // loopAdditionalSlides={2}
-            speed={800}
-            className="dashboard-carousel"
-            breakpoints={{
-              320: {
-                slidesPerView: 1,
-              },
-              768: {
-                slidesPerView: 1.3,
-              },
-              1024: {
-                slidesPerView: 1.3,
-              },
-            }}
-          >
-            {dashboardSlides.map((slide, index) => (
-              <SwiperSlide key={index}>
-                {({ isActive }) => (
-                  <div
-                    className={`relative cursor-pointer transition-all duration-500 p-3.5 bg-linear-to-b from-[#4F4E66] to-[#44413F] rounded-xl ${
-                      isActive ? "z-10" : "opacity-100"
-                    }`}
-                  >
-                    {/* Main image */}
-                    <div className="p-3.5 bg-linear-to-b from-[#767390] to-[#5C5A5A] rounded-xl">
-                      <img
-                        src={slide.image}
-                        alt={`Slide ${index + 1}`}
-                        className={`w-full h-full object-cover rounded-xl! shadow-md md:border-none md:h-[750px] ${isActive ? "md:shadow-[0_5px_15px_rgba(0,0,0,0.35)]" : ""}`}
-                      />
+      <LuxuryReveal width="100%" direction="up" delay={0.1}>
+        <div className="relative mx-auto p-3 md:p-0">
+          <div className="relative">
+            <Swiper
+              modules={[Pagination, Autoplay, Navigation]}
+              navigation={{
+                nextEl: ".dashboard-next",
+                prevEl: ".dashboard-prev",
+              }}
+              slidesPerView={1.3}
+              centeredSlides={true}
+              pagination={{
+                clickable: true,
+                bulletClass: "swiper-pagination-bullet dashboard-bullet",
+                bulletActiveClass:
+                  "swiper-pagination-bullet-active dashboard-bullet-active",
+              }}
+              autoplay={{
+                delay: 3000,
+                disableOnInteraction: false,
+              }}
+              loop={true}
+              speed={800}
+              className="dashboard-carousel"
+              breakpoints={{
+                320: {
+                  slidesPerView: 1,
+                },
+                768: {
+                  slidesPerView: 1.3,
+                },
+                1024: {
+                  slidesPerView: 1.3,
+                },
+              }}
+            >
+              {dashboardSlides.map((slide, index) => (
+                <SwiperSlide key={index}>
+                  {({ isActive }) => (
+                    <div
+                      className={`relative cursor-pointer transition-all duration-500 p-3.5 bg-linear-to-b from-[#4F4E66] to-[#44413F] rounded-xl ${
+                        isActive ? "z-10" : "opacity-100"
+                      }`}
+                    >
+                      <div className="p-3.5 bg-linear-to-b from-[#767390] to-[#5C5A5A] rounded-xl">
+                        <img
+                          src={slide.image}
+                          alt={`Slide ${index + 1}`}
+                          className={`w-full h-full object-cover rounded-xl! shadow-md md:border-none md:h-[750px] ${isActive ? "md:shadow-[0_5px_15px_rgba(0,0,0,0.35)]" : ""}`}
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
-              </SwiperSlide>
-            ))}
-          </Swiper>
-          <div className="flex justify-center items-center gap-5 md:gap-24 mt-10 md:-mt-12 relative z-20">
-            {/* Left Arrow */}
-            <button className="dashboard-prev w-12 h-12 rounded-full flex items-center justify-center bg-linear-to-b from-[#4A525B] via-[#212B36] to-[#212B36] hover:bg-linear-to-b hover:from-[#7F82F4] hover:via-[#6366F1] hover:to-[#6366F1] transition-colors cursor-pointer shadow-[0_0_25px_5px_#343434]">
-              <Icon src={arrowLeft} className="text-white size-5" />
-            </button>
+                  )}
+                </SwiperSlide>
+              ))}
+            </Swiper>
+            <div className="flex justify-center items-center gap-5 md:gap-24 mt-10 md:-mt-12 relative z-20">
+              <button className="dashboard-prev w-12 h-12 rounded-full flex items-center justify-center bg-linear-to-b from-[#4A525B] via-[#212B36] to-[#212B36] hover:bg-linear-to-b hover:from-[#7F82F4] hover:via-[#6366F1] hover:to-[#6366F1] transition-colors cursor-pointer shadow-[0_0_25px_5px_#343434]">
+                <Icon src={arrowLeft} className="text-white size-5" />
+              </button>
 
-            {/* Pagination goes here */}
-            <div className="dashboard-pagination flex items-center"></div>
+              <div className="dashboard-pagination flex items-center"></div>
 
-            {/* Right Arrow */}
-            <button className="dashboard-next w-12 h-12 rounded-full flex items-center justify-center bg-linear-to-b from-[#4A525B] via-[#212B36] to-[#212B36] hover:bg-linear-to-b hover:from-[#7F82F4] hover:via-[#6366F1] hover:to-[#6366F1] transition-colors cursor-pointer shadow-[0_0_25px_5px_#343434]">
-              <Icon src={arrowRight} className="text-white size-5" />
-            </button>
+              <button className="dashboard-next w-12 h-12 rounded-full flex items-center justify-center bg-linear-to-b from-[#4A525B] via-[#212B36] to-[#212B36] hover:bg-linear-to-b hover:from-[#7F82F4] hover:via-[#6366F1] hover:to-[#6366F1] transition-colors cursor-pointer shadow-[0_0_25px_5px_#343434]">
+                <Icon src={arrowRight} className="text-white size-5" />
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Custom pagination styles */}
-        <style>{`
+          <style>{`
         .dashboard-carousel {
           padding: 60px 0 100px 0;
           overflow: hidden;
@@ -147,7 +142,8 @@ export default function DashboardSliders() {
           transform: scale(1.1) !important;
         }
       `}</style>
-      </div>
+        </div>
+      </LuxuryReveal>
     </div>
   );
 }

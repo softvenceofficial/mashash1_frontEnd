@@ -2,6 +2,7 @@ import { Check, Zap, Trophy, Crown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { motion } from "framer-motion";
 
 interface Plan {
   name: string;
@@ -11,66 +12,92 @@ interface Plan {
   yearly: string;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.2
+    }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 50 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] } }
+};
+
 export default function PricingSection() {
   return (
     <section id="pricing" className="mt-10">
-      <h1 className="text-3xl md:text-4xl lg:text-[40px] font-bold  max-w-2xl mx-auto text-center mb-12 text-white">
+      <motion.h1 
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        viewport={{ once: true }}
+        className="text-3xl md:text-4xl lg:text-[40px] font-bold  max-w-2xl mx-auto text-center mb-12 text-white"
+      >
         Choose the Plan That Fits Your Creativity
-      </h1>
+      </motion.h1>
       <div className="w-full bg-black p-5 flex justify-center pb-20">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-7 container w-full">
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-3 gap-7 container w-full"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+        >
           {plans.map((plan) => (
-            <Card
-              key={plan.name}
-              className={`
-              bg-[#0F0F0F] border border-neutral-800 text-white rounded-2xl 
-               flex flex-col justify-between relative transition-all duration-300 hover:shadow-[0_0_2px_#232323,0_0_5px_#635C5A,0_0_30px_#64607C] hover:scale-105 group
-            `}
-            >
-              {/* Icon */}
-              <div className="absolute top-6 right-6 bg-[#222222] p-2.5 rounded-full">
-                {plan.icon}
-              </div>
-
-              <CardContent>
-                <div className="space-y-2">
-                  <h2 className="text-xl font-bold">{plan.name}</h2>
-                  <p className="text-[56px] font-bold">
-                    {plan.price}
-                    <span className="text-xl font-bold">{plan.month}</span>
-                  </p>
-                  <p className="text-base font-normal text-[#6E6E6E]">
-                    {plan.yearly}
-                  </p>
+            <motion.div key={plan.name} variants={cardVariants}>
+              <Card
+                className={`
+                bg-[#0F0F0F] border border-neutral-800 text-white rounded-2xl 
+                 flex flex-col justify-between relative transition-all duration-300 hover:shadow-[0_0_2px_#232323,0_0_5px_#635C5A,0_0_30px_#64607C] hover:scale-105 group
+              `}
+              >
+                <div className="absolute top-6 right-6 bg-[#222222] p-2.5 rounded-full">
+                  {plan.icon}
                 </div>
 
-                <Separator className="my-8 bg-[#262626]" />
-                <div className=" space-y-5">
-                  {Array(3)
-                    .fill(0)
-                    .map((_, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-white" />
-                        <span className="text-sm text-[#6E6E6E]">
-                          Feature text goes here
-                        </span>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
+                <CardContent>
+                  <div className="space-y-2">
+                    <h2 className="text-xl font-bold">{plan.name}</h2>
+                    <p className="text-[56px] font-bold">
+                      {plan.price}
+                      <span className="text-xl font-bold">{plan.month}</span>
+                    </p>
+                    <p className="text-base font-normal text-[#6E6E6E]">
+                      {plan.yearly}
+                    </p>
+                  </div>
 
-              {/* Button */}
-              <div className="px-5">
-                <Button
-                  className={`
-                mt-12 w-full h-11 rounded-full font-medium bg-[#171717] group-hover:bg-white! group-hover:text-black! transition-colors duration-300 ease-in-out cursor-pointer`}
-                >
-                  Get started
-                </Button>
-              </div>
-            </Card>
+                  <Separator className="my-8 bg-[#262626]" />
+                  <div className=" space-y-5">
+                    {Array(3)
+                      .fill(0)
+                      .map((_, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-white" />
+                          <span className="text-sm text-[#6E6E6E]">
+                            Feature text goes here
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+
+                <div className="px-5 pb-5">
+                  <Button
+                    className={`
+                  mt-12 w-full h-11 rounded-full font-medium bg-[#171717] group-hover:bg-white! group-hover:text-black! transition-colors duration-300 ease-in-out cursor-pointer`}
+                  >
+                    Get started
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
