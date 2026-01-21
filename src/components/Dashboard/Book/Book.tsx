@@ -1653,6 +1653,58 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     setIsPanning(false);
   };
 
+  // --- Drag and Drop Logic ---
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const imageSrc = e.dataTransfer.getData('imageSrc');
+    if (!imageSrc || !bookRef.current) return;
+
+    const bookNode = (bookRef.current as any).el as HTMLElement;
+    if (!bookNode) return;
+
+    const rect = bookNode.getBoundingClientRect();
+    const xInBook = (e.clientX - rect.left) / zoom;
+    const yInBook = (e.clientY - rect.top) / zoom;
+
+    let targetPageIndex = currentPageIndex;
+    let pageX = xInBook;
+    let pageY = yInBook;
+
+    const isCover = currentPageIndex === 0;
+    
+    if (!isCover) {
+      const spineX = rect.width / (2 * zoom);
+      if (xInBook > spineX) {
+        targetPageIndex = currentPageIndex + 1;
+        pageX = xInBook - spineX;
+      }
+    }
+
+    if (targetPageIndex >= pages.length) return;
+
+    saveCurrentPageState(targetPageIndex);
+
+    const newImage: ImageType = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      type: 'image',
+      x: Math.max(0, pageX - 100),
+      y: Math.max(0, pageY - 100),
+      width: 200,
+      height: 200,
+      rotation: 0,
+      src: imageSrc,
+      zIndex: getMaxZIndex(pages[targetPageIndex]) + 1
+    };
+
+    const currentImages = pages[targetPageIndex].images || [];
+    updatePageData(targetPageIndex, 'images', [...currentImages, newImage]);
+  };
+
   // --- Image Upload Logic ---
   const handleImageUpload = (file: File, targetPage?: 'left' | 'right' | 'current') => {
     const reader = new FileReader();
@@ -2337,6 +2389,8 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       onMouseDown={handleContainerMouseDown}
       onMouseMove={handleContainerMouseMove}
       onMouseUp={handleContainerMouseUp}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
       
       {/* Undo/Redo Controls */}

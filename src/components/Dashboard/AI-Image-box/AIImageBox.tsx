@@ -128,6 +128,11 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps
     }
   };
 
+  const handleDragStart = (e: React.DragEvent<HTMLImageElement>, url: string) => {
+    e.dataTransfer.setData('imageSrc', url);
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+
   return (
     <div className="bg-background text-foreground p-4 pb-0 pt-2 font-sans selection:bg-primary selection:text-primary-foreground">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -215,7 +220,9 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps
                   <img 
                     src={img.url} 
                     alt={img.prompt} 
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    draggable={true}
+                    onDragStart={(e) => handleDragStart(e, img.url)}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-grab active:cursor-grabbing"
                   />
                   <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3">
                     <p className="text-xs text-foreground line-clamp-2">{img.prompt}</p>
