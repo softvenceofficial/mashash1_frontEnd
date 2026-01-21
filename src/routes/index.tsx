@@ -58,7 +58,11 @@ const router = createBrowserRouter([
   },
   {
     path: "/Creator",
-    // FIX: Moved Creator inside ProtectedRoute as requested
+    element: <ProtectedRoute><Creator /></ProtectedRoute>,
+    errorElement: <NotFoundPage />,
+  },
+  {
+    path: "/Creator/:id",
     element: <ProtectedRoute><Creator /></ProtectedRoute>,
     errorElement: <NotFoundPage />,
   },

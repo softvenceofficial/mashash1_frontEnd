@@ -9,8 +9,6 @@ import style8 from '@/assets/Imagestyles/Sketch.jpg'
 import style9 from '@/assets/Imagestyles/Line Art.jpg'
 import style10 from '@/assets/Imagestyles/Pixel Art.jpg'
 
-import  { useState } from 'react';
-
 
 const styleData = [
   { id: 1, name: "3D Pixar", type: "3D Render", img: style1 },
@@ -25,45 +23,43 @@ const styleData = [
   { id: 10, name: "Pixel Art", type: "Retro Game", img: style10 },
 ];
 
-const AIImageType = () => {
-  const [selectedId, setSelectedId] = useState(1);
+interface AIImageTypeProps {
+  onStyleSelect: (styleId: number) => void;
+  selectedStyleId: number;
+}
 
+const AIImageType = ({ onStyleSelect, selectedStyleId }: AIImageTypeProps) => {
   return (
     <div className="w-full rounded-xl flex flex-col items-center py-4 px-3 select-none" style={{height: "calc(100vh - 100px)"}}>
-      {/* Header Title */}
       <h4 className="text-white text-[20px] font-semibold font-Inter text-center mb-4 leading-tight">
         Select your style
       </h4>
 
-      {/* Styles Container with Custom Scrollbar */}
       <div className="w-full flex-1 overflow-y-auto overflow-x-hidden pr-1 custom-scrollbar">
         <div className="flex flex-col gap-3">
           {styleData.map((style) => (
             <button
               key={style.id}
-              onClick={() => setSelectedId(style.id)}
+              onClick={() => onStyleSelect(style.id)}
               className={`group relative w-full aspect-square rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                selectedId === style.id ? 'border-text' : 'border-transparent hover:border-zinc-600'
+                selectedStyleId === style.id ? 'border-text' : 'border-transparent hover:border-zinc-600'
               }`}
             >
-              {/* Style Image */}
               <img 
                 src={style.img} 
                 alt={style.name} 
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
               />
 
-              {/* Label Overlay (Bottom) */}
               <div className={`absolute  left-0 right-0 bg-lime-400 py-1 px-1 transition-all duration-300 ${
-                selectedId === style.id ? 'bottom-[0px]' : 'bottom-[-50px]'
+                selectedStyleId === style.id ? 'bottom-[0px]' : 'bottom-[-50px]'
               }`}>
                 <p className="text-[9px] font-bold text-zinc-900 truncate text-center uppercase tracking-tighter">
                   {style.name}
                 </p>
               </div>
 
-              {/* Selected Indicator Glow */}
-              {selectedId === style.id && (
+              {selectedStyleId === style.id && (
                 <div className="absolute inset-0 bg-lime-400/10 pointer-events-none" />
               )}
             </button>
@@ -71,7 +67,6 @@ const AIImageType = () => {
         </div>
       </div>
 
-      {/* Internal CSS for the custom scrollbar */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 8px;
@@ -81,7 +76,7 @@ const AIImageType = () => {
           border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #818cf8; /* Indigo color from your demo code */
+          background: #818cf8;
           border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {

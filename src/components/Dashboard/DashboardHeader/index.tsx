@@ -10,9 +10,11 @@ import { Link } from "react-router";
 export function SiteHeader({
   sidebarOpen,
   setSidebarOpen,
+  children,
 }: {
   sidebarOpen?: boolean;
   setSidebarOpen?: (open: boolean) => void;
+  children?: React.ReactNode;
 }) {
   const userData = useCurrentUser();
   return (
@@ -30,6 +32,7 @@ export function SiteHeader({
           <SearchForm className="w-96 hidden md:block" />
         </div>
         <div className="ml-auto flex items-center gap-24">
+          {children}
           <div className="flex items-center gap-2 md:gap-5">
             <ModeToggle />
             <Menu

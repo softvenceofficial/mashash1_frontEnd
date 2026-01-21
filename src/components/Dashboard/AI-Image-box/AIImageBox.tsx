@@ -1,41 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, Send, X, Check, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { useGenerateImageMutation } from '@/redux/endpoints/bookApi';
+import { toast } from 'sonner';
+import { getImageUrl } from '@/lib/utils';
 
-// --- API Helper ---
-const generateImage = async (prompt: string, apiKey: string) => {
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          instances: [{ prompt: prompt }],
-          parameters: { sampleCount: 1 },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    const base64Image = result.predictions?.[0]?.bytesBase64Encoded;
-    if (base64Image) {
-      return `data:image/png;base64,${base64Image}`;
-    }
-    return null;
-  } catch (error) {
-    console.error("Image generation failed:", error);
-    return null;
-  }
-};
-
-// Voice Waveform Visualization
 const VoiceVisualizer = ({ isActive }: { isActive: boolean }) => {
   return (
     <div className="flex items-center gap-1 h-8">
@@ -55,12 +24,17 @@ const VoiceVisualizer = ({ isActive }: { isActive: boolean }) => {
   );
 };
 
-const AIImageBox = () => {
+interface AIImageBoxProps {
+  bookId: number | null;
+  selectedStyleId: number;
+  selectedSizeId: number;
+}
+
+const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps) => {
   const [prompt, setPrompt] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [images, setImages] = useState<Array<{ url: string; prompt: string } | null>>(Array(50).fill(null));
-
+  const [generateImage, { isLoading }] = useGenerateImageMutation();
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -118,24 +92,32 @@ const AIImageBox = () => {
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
-    setIsLoading(true);
-    const apiKey = ""; // Add your API key here
-    
+    if (!bookId) {
+      toast.error('Please save your artbook before generating images.');
+      return;
+    }
+
     try {
-      const newImageBase64 = await generateImage(prompt, apiKey);
+      const result = await generateImage({
+        book_id: bookId,
+        style_id: selectedStyleId,
+        size_id: selectedSizeId,
+        prompt: prompt
+      }).unwrap();
       
-      if (newImageBase64) {
+      if (result.image) {
+        const imageUrl = getImageUrl(result.image);
         setImages(prevImages => {
           const newImages = [...prevImages];
           newImages.pop();
-          newImages.unshift({ url: newImageBase64, prompt: prompt });
+          newImages.unshift({ url: imageUrl, prompt: prompt });
           return newImages;
         });
+        toast.success('Image generated successfully!');
       }
     } catch (err) {
       console.error(err);
-    } finally {
-      setIsLoading(false);
+      toast.error('Failed to generate image');
     }
   };
 
@@ -161,22 +143,24 @@ const AIImageBox = () => {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Command what type of image you want..."
-                className="w-full bg-transparent border-none outline-none resize-none text-foreground placeholder-muted-foreground h-10 py-2"
+                placeholder={bookId ? "Command what type of image you want..." : "Save book to generate images..."}
+                disabled={!bookId}
+                className="w-full bg-transparent border-none outline-none resize-none text-foreground placeholder-muted-foreground h-10 py-2 disabled:opacity-50"
               />
               <div className="flex justify-end items-center gap-3">
                 <button 
                   onClick={toggleListening}
-                  className="p-2 rounded-full hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={!bookId}
+                  className="p-2 rounded-full hover:bg-accent text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                   title="Voice Command"
                 >
                   <Mic size={20} />
                 </button>
                 <button 
                   onClick={handleGenerate}
-                  disabled={isLoading || !prompt.trim()}
+                  disabled={isLoading || !prompt.trim() || !bookId}
                   className={`p-2 rounded-full transition-all duration-200 ${
-                    isLoading || !prompt.trim() 
+                    isLoading || !prompt.trim() || !bookId
                       ? 'text-muted-foreground bg-muted' 
                       : 'text-primary-foreground bg-primary hover:bg-primary/90 shadow-lg'
                   }`}
@@ -190,7 +174,6 @@ const AIImageBox = () => {
 
           {isListening && (
             <div className="h-[106px] flex items-center justify-between px-6 animate-in fade-in zoom-in-95 duration-200">
-              
               <div className="flex-1 mr-4 overflow-hidden">
                 {prompt ? (
                   <p className="text-lg text-foreground font-medium truncate">{prompt}</p>
@@ -199,11 +182,9 @@ const AIImageBox = () => {
                 )}
                 <div className="w-full border-b border-dashed border-border mt-2"></div>
               </div>
-
               <div className="mx-4">
                 <VoiceVisualizer isActive={isListening} />
               </div>
-
               <div className="flex items-center gap-4 pl-4 border-l border-border">
                 <button 
                   onClick={handleVoiceCancel}
@@ -256,7 +237,6 @@ const AIImageBox = () => {
             </div>
           ))}
         </div>
-
       </div>
     </div>
   );

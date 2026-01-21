@@ -19,6 +19,20 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      '/media': {
+        target: 'https://mashash.softvencealpha.com',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api': {
+        target: 'https://mashash.softvencealpha.com',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
+  },
   optimizeDeps: {
     include: ['react-apexcharts', 'apexcharts'],
     exclude: []

@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect } from "react";
+import { useParams, useNavigate } from "react-router";
 import Tools from "@/components/Dashboard/Tools/Tools";
 import Toolbox, { DrawingMode } from "@/components/Dashboard/Toolbox/Toolbox";
 import AIImageBox from "@/components/Dashboard/AI-Image-box/AIImageBox";
@@ -9,12 +11,22 @@ import { SiteHeader } from "@/components/Dashboard/DashboardHeader";
 import { useToolState } from "@/hooks/useToolState";
 import { keyboardManager } from "@/utils/KeyboardManager";
 import { HelpOverlay } from "@/components/Dashboard/HelpOverlay";
+import { useCreateBookMutation, useGetBookDetailsQuery, useUpdateBookMutation } from "@/redux/endpoints/bookApi";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { Save, Loader2 } from "lucide-react";
+import type { PageData } from "@/components/Dashboard/Book/types";
+import { getImageUrl } from "@/lib/utils";
 
 export default function Creator() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const { updateToolColor, getToolColor } = useToolState();
   const [activeTool, setActiveTool] = useState("Book Size");
   const [activeSubTool, setActiveSubTool] = useState("select");
   const [selectedBookSize, setSelectedBookSize] = useState("6 x 4");
+  const [selectedStyleId, setSelectedStyleId] = useState(1);
+  const selectedSizeId = 6;
   const [strokeColor, setStrokeColor] = useState(getToolColor("Text"));
   const [strokeWidth, setStrokeWidth] = useState(5);
   const [fontSize, setFontSize] = useState(24);
@@ -32,7 +44,130 @@ export default function Creator() {
     strokeWidth: 2,
     isFillTransparent: false,
   });
+  const [loadedPages, setLoadedPages] = useState<PageData[] | null>(null);
   const bookRef = useRef<any>(null);
+
+  const [createBook, { isLoading: isSaving }] = useCreateBookMutation();
+  const [updateBook, { isLoading: isUpdating }] = useUpdateBookMutation();
+  const { data: bookDetails, isLoading: isLoadingBook } = useGetBookDetailsQuery(id || "", { skip: !id });
+
+  useEffect(() => {
+    const loadBookData = async () => {
+      if (bookDetails?.data?.file) {
+        try {
+          let fileUrl = bookDetails.data.file;
+          
+          if (!window.location.hostname.includes('localhost')) {
+            fileUrl = getImageUrl(bookDetails.data.file);
+          } else {
+            if (fileUrl && !fileUrl.startsWith('/')) {
+              fileUrl = `/${fileUrl}`;
+            }
+          }
+          
+          const response = await fetch(fileUrl);
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch book data');
+          }
+
+          const data = await response.json();
+          
+          const processedData = data.map((page: any) => ({
+            lines: page.lines || [],
+            texts: page.texts || [],
+            shapes: page.shapes || [],
+            images: (page.images || []).map((img: any) => ({
+              ...img,
+              type: 'image',
+              id: img.id || Date.now().toString() + Math.random().toString(36).substr(2, 9)
+            })),
+            stickyNotes: page.stickyNotes || [],
+            tables: page.tables || [],
+            background: page.background || null
+          }));
+          
+          setLoadedPages(processedData);
+        } catch (err) {
+          console.error("Error loading book JSON:", err);
+          toast.error("Failed to load saved book data");
+        }
+      }
+    };
+
+    loadBookData();
+  }, [bookDetails]);
+
+  // Save book function
+  const handleSaveBook = async () => {
+    if (!bookRef.current) return;
+
+    try {
+      const pagesData = bookRef.current.getPageData();
+      
+      const processedPages = pagesData.map((page: PageData) => ({
+        lines: page.lines || [],
+        texts: page.texts || [],
+        shapes: page.shapes || [],
+        images: (page.images || []).map((img: any) => ({
+          ...img,
+          _type: 'image',
+          type: 'image'
+        })),
+        stickyNotes: page.stickyNotes || [],
+        tables: page.tables || [],
+        background: page.background || null
+      }));
+
+      const jsonString = JSON.stringify(processedPages);
+      const jsonFile = new File([jsonString], "book_data.json", { type: "application/json" });
+
+      let coverBlob: Blob | null = null;
+      
+      try {
+        const stageElement = document.querySelector('.konvajs-content canvas');
+        if (stageElement) {
+          coverBlob = await new Promise<Blob>((resolve, reject) => {
+            (stageElement as HTMLCanvasElement).toBlob((blob) => {
+              if (blob) resolve(blob);
+              else reject(new Error('Could not generate cover'));
+            }, 'image/png');
+          });
+        }
+      } catch (err) {
+        console.warn("Could not generate cover image:", err);
+      }
+
+      const formData = new FormData();
+      const bookTitle = bookDetails?.data?.title || `Artbook ${new Date().toLocaleDateString()}`;
+      const isUpdate = !!id;
+      
+      formData.append("title", bookTitle);
+      formData.append("file", jsonFile);
+      
+      if (coverBlob && coverBlob.size > 0) {
+        formData.append("cover_image", coverBlob, "cover.png");
+      }
+
+      let response;
+      if (isUpdate) {
+        response = await updateBook({ id: parseInt(id!), data: formData }).unwrap();
+        toast.success("Book updated successfully!");
+      } else {
+        response = await createBook(formData).unwrap();
+        toast.success("Book saved successfully!");
+      }
+      
+      if (response?.data?.id) {
+        navigate(`/Creator/${response.data.id}`, { replace: true });
+      } else {
+        navigate("/Dashboard");
+      }
+    } catch (error) {
+      console.error("Failed to save book:", error);
+      toast.error("Failed to save book");
+    }
+  };
 
   // Restore tool color when switching tools
   useEffect(() => {
@@ -136,11 +271,29 @@ export default function Creator() {
 
   return (
     <div className="relative">
-      <SiteHeader />
+      <SiteHeader>
+        <Button onClick={handleSaveBook} disabled={isSaving || isUpdating || isLoadingBook} className="ml-auto">
+          {(isSaving || isUpdating) ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {id ? "Updating..." : "Saving..."}
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              {id ? "Update Artbook" : "Save Artbook"}
+            </>
+          )}
+        </Button>
+      </SiteHeader>
       <div className="flex gap-4 mt-2" style={{ height: "calc(100vh - 80px)" }}>
         <div className="w-[23.3%]">
           <Tools activeTool={activeTool} setActiveTool={setActiveTool} />
-          <AIImageBox />
+          <AIImageBox 
+            bookId={id ? parseInt(id) : null}
+            selectedStyleId={selectedStyleId}
+            selectedSizeId={selectedSizeId}
+          />
         </div>
         <div className="w-[63.8%]">
           <Toolbox
@@ -195,13 +348,17 @@ export default function Creator() {
             shapeStrokeColor={shapeProperties.strokeColor}
             shapeStrokeWidth={shapeProperties.strokeWidth}
             isFillTransparent={shapeProperties.isFillTransparent}
+            initialData={loadedPages}
           />
         </div>
         <div
           className="w-[10.2%] bg-secondary px-3 py-4 rounded-lg overflow-hidden"
           style={{ height: "calc(100vh - 100px)" }}
         >
-          <AIImageType />
+          <AIImageType 
+            onStyleSelect={setSelectedStyleId}
+            selectedStyleId={selectedStyleId}
+          />
         </div>
       </div>
 

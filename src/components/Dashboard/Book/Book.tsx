@@ -89,6 +89,7 @@ interface BookProps {
   shapeStrokeWidth?: number;
   isFillTransparent?: boolean;
   onToolChange?: (tool: string, subTool: string) => void;
+  initialData?: PageData[] | null;
 }
 
 // --- Constants ---
@@ -772,11 +773,19 @@ BookPage.displayName = 'BookPage';
 
 // --- Main Book Component ---
 
-const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeColor = '#000000', strokeWidth = 5, selectedBookSize = '6 x 4', fontSize = 16, fontFamily = 'Roboto', onAdvancedTextChange, drawingMode, zoom: externalZoom, onZoomChange, selectedShape = 'rectangle', shapeFillColor = '#1e3a8a', shapeStrokeColor = '#60a5fa', shapeStrokeWidth = 2, isFillTransparent = false, onToolChange }: BookProps, ref: any) => {
-  const [pages, setPages] = useState<PageData[]>(INITIAL_PAGES);
+const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeColor = '#000000', strokeWidth = 5, selectedBookSize = '6 x 4', fontSize = 16, fontFamily = 'Roboto', onAdvancedTextChange, drawingMode, zoom: externalZoom, onZoomChange, selectedShape = 'rectangle', shapeFillColor = '#1e3a8a', shapeStrokeColor = '#60a5fa', shapeStrokeWidth = 2, isFillTransparent = false, onToolChange, initialData }: BookProps, ref: any) => {
+  const [pages, setPages] = useState<PageData[]>(initialData || INITIAL_PAGES);
   const [currentZoom, setCurrentZoom] = useState(externalZoom ?? 1);
   const bookContainerRef = useRef<HTMLDivElement>(null);
   const { isFullscreen, toggleFullscreen } = useFullscreen(bookContainerRef);
+
+  // Update pages when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setPages(initialData);
+    }
+  }, [initialData]);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [pagesToAdd, setPagesToAdd] = useState('2');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -1079,6 +1088,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     updatePageData,
     handleImageUpload: (file: File, targetPage?: 'left' | 'right' | 'current') => handleImageUpload(file, targetPage),
     currentPageIndex,
+    getPageData: () => pages,
     getSelectedTableProperties: () => {
       const targetPageIndex = selectedTablePageIndex !== -1 ? selectedTablePageIndex : currentPageIndex;
       if (!selectedTableId || !pages[targetPageIndex]) return null;
