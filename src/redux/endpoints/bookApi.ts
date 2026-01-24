@@ -1,9 +1,9 @@
 import { baseApi } from "../api";
-import type { IBook, IBookDetails, IStyle, IGeneratedImage } from "@/types/book.type";
+import type { IBook, IBookDetails, IStyle, IGeneratedImage, IApiResponse } from "@/types/book.type";
 
 export const bookApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    getBooks: build.query<{ data: IBook[] }, void>({
+    getBooks: build.query<IApiResponse<IBook[]>, void>({
       query: () => ({
         url: "/books/",
         method: "GET",
@@ -11,33 +11,33 @@ export const bookApi = baseApi.injectEndpoints({
       providesTags: ["book"],
     }),
 
-    createBook: build.mutation<{ data: IBook }, FormData>({
+    createBook: build.mutation<IApiResponse<IBook>, FormData>({
       query: (data) => ({
         url: "/books/",
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["book"],
+      invalidatesTags: ["book", "recent-work"],
     }),
 
-    updateBook: build.mutation<{ data: IBook }, { id: number; data: FormData }>({
+    updateBook: build.mutation<IApiResponse<IBook>, { id: number; data: FormData }>({
       query: ({ id, data }) => ({
         url: `/book/${id}/`,
         method: "PUT",
         body: data,
       }),
-      invalidatesTags: ["book"],
+      invalidatesTags: ["book", "recent-work", "previous-work"],
     }),
 
-    deleteBook: build.mutation<void, number>({
+    deleteBook: build.mutation<IApiResponse<void>, number>({
       query: (id) => ({
         url: `/book/${id}/`,
         method: "DELETE",
       }),
-      invalidatesTags: ["book"],
+      invalidatesTags: ["book", "recent-work", "previous-work", "trash"],
     }),
 
-    getBookDetails: build.query<{ data: IBookDetails }, string>({
+    getBookDetails: build.query<IApiResponse<IBookDetails>, string>({
       query: (id) => ({
         url: `/book/details/${id}/`,
         method: "GET",
@@ -45,7 +45,39 @@ export const bookApi = baseApi.injectEndpoints({
       providesTags: ["book"],
     }),
 
-    getStyles: build.query<{ data: IStyle[] }, void>({
+    getRecentWorks: build.query<IApiResponse<IBook[]>, void>({
+      query: () => ({
+        url: "/recent-works/",
+        method: "GET",
+      }),
+      providesTags: ["recent-work"],
+    }),
+
+    getPreviousWorks: build.query<IApiResponse<IBook[]>, void>({
+      query: () => ({
+        url: "/previous-works/",
+        method: "GET",
+      }),
+      providesTags: ["previous-work"],
+    }),
+
+    getTrashBooks: build.query<IApiResponse<IBook[]>, void>({
+      query: () => ({
+        url: "/trash/",
+        method: "GET",
+      }),
+      providesTags: ["trash"],
+    }),
+
+    deleteBookPermanently: build.mutation<IApiResponse<void>, number>({
+      query: (id) => ({
+        url: `/trash/${id}/`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["trash"],
+    }),
+
+    getStyles: build.query<IApiResponse<IStyle[]>, void>({
       query: () => ({
         url: "/styles/",
         method: "GET",
@@ -68,6 +100,10 @@ export const {
   useUpdateBookMutation,
   useDeleteBookMutation,
   useGetBookDetailsQuery,
+  useGetRecentWorksQuery,
+  useGetPreviousWorksQuery,
+  useGetTrashBooksQuery,
+  useDeleteBookPermanentlyMutation,
   useGetStylesQuery,
   useGenerateImageMutation,
 } = bookApi;

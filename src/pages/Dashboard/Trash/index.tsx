@@ -1,55 +1,40 @@
 import BackButton from "@/components/common/BackButton";
-import cardBook from "@/assets/images/cardBook.png";
 import WorkingCard from "@/components/common/WorkingCard";
+import { useGetTrashBooksQuery } from "@/redux/endpoints/bookApi";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getImageUrl } from "@/lib/utils";
 
 export default function TrashPage() {
+  const { data: trashData, isLoading } = useGetTrashBooksQuery();
+
   return (
     <div>
       <BackButton />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-10 mr-5 mt-10">
-        {workingData.map((work) => (
-          <WorkingCard key={work.id} work={work} />
-        ))}
-      </div>
+      <h1 className="text-2xl font-bold mt-4 mb-6">Trash</h1>
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-10 mr-5 mt-10">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[280px] w-full rounded-xl" />
+          ))}
+        </div>
+      ) : trashData?.data?.length === 0 ? (
+        <p className="text-gray-500 mt-10">Trash is empty.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-10 mr-5 mt-10">
+          {trashData?.data?.map((work) => (
+            <WorkingCard
+              key={work.id}
+              work={{
+                id: work.id,
+                title: work.title,
+                date: new Date(work.created_at).toLocaleDateString("en-GB"),
+                imageUrl: getImageUrl(work.cover_image),
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-
-const workingData = [
-  {
-    id: 1,
-    title: "My lil star...",
-    date: "17/11/2025",
-    imageUrl: cardBook,
-  },
-  {
-    id: 2,
-    title: "Tiny moments",
-    date: "19/10/2025",
-    imageUrl: cardBook,
-  },
-  {
-    id: 3,
-    title: "Sweet memories",
-    date: "02/11/2023",
-    imageUrl: cardBook,
-  },
-  {
-    id: 4,
-    title: "Smiling days",
-    date: "10/12/2023",
-    imageUrl: cardBook,
-  },
-  {
-    id: 5,
-    title: "Little stories",
-    date: "05/01/2024",
-    imageUrl: cardBook,
-  },
-  //   {
-  //     id: 6,
-  //     title: "You shine bright",
-  //     date: "19/02/2024",
-  //     imageUrl: cardBook,
-  //   }
-];

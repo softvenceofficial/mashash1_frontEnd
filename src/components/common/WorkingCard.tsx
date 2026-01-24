@@ -8,12 +8,11 @@ export default function WorkingCard({
   work: { id: number; title: string; date: string; imageUrl: string };
 }) {
   const pathName = window.location.pathname;
-  console.log("Current Path:", pathName);
   return (
     <Card className="dark:bg-[#212B36] border-none p-4 mr-6 relative ">
       <div className="absolute top-0.5 -right-6">
         {
-          pathName.includes("trash") ? <TrashThreeDotButton /> : <ThreeDotButton />
+          pathName.includes("trash") ? <TrashThreeDotButton bookId={work.id} /> : <ThreeDotButton bookId={work.id} />
         }
       </div>
       <CardContent className="px-0">

@@ -10,14 +10,12 @@ export default function DashboardPage() {
   const { data: booksData, isLoading } = useGetBooksQuery();
   const [deleteBook] = useDeleteBookMutation();
 
-  // Image URL helper function
   const getImageUrl = (path: string | null) => {
   if (!path) return "";
   
-  // Fix both issues: protocol and /api/
   return path
-    .replace("https:/", "https://")  // Fix protocol
-    .replace("/api/", "/");          // Remove /api/
+    .replace("https:/", "https://")  
+    .replace("/api/", "/");          
 };
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
