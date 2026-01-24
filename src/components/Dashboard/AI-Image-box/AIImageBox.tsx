@@ -36,7 +36,7 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps
   const [images, setImages] = useState<Array<{ url: string; prompt: string } | null>>(Array(50).fill(null));
   const [generateImage, { isLoading }] = useGenerateImageMutation();
   const recognitionRef = useRef<any>(null);
-
+  
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -127,12 +127,15 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps
       handleGenerate();
     }
   };
+  
+  
 
   const handleDragStart = (e: React.DragEvent<HTMLImageElement>, url: string) => {
     e.dataTransfer.setData('imageSrc', url);
     e.dataTransfer.effectAllowed = 'copy';
   };
 
+  
   return (
     <div className="bg-background text-foreground p-4 pb-0 pt-2 font-sans selection:bg-primary selection:text-primary-foreground">
       <div className="max-w-6xl mx-auto space-y-6">

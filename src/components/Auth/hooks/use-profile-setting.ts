@@ -124,6 +124,7 @@ export default function useProfileSettings(
     handleAvatarChange, 
     avatarPreview, 
     user,
-    setAvatarFile 
+    setAvatarFile,
+    avatarFile
   };
 }

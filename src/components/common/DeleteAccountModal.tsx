@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { toast } from "sonner";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
@@ -20,7 +21,7 @@ export default function DeleteAccountModal() {
     toast.loading("Deleting account...");
 
     try {
-      await deleteAccount().unwrap();
+      await deleteAccount({}).unwrap();
       toast.dismiss();
       toast.success("Account deleted permanently");
       dispatch(removeUserInfo());

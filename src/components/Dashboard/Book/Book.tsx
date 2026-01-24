@@ -244,7 +244,7 @@ const TableCellComponent = memo(({
 
 TableCellComponent.displayName = 'TableCellComponent';
 
-const URLImage = ({ image, isSelected, onSelect, isSelectMode, onContextMenu }: any) => {
+const URLImage = ({ image, isSelected, onSelect, isSelectMode, onContextMenu, onChange }: any) => {
   const [img] = useImage(image.src);
   const imageRef = useRef<Konva.Image>(null);
   const trRef = useRef<Konva.Transformer>(null);
@@ -254,7 +254,7 @@ const URLImage = ({ image, isSelected, onSelect, isSelectMode, onContextMenu }: 
       trRef.current.nodes([imageRef.current]);
       trRef.current.getLayer()?.batchDraw();
     }
-  }, [isSelected]);
+  }, [isSelected, isSelectMode]);
 
   return (
     <>
@@ -270,6 +270,31 @@ const URLImage = ({ image, isSelected, onSelect, isSelectMode, onContextMenu }: 
         draggable={isSelectMode}
         onClick={onSelect}
         onContextMenu={onContextMenu}
+        onDragEnd={(e) => {
+          onChange({
+            ...image,
+            x: e.target.x(),
+            y: e.target.y(),
+          });
+        }}
+        onTransformEnd={() => {
+          const node = imageRef.current;
+          if (!node) return;
+          const scaleX = node.scaleX();
+          const scaleY = node.scaleY();
+          
+          node.scaleX(1);
+          node.scaleY(1);
+          
+          onChange({
+            ...image,
+            x: node.x(),
+            y: node.y(),
+            width: Math.max(5, node.width() * scaleX),
+            height: Math.max(5, node.height() * scaleY),
+            rotation: node.rotation(),
+          });
+        }}
       />
       {isSelected && <Transformer ref={trRef} />}
     </>
@@ -309,10 +334,14 @@ interface BookPageProps {
   pages: PageData[];
   shapeTransformerRef: React.RefObject<Konva.Transformer | null>;
   setContextMenu: (menu: { x: number; y: number } | null) => void;
+  onImageUpdate: (pageIndex: number, img: ImageType) => void;
+  onShapeUpdate: (pageIndex: number, shape: ShapeType) => void;
+  onTableUpdate: (pageIndex: number, table: TableType) => void;
+  onTextUpdate: (pageIndex: number, text: TextType) => void;
 }
 
 const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({ 
-  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onStageDoubleClick, onTextDblClick, selectedTextId, onTextSelect, penState, snapToStart, mousePos, strokeColor, strokeWidth, penFillColor, penFillOpacity, penMode, handleStickyNoteDoubleClick, handleStickyNoteUpdate, handleStickyNoteDelete, isSelectMode, isPenMode, handleTableCellClick, handleTableCellDoubleClick, handleTableContextMenu, pages, shapeTransformerRef, setContextMenu
+  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onStageDoubleClick, onTextDblClick, selectedTextId, onTextSelect, penState, snapToStart, mousePos, strokeColor, strokeWidth, penFillColor, penFillOpacity, penMode, handleStickyNoteDoubleClick, handleStickyNoteUpdate, handleStickyNoteDelete, isSelectMode, isPenMode, handleTableCellClick, handleTableCellDoubleClick, handleTableContextMenu,  shapeTransformerRef, setContextMenu, onImageUpdate, onShapeUpdate, onTableUpdate, onTextUpdate
 }, ref) => {
   const transformerRef = useRef<Konva.Transformer>(null);
   const textRefs = useRef<{ [key: string]: Konva.Text }>({});
@@ -465,6 +494,9 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                         onTextSelect(element.id);
                         setContextMenu({ x: e.evt.clientX, y: e.evt.clientY });
                       }}
+                      onChange={(newAttrs: ImageType) => {
+                        onImageUpdate(pageIndex, newAttrs);
+                      }}
                     />
                   );
                 }
@@ -484,27 +516,19 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                         selectedTextId === element.id,
                         () => isSelectMode && onTextSelect(element.id),
                         (x, y) => {
-                          const updatedPages = [...pages];
-                          const shapeIndex = updatedPages[pageIndex].shapes.findIndex(s => s.id === element.id);
-                          if (shapeIndex !== -1) {
-                            updatedPages[pageIndex].shapes[shapeIndex] = { ...element, x, y };
-                          }
+                          onShapeUpdate(pageIndex, { ...element, x, y });
                         },
                         (node) => {
-                          const updatedPages = [...pages];
-                          const shapeIndex = updatedPages[pageIndex].shapes.findIndex(s => s.id === element.id);
-                          if (shapeIndex !== -1) {
-                            updatedPages[pageIndex].shapes[shapeIndex] = {
-                              ...element,
-                              x: node.x(),
-                              y: node.y(),
-                              width: Math.max(5, node.width() * node.scaleX()),
-                              height: Math.max(5, node.height() * node.scaleY()),
-                              rotation: node.rotation(),
-                              scaleX: 1,
-                              scaleY: 1
-                            };
-                          }
+                          onShapeUpdate(pageIndex, {
+                            ...element,
+                            x: node.x(),
+                            y: node.y(),
+                            width: Math.max(5, node.width() * node.scaleX()),
+                            height: Math.max(5, node.height() * node.scaleY()),
+                            rotation: node.rotation(),
+                            scaleX: 1,
+                            scaleY: 1
+                          });
                         },
                         (node) => {
                           if (node) textRefs.current[element.id] = node;
@@ -548,13 +572,11 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                         setContextMenu({ x: e.evt.clientX, y: e.evt.clientY });
                       }}
                       onDragEnd={(e) => {
-                        const newX = e.target.x();
-                        const newY = e.target.y();
-                        handleStickyNoteUpdate(pageIndex, {
+                        onTableUpdate(pageIndex, {
                           ...element,
-                          x: newX,
-                          y: newY
-                        } as any);
+                          x: e.target.x(),
+                          y: e.target.y()
+                        });
                       }}
                     >
                       {element.data.map((row: any, rowIndex: number) =>
@@ -640,12 +662,27 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                         onTextSelect(element.id);
                         setContextMenu({ x: e.evt.clientX, y: e.evt.clientY });
                       }}
-                      onTransform={(e) => {
+                      onDragEnd={(e) => {
+                        onTextUpdate(pageIndex, {
+                          ...element,
+                          x: e.target.x(),
+                          y: e.target.y()
+                        });
+                      }}
+                      onTransformEnd={(e) => {
                         const node = e.target as Konva.Text;
                         const scaleX = node.scaleX();
+                        
                         node.scaleX(1);
                         node.scaleY(1);
-                        node.width(Math.max(30, node.width() * scaleX));
+                        
+                        onTextUpdate(pageIndex, {
+                          ...element,
+                          x: node.x(),
+                          y: node.y(),
+                          rotation: node.rotation(),
+                          width: Math.max(30, node.width() * scaleX),
+                        });
                       }}
                     />
                   );
@@ -995,6 +1032,62 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     setSelectedIds(newItems.map(i => i.id));
     setContextMenu(null);
   }, [clipboard, currentPageIndex, pages, saveCurrentPageState]);
+
+  const handleImageUpdate = useCallback((pageIndex: number, newImageAttrs: ImageType) => {
+    setPages(prev => {
+      const newPages = [...prev];
+      const page = newPages[pageIndex];
+      const index = page.images.findIndex(img => img.id === newImageAttrs.id);
+      if (index !== -1) {
+        const newImages = [...page.images];
+        newImages[index] = newImageAttrs;
+        newPages[pageIndex] = { ...page, images: newImages };
+      }
+      return newPages;
+    });
+  }, []);
+
+  const handleShapeUpdate = useCallback((pageIndex: number, newShapeAttrs: ShapeType) => {
+    setPages(prev => {
+      const newPages = [...prev];
+      const page = newPages[pageIndex];
+      const index = page.shapes.findIndex(s => s.id === newShapeAttrs.id);
+      if (index !== -1) {
+        const newShapes = [...page.shapes];
+        newShapes[index] = newShapeAttrs;
+        newPages[pageIndex] = { ...page, shapes: newShapes };
+      }
+      return newPages;
+    });
+  }, []);
+
+  const handleTableUpdate = useCallback((pageIndex: number, newTableAttrs: TableType) => {
+    setPages(prev => {
+      const newPages = [...prev];
+      const page = newPages[pageIndex];
+      const index = page.tables.findIndex(t => t.id === newTableAttrs.id);
+      if (index !== -1) {
+        const newTables = [...page.tables];
+        newTables[index] = newTableAttrs;
+        newPages[pageIndex] = { ...page, tables: newTables };
+      }
+      return newPages;
+    });
+  }, []);
+
+  const handleDirectTextUpdate = useCallback((pageIndex: number, newTextAttrs: TextType) => {
+    setPages(prev => {
+      const newPages = [...prev];
+      const page = newPages[pageIndex];
+      const index = page.texts.findIndex(t => t.id === newTextAttrs.id);
+      if (index !== -1) {
+        const newTexts = [...page.texts];
+        newTexts[index] = newTextAttrs;
+        newPages[pageIndex] = { ...page, texts: newTexts };
+      }
+      return newPages;
+    });
+  }, []);
 
   const handleLayerAction = useCallback((action: 'front' | 'back' | 'forward' | 'backward') => {
     if (selectedIds.length === 0) return;
@@ -2562,6 +2655,10 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
                     pages={pages}
                     shapeTransformerRef={shapeTransformerRef}
                     setContextMenu={setContextMenu}
+                    onImageUpdate={handleImageUpdate}
+                    onShapeUpdate={handleShapeUpdate}
+                    onTableUpdate={handleTableUpdate}
+                    onTextUpdate={handleDirectTextUpdate}
                 />
             ))}
         </HTMLFlipBook>

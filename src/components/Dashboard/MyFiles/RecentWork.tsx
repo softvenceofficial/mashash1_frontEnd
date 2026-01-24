@@ -1,11 +1,16 @@
 import { useGetRecentWorksQuery } from "@/redux/endpoints/bookApi";
 import WorkingCard from "@/components/common/WorkingCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getImageUrl } from "@/lib/utils";
 
 export default function RecentWork() {
   const { data: recentWorksData, isLoading } = useGetRecentWorksQuery();
-
+  const getImageUrl = (path: string | null) => {
+  if (!path) return "";
+  
+  return path
+    .replace("https:/", "https://")  
+    .replace("/api/", "/");          
+};
   if (isLoading) {
     return (
       <section>

@@ -2,11 +2,16 @@ import BackButton from "@/components/common/BackButton";
 import WorkingCard from "@/components/common/WorkingCard";
 import { useGetTrashBooksQuery } from "@/redux/endpoints/bookApi";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getImageUrl } from "@/lib/utils";
 
 export default function TrashPage() {
   const { data: trashData, isLoading } = useGetTrashBooksQuery();
-
+  const getImageUrl = (path: string | null) => {
+  if (!path) return "";
+  
+  return path
+    .replace("https:/", "https://")  
+    .replace("/api/", "/");          
+};
   return (
     <div>
       <BackButton />

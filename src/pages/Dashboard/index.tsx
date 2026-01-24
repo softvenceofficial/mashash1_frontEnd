@@ -67,19 +67,19 @@ export default function DashboardPage() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-6 mt-6 ">
           {books.map((book) => (
             <div
               key={book.id}
               className="group relative border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white "
             >
               <Link to={`/Creator/${book.id}`}>
-                <div className="aspect-[6/5] bg-gray-100 relative overflow-hidden">
+                <div className=" bg-gray-100 relative overflow-hidden ">
                   {book.cover_image ? (
                     <img
                       src={getImageUrl(book.cover_image)}
                       alt={book.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">
