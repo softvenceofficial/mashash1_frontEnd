@@ -4,19 +4,18 @@ import { PersistGate } from "redux-persist/integration/react";
 import { persistor, store } from "@/redux/store";
 import router from "@/routes";
 import { ThemeProvider } from "@/theme";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 export default function Providers() {
-  // const currentUser = useCurrentUser();
-
   return (
-    // <SocketProvider userId={currentUser?.id as string}>
-    <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
-        <ThemeProvider>
-          <RouterProvider router={router} />
-        </ThemeProvider>
-      </PersistGate>
-    </Provider>
-    // </SocketProvider>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
+      <Provider store={store}>
+        <PersistGate loading={null} persistor={persistor}>
+          <ThemeProvider>
+            <RouterProvider router={router} />
+          </ThemeProvider>
+        </PersistGate>
+      </Provider>
+    </GoogleOAuthProvider>
   );
 }

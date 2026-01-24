@@ -5,11 +5,20 @@ import { Link } from "react-router";
 import { useGetBooksQuery, useDeleteBookMutation } from "@/redux/endpoints/bookApi";
 import { Loader2, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { getImageUrl } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { data: booksData, isLoading } = useGetBooksQuery();
   const [deleteBook] = useDeleteBookMutation();
+
+  // Image URL helper function
+  const getImageUrl = (path: string | null) => {
+  if (!path) return "";
+  
+  // Fix both issues: protocol and /api/
+  return path
+    .replace("https:/", "https://")  // Fix protocol
+    .replace("/api/", "/");          // Remove /api/
+};
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.preventDefault();
@@ -54,7 +63,7 @@ export default function DashboardPage() {
           <div className="flex justify-center mt-7">
             <Link to="/Creator">
               <Button variant="default" className="mt-4">
-                Create New Artbook
+                First New Artbook
               </Button>
             </Link>
           </div>
@@ -64,10 +73,10 @@ export default function DashboardPage() {
           {books.map((book) => (
             <div
               key={book.id}
-              className="group relative border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white"
+              className="group relative border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white "
             >
               <Link to={`/Creator/${book.id}`}>
-                <div className="aspect-[4/5] bg-gray-100 relative overflow-hidden">
+                <div className="aspect-[6/5] bg-gray-100 relative overflow-hidden">
                   {book.cover_image ? (
                     <img
                       src={getImageUrl(book.cover_image)}
@@ -81,7 +90,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <div className="p-4">
-                  <h3 className="font-semibold truncate" title={book.title}>
+                  <h3 className="font-semibold truncate text-black" title={book.title}>
                     {book.title || "Untitled Book"}
                   </h3>
                   <p className="text-xs text-gray-500 mt-1">

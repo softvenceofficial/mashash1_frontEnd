@@ -31,27 +31,12 @@ export type TChangePassword = {
 };
 
 export type TUser = {
-    _id: string;
-    avatar: string;
-    createdAt: string;
-    updatedAt: string;
-    designation: string;
+    id: string;
     email: string;
-    employeeId: string;
-    firstName: string;
-    lastName: string;
-    userName: string;
-    phoneNumber: string;
-    role: TUserRole;
-    userStatus: 'Active' | 'Deactivate';
-    team?: string;
-    teamLead?: string;
-    address?: string;
-    subArea?: string;
-    district?: string;
-    state?: string;
-    country?: string;
-    isBlocked: boolean;
-    isDeleted: boolean;
-    isPasswordChanged: boolean;
+    first_name: string;
+    last_name: string;
+    full_name: string;
+    phone_number: string;
+    date_of_birth: string | null;
+    avatar: string | null;
 };

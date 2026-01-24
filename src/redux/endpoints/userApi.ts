@@ -6,24 +6,31 @@ export const userApi = baseApi.injectEndpoints({
       query: () => ({
         url: `/account/profile/`,
         method: "GET",
-        credentials: "include",
-        invalidatesTags: ["user"],
       }),
+      providesTags: ["user"],
     }),
 
-    userImageUpdate: build.mutation({
+    updateUserProfile: build.mutation({
       query: (data) => ({
-        url: "/update/user/image",
-        method: "POST",
-        credentials: "include",
+        url: "/account/profile/",
+        method: "PUT",
         body: data,
       }),
       invalidatesTags: ["user"],
+    }),
+
+    deleteAccount: build.mutation({
+      query: () => ({
+        url: "/account/profile/delete/",
+        method: "DELETE",
+      }),
+      invalidatesTags: ["auth", "user"],
     }),
   }),
 });
 
 export const {
   useGetCurrentUserQuery,
-  useUserImageUpdateMutation,
+  useUpdateUserProfileMutation,
+  useDeleteAccountMutation,
 } = userApi;

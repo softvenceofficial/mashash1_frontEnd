@@ -7,22 +7,22 @@ export const authApi = baseApi.injectEndpoints({
       query: (data) => ({
         url: "/account/login/",
         method: "POST",
-        credentials: "include",
         body: data,
       }),
-      invalidatesTags: ["auth"],
+      invalidatesTags: ["auth", "user"],
       async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
           
-          // FIX: Updated paths based on your console log response
-          dispatch(
-            storeUserInfo({
-              token: data.tokens.access,   // Correct path: data.tokens
-              refresh: data.tokens.refresh,
-              user: data.data,             // Correct path: data.data contains user info
-            }),
-          );
+          if (data.code === 200 && data.tokens) {
+            dispatch(
+              storeUserInfo({
+                token: data.tokens.access,
+                refresh: data.tokens.refresh,
+                user: data.data,
+              }),
+            );
+          }
         } catch (error) {
           console.log("Error storing user info:", error);
         }
@@ -33,16 +33,40 @@ export const authApi = baseApi.injectEndpoints({
       query: (data) => ({
         url: "/account/signup/",
         method: "POST",
-        credentials: "include",
         body: data,
       }),
+    }),
+
+    googleLogin: build.mutation({
+      query: (data) => ({
+        url: "/account/google/login/",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["auth", "user"],
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          
+          if (data.code === 200 && data.tokens) {
+            dispatch(
+              storeUserInfo({
+                token: data.tokens.access,
+                refresh: data.tokens.refresh,
+                user: data.data,
+              }),
+            );
+          }
+        } catch (error) {
+          console.log("Error storing google user info:", error);
+        }
+      },
     }),
 
     forgotPassword: build.mutation({
       query: (data) => ({
         url: "/account/password/forgot/",
         method: "POST",
-        credentials: "include",
         body: data,
       }),
     }),
@@ -51,7 +75,6 @@ export const authApi = baseApi.injectEndpoints({
       query: (data) => ({
         url: `/account/password/verify-otp/`,
         method: "POST",
-        credentials: "include",
         body: data,
       }),
     }),
@@ -60,7 +83,6 @@ export const authApi = baseApi.injectEndpoints({
       query: (data) => ({
         url: `/resend-otp`,
         method: "POST",
-        credentials: "include",
         body: data,
       }),
     }),
@@ -69,7 +91,6 @@ export const authApi = baseApi.injectEndpoints({
       query: (data) => ({
         url: `/account/password/reset/`,
         method: "POST",
-        credentials: "include",
         body: data,
       }),
     }),
@@ -78,9 +99,8 @@ export const authApi = baseApi.injectEndpoints({
       query: () => ({
         url: "/account/logout/",
         method: "POST",
-        credentials: "include",
       }),
-      invalidatesTags: ["auth"],
+      invalidatesTags: ["auth", "user"],
       async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
@@ -96,6 +116,7 @@ export const authApi = baseApi.injectEndpoints({
 export const {
   useUserLoginMutation,
   useUserSignUpMutation,
+  useGoogleLoginMutation,
   useForgotPasswordMutation,
   useVerifyOTPPasswordMutation,
   useResendOTPMutation,

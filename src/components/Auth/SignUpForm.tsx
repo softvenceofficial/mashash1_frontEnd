@@ -1,7 +1,5 @@
 import { Link } from "react-router";
-import Icon from "../common/Icon";
 import { Button } from "../ui/button";
-import google from "@/assets/svgs/google.svg";
 import {
   Form,
   FormControl,
@@ -16,6 +14,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import useSignup from "./hooks/use-signup";
+import GoogleLoginButton from "./GoogleLoginButton";
 
 export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -29,13 +28,7 @@ export default function SignUpForm() {
         <p className="text-base font-normal text-auth-foreground">
           Create your new account.
         </p>
-        <Button
-          variant="outline"
-          className="w-full mt-6 bg-transparent! border-black rounded-full h-12 hover:text-foreground"
-        >
-          <Icon src={google} className="size-5" />
-          <span className="font-medium text-black">Register with Google</span>
-        </Button>
+        <GoogleLoginButton text="Register with Google" />
       </div>
       <div className="flex w-full items-center my-5 md:my-10">
         <div className="bg-auth-border h-px w-1/2 ml-10"></div>

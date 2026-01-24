@@ -1,6 +1,4 @@
 import { Button } from "@/components/ui/button";
-import google from "@/assets/svgs/google.svg";
-import Icon from "@/components/common/Icon";
 import {
   Form,
   FormControl,
@@ -16,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "../ui/label";
 import { Link } from "react-router";
 import { Eye, EyeOff } from "lucide-react";
+import GoogleLoginButton from "./GoogleLoginButton";
 
 const SigninForm = () => {
   const [loading, setLoading] = useState(false);
@@ -28,13 +27,7 @@ const SigninForm = () => {
         <p className="text-base font-normal text-auth-foreground">
           Enter your email and password to log in
         </p>
-        <Button
-          variant="outline"
-          className="w-full mt-6 bg-transparent! border-black rounded-full h-12 hover:text-foreground"
-        >
-          <Icon src={google} className="size-5" />
-          <span className="font-medium text-black">Log in with Google</span>
-        </Button>
+        <GoogleLoginButton text="Log in with Google" />
       </div>
       <div className="flex w-full items-center my-5 md:my-10">
         <div className="bg-auth-border h-px w-1/2 ml-10"></div>
