@@ -4,16 +4,25 @@
 
 export const fetchBookContent = async (fileUrl: string): Promise<any> => {
   try {
-    // Force HTTPS to avoid Mixed Content warnings/blocks
-    const secureUrl = fileUrl.replace('http://', 'https://');
+    // In development, use proxy by converting to relative URL
+    // In production, use full HTTPS URL
+    let fetchUrl = fileUrl;
     
-    console.log('Fetching book data from:', secureUrl);
+    if (import.meta.env.DEV) {
+      // Extract path from full URL for proxy
+      const url = new URL(fileUrl.replace('http://', 'https://'));
+      fetchUrl = url.pathname; // e.g., /media/artbook_file/book_data.json
+    } else {
+      // Force HTTPS in production
+      fetchUrl = fileUrl.replace('http://', 'https://');
+    }
+    
+    console.log('Fetching book data from:', fetchUrl);
 
-    const response = await fetch(secureUrl, {
+    const response = await fetch(fetchUrl, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json',
       },
     });
 
