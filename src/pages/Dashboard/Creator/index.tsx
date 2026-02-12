@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Save, Loader2 } from "lucide-react";
 import type { PageData } from "@/components/Dashboard/Book/types";
-import { getImageUrl } from "@/lib/utils";
+import { fetchBookContent, processBookData } from "@/utils/bookDataLoader";
 
 export default function Creator() {
   const { id } = useParams();
@@ -55,42 +55,13 @@ export default function Creator() {
     const loadBookData = async () => {
       if (bookDetails?.data?.file) {
         try {
-          let fileUrl = bookDetails.data.file;
-          
-          if (!window.location.hostname.includes('localhost')) {
-            fileUrl = getImageUrl(bookDetails.data.file);
-          } else {
-            if (fileUrl && !fileUrl.startsWith('/')) {
-              fileUrl = `/${fileUrl}`;
-            }
-          }
-          
-          const response = await fetch(fileUrl);
-          
-          if (!response.ok) {
-            throw new Error('Failed to fetch book data');
-          }
-
-          const data = await response.json();
-          
-          const processedData = data.map((page: any) => ({
-            lines: page.lines || [],
-            texts: page.texts || [],
-            shapes: page.shapes || [],
-            images: (page.images || []).map((img: any) => ({
-              ...img,
-              type: 'image',
-              id: img.id || Date.now().toString() + Math.random().toString(36).substr(2, 9)
-            })),
-            stickyNotes: page.stickyNotes || [],
-            tables: page.tables || [],
-            background: page.background || null
-          }));
-          
+          const data = await fetchBookContent(bookDetails.data.file);
+          const processedData = processBookData(data);
           setLoadedPages(processedData);
+          toast.success("Book data loaded successfully!");
         } catch (err) {
           console.error("Error loading book JSON:", err);
-          toast.error("Failed to load saved book data");
+          toast.error(err instanceof Error ? err.message : "Failed to load saved book data");
         }
       }
     };
