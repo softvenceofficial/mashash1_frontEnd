@@ -264,6 +264,7 @@ export default function Creator() {
             bookId={id ? parseInt(id) : null}
             selectedStyleId={selectedStyleId}
             selectedSizeId={selectedSizeId}
+            existingImages={bookDetails?.data?.images}
           />
         </div>
         <div className="w-[63.8%]">

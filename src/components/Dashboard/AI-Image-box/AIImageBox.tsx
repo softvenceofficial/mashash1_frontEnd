@@ -24,19 +24,44 @@ const VoiceVisualizer = ({ isActive }: { isActive: boolean }) => {
   );
 };
 
+interface ApiImage {
+  id: number;
+  image: string;
+  generated_at: string;
+  book: number;
+}
+
 interface AIImageBoxProps {
   bookId: number | null;
   selectedStyleId: number;
   selectedSizeId: number;
+  existingImages?: ApiImage[];
 }
 
-const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps) => {
+const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId, existingImages = [] }: AIImageBoxProps) => {
   const [prompt, setPrompt] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [images, setImages] = useState<Array<{ url: string; prompt: string } | null>>(Array(50).fill(null));
   const [generateImage, { isLoading }] = useGenerateImageMutation();
   const recognitionRef = useRef<any>(null);
   
+  useEffect(() => {
+    if (existingImages && existingImages.length > 0) {
+      setImages(() => {
+        const newImages = Array(50).fill(null);
+        existingImages.forEach((img, index) => {
+          if (index < 50) {
+            newImages[index] = {
+              url: getImageUrl(img.image),
+              prompt: `Generated on ${new Date(img.generated_at).toLocaleDateString()}`
+            };
+          }
+        });
+        return newImages;
+      });
+    }
+  }, [existingImages]);
+
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -114,6 +139,7 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps
           return newImages;
         });
         toast.success('Image generated successfully!');
+        setPrompt('');
       }
     } catch (err) {
       console.error(err);
