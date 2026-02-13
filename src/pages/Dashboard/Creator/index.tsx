@@ -25,8 +25,8 @@ export default function Creator() {
   const [activeTool, setActiveTool] = useState("Book Size");
   const [activeSubTool, setActiveSubTool] = useState("select");
   const [selectedBookSize, setSelectedBookSize] = useState("6 x 4");
-  const [selectedStyleId, setSelectedStyleId] = useState(1);
-  const selectedSizeId = 6;
+  const [selectedStyleId, setSelectedStyleId] = useState(2);
+  const [selectedSizeId, setSelectedSizeId] = useState(6);
   const [strokeColor, setStrokeColor] = useState(getToolColor("Text"));
   const [strokeWidth, setStrokeWidth] = useState(5);
   const [fontSize, setFontSize] = useState(24);
@@ -273,6 +273,8 @@ export default function Creator() {
             activeSubTool={activeSubTool}
             onToolChange={setActiveSubTool}
             onBookSizeChange={setSelectedBookSize}
+            selectedSizeId={selectedSizeId}
+            onSizeSelect={setSelectedSizeId}
             onStrokeColorChange={handleStrokeColorChange}
             onStrokeWidthChange={setStrokeWidth}
             onFontSizeChange={setFontSize}

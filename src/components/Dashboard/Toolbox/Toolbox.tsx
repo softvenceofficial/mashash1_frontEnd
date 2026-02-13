@@ -141,6 +141,8 @@ interface ToolboxProps {
   activeTool: string;
   activeSubTool?: string;
   onBookSizeChange?: (size: string) => void;
+  selectedSizeId?: number;
+  onSizeSelect?: (id: number) => void;
   onStrokeColorChange?: (color: string) => void;
   onStrokeWidthChange?: (width: number) => void;
   onFontSizeChange?: (size: number) => void;
@@ -183,6 +185,8 @@ const Toolbox = ({
   activeTool, 
   activeSubTool,
   onBookSizeChange,
+  selectedSizeId = 6,
+  onSizeSelect,
   onStrokeColorChange,
   onStrokeWidthChange,
   onFontSizeChange,
@@ -212,7 +216,7 @@ const Toolbox = ({
   selectedTableId,
   onShapePropertiesChange,
 }: ToolboxProps) => {
-  const [selectedBook, setSelectedBook] = useState(2);
+  const [selectedBook, setSelectedBook] = useState(selectedSizeId || 6);
   const [fontSize, setFontSize] = useState(24);
   const [fontFamily, setFontFamily] = useState('Roboto');
   const [activeFormats, setActiveFormats] = useState<string[]>([]);
@@ -261,6 +265,13 @@ const Toolbox = ({
   const [internalDrawingMode, setInternalDrawingMode] = useState<DrawingMode>(DrawingMode.BRUSH);
   const currentDrawingMode = drawingMode ?? internalDrawingMode;
   const [brushOpacity, setBrushOpacity] = useState(100);
+
+  // Sync selectedBook with selectedSizeId prop
+  useEffect(() => {
+    if (selectedSizeId) {
+      setSelectedBook(selectedSizeId);
+    }
+  }, [selectedSizeId]);
 
   // Sync table properties when they change from Book component
   useEffect(() => {
@@ -362,6 +373,7 @@ const Toolbox = ({
   const handleBookSelect = (bookId: number, label: string) => {
     setSelectedBook(bookId);
     onBookSizeChange?.(label);
+    onSizeSelect?.(bookId);
   };
 
   // const handleShapeSelect = (shape: string) => {

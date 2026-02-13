@@ -115,10 +115,23 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId, existingImages = 
   };
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim()) {
+      toast.error('Please enter a prompt');
+      return;
+    }
 
     if (!bookId) {
       toast.error('Please save your artbook before generating images.');
+      return;
+    }
+
+    if (!selectedStyleId) {
+      toast.error('Please select a style from the right panel');
+      return;
+    }
+
+    if (!selectedSizeId) {
+      toast.error('Please select a book size from the toolbox');
       return;
     }
 
@@ -141,9 +154,10 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId, existingImages = 
         toast.success('Image generated successfully!');
         setPrompt('');
       }
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to generate image');
+    } catch (err: any) {
+      console.error('Generation error:', err);
+      const errorMessage = err?.data?.message || err?.message || 'Failed to generate image';
+      toast.error(errorMessage);
     }
   };
 

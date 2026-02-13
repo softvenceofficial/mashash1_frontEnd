@@ -1,5 +1,6 @@
 import { useGetStylesQuery } from '@/redux/endpoints/bookApi';
 import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface AIImageTypeProps {
   onStyleSelect: (styleId: number) => void;
@@ -8,6 +9,13 @@ interface AIImageTypeProps {
 
 const AIImageType = ({ onStyleSelect, selectedStyleId }: AIImageTypeProps) => {
   const { data: styleData, isLoading } = useGetStylesQuery();
+
+  // Set default style when data loads
+  useEffect(() => {
+    if (styleData?.data && styleData.data.length > 0 && !selectedStyleId) {
+      onStyleSelect(styleData.data[0].id);
+    }
+  }, [styleData, selectedStyleId, onStyleSelect]);
 
   return (
     <div className="w-full rounded-xl flex flex-col items-center py-4 px-3 select-none" style={{height: "calc(100vh - 100px)"}}>
