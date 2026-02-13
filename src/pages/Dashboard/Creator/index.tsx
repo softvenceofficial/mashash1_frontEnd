@@ -45,6 +45,7 @@ export default function Creator() {
     isFillTransparent: false,
   });
   const [loadedPages, setLoadedPages] = useState<PageData[] | null>(null);
+  const [targetColorPage, setTargetColorPage] = useState<'left' | 'right'>('left');
   const bookRef = useRef<any>(null);
 
   const [createBook, { isLoading: isSaving }] = useCreateBookMutation();
@@ -239,6 +240,33 @@ export default function Creator() {
   const handleShapePropertiesChange = (properties: any) => {
     setShapeProperties((prev) => ({ ...prev, ...properties }));
   };
+  
+  // INDIVIDUAL PAGE COLOR HANDLER (Requirement 4)
+  const handleTargetColorPageChange = (page: 'left' | 'right') => {
+    setTargetColorPage(page);
+  };
+  
+  // Apply color to the correct page based on targetColorPage
+  const handleStrokeColorChangeWithPage = (color: string) => {
+    setStrokeColor(color);
+    updateToolColor(activeTool, color);
+    
+    // If Color tool is active, apply to the selected page
+    if (activeTool === 'Color' && bookRef.current?.updatePageData) {
+      const currentIdx = bookRef.current.currentPageIndex || 0;
+      
+      // Determine which page to color
+      let targetPageIndex = currentIdx;
+      if (targetColorPage === 'right' && currentIdx % 2 !== 0) {
+        // If we're on an odd page (left page of spread) and want to color right
+        targetPageIndex = currentIdx + 1;
+      }
+      
+      if (targetPageIndex < (bookRef.current.getPageData?.()?.length || 0)) {
+        bookRef.current.updatePageData(targetPageIndex, 'background', color);
+      }
+    }
+  };
 
   return (
     <div className="relative">
@@ -275,7 +303,7 @@ export default function Creator() {
             onBookSizeChange={setSelectedBookSize}
             selectedSizeId={selectedSizeId}
             onSizeSelect={setSelectedSizeId}
-            onStrokeColorChange={handleStrokeColorChange}
+            onStrokeColorChange={handleStrokeColorChangeWithPage}
             onStrokeWidthChange={setStrokeWidth}
             onFontSizeChange={setFontSize}
             onFontFamilyChange={setFontFamily}
@@ -300,6 +328,7 @@ export default function Creator() {
             tableProperties={tableProperties}
             selectedTableId={selectedTableId}
             onShapePropertiesChange={handleShapePropertiesChange}
+            onTargetColorPageChange={handleTargetColorPageChange}
           />
           <Book
             onToolChange={(tool, subTool) => {
@@ -323,6 +352,7 @@ export default function Creator() {
             shapeStrokeWidth={shapeProperties.strokeWidth}
             isFillTransparent={shapeProperties.isFillTransparent}
             initialData={loadedPages}
+            targetColorPage={targetColorPage}
           />
         </div>
         <div

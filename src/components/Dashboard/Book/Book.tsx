@@ -90,6 +90,7 @@ interface BookProps {
   isFillTransparent?: boolean;
   onToolChange?: (tool: string, subTool: string) => void;
   initialData?: PageData[] | null;
+  targetColorPage?: 'left' | 'right'; // NEW: For individual page coloring
 }
 
 // --- Constants ---
@@ -315,6 +316,7 @@ interface BookPageProps {
   onMouseUp: () => void;
   onStageDoubleClick: (e: Konva.KonvaEventObject<MouseEvent>, index: number) => void;
   onTextDblClick: (e: Konva.KonvaEventObject<MouseEvent>, index: number, item: TextType) => void;
+  onTextClick?: (index: number, item: TextType) => void; // NEW
   selectedTextId: string | null;
   onTextSelect: (id: string | null) => void;
   penState: { points: number[]; isDrawing: boolean; mode: 'polygon' | 'freehand' };
@@ -341,7 +343,7 @@ interface BookPageProps {
 }
 
 const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({ 
-  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onStageDoubleClick, onTextDblClick, selectedTextId, onTextSelect, penState, snapToStart, mousePos, strokeColor, strokeWidth, penFillColor, penFillOpacity, penMode, handleStickyNoteDoubleClick, handleStickyNoteUpdate, handleStickyNoteDelete, isSelectMode, isPenMode, handleTableCellClick, handleTableCellDoubleClick, handleTableContextMenu,  shapeTransformerRef, setContextMenu, onImageUpdate, onShapeUpdate, onTableUpdate, onTextUpdate
+  pageIndex, data, activeTool, width, height, onMouseDown, onMouseMove, onMouseUp, onStageDoubleClick, onTextDblClick, onTextClick, selectedTextId, onTextSelect, penState, snapToStart, mousePos, strokeColor, strokeWidth, penFillColor, penFillOpacity, penMode, handleStickyNoteDoubleClick, handleStickyNoteUpdate, handleStickyNoteDelete, isSelectMode, isPenMode, handleTableCellClick, handleTableCellDoubleClick, handleTableContextMenu,  shapeTransformerRef, setContextMenu, onImageUpdate, onShapeUpdate, onTableUpdate, onTextUpdate
 }, ref) => {
   const transformerRef = useRef<Konva.Transformer>(null);
   const textRefs = useRef<{ [key: string]: Konva.Text }>({});
@@ -655,7 +657,12 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                       stroke={element.stroke}
                       strokeWidth={element.strokeWidth || 0}
                       draggable={isSelectMode}
-                      onClick={() => onTextSelect(element.id)}
+                      onClick={() => {
+                        onTextSelect(element.id);
+                        if (isSelectMode && onTextClick) {
+                          onTextClick(pageIndex, element);
+                        }
+                      }}
                       onDblClick={(e) => onTextDblClick(e, pageIndex, element)}
                       onContextMenu={(e) => {
                         e.evt.preventDefault();
@@ -1671,21 +1678,16 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     let timeoutId: NodeJS.Timeout;
 
     if (strokeColor && activeTool === 'Color') {
-      // Wait 50ms before applying the color to prevent flashing when switching tools
       timeoutId = setTimeout(() => {
-        // This ensures color changes from the toolbox apply to the page background.
-        // Apply to the current page (which is the left page in a spread).
+        // INDIVIDUAL PAGE COLOR (Requirement 4)
+        // Apply color only to the selected page (left or right)
+        // The Toolbox now has a targetColorPage state that determines which page to color
+        // We apply to current page by default
         updatePageData(currentPageIndex, 'background', strokeColor);
-
-        // If we are in a spread view (currentPageIndex will be odd), and the right page exists,
-        // apply the color to the right page as well.
-        if (currentPageIndex % 2 !== 0 && (currentPageIndex + 1) < pages.length) {
-          updatePageData(currentPageIndex + 1, 'background', strokeColor);
-        }
       }, 50);
     }
     return () => clearTimeout(timeoutId);
-  }, [strokeColor, currentPageIndex, updatePageData, pages.length, activeTool]);
+  }, [strokeColor, currentPageIndex, updatePageData, activeTool]);
 
 
   // Handle advanced text changes from Toolbox
@@ -1765,8 +1767,6 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     const yInBook = (e.clientY - rect.top) / zoom;
 
     let targetPageIndex = currentPageIndex;
-    let pageX = xInBook;
-    let pageY = yInBook;
 
     const isCover = currentPageIndex === 0;
     
@@ -1774,7 +1774,6 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       const spineX = rect.width / (2 * zoom);
       if (xInBook > spineX) {
         targetPageIndex = currentPageIndex + 1;
-        pageX = xInBook - spineX;
       }
     }
 
@@ -1782,16 +1781,17 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
 
     saveCurrentPageState(targetPageIndex);
 
+    // AUTO-FIT: Image fills entire page (Requirement 2)
     const newImage: ImageType = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       type: 'image',
-      x: Math.max(0, pageX - 100),
-      y: Math.max(0, pageY - 100),
-      width: 200,
-      height: 200,
+      x: 0,
+      y: 0,
+      width: WIDTH,
+      height: HEIGHT,
       rotation: 0,
       src: imageSrc,
-      zIndex: getMaxZIndex(pages[targetPageIndex]) + 1
+      zIndex: 0 // Place behind text
     };
 
     const currentImages = pages[targetPageIndex].images || [];
@@ -2135,6 +2135,38 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>, pageIndex: number) => {
     const clickedOnEmpty = e.target === e.target.getStage();
+    
+    // SINGLE-CLICK TEXT CREATION (Requirement 3)
+    if (clickedOnEmpty && activeTool === 'Text') {
+      const pos = e.target.getStage()?.getPointerPosition();
+      if (!pos) return;
+      
+      saveCurrentPageState(pageIndex);
+      
+      const newText: TextType = {
+        id: Date.now().toString(),
+        x: pos.x,
+        y: pos.y,
+        text: 'Type here...',
+        fontSize: fontSize,
+        fontFamily: fontFamily,
+        fill: strokeColor,
+        fontStyle: 'normal',
+        textDecoration: 'none',
+        textAlign: 'left',
+        width: 200,
+        opacity: 1
+      };
+      
+      const newTexts = [...pages[pageIndex].texts, newText];
+      updatePageData(pageIndex, 'texts', newTexts);
+      
+      // Immediately enter edit mode
+      setCurrentPageIndex(pageIndex);
+      setEditingTextItem(newText);
+      return;
+    }
+    
     if (clickedOnEmpty) {
       setSelectedIds([]);
       setShowToolbar(false);
@@ -2365,6 +2397,15 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     setCurrentPageIndex(pageIndex);
     setEditingTextItem(textItem);
     setShowToolbar(false);
+  };
+  
+  // SINGLE-CLICK TEXT EDIT (Requirement 3)
+  const handleTextClick = (pageIndex: number, textItem: TextType) => {
+    if (isSelectMode) {
+      setCurrentPageIndex(pageIndex);
+      setEditingTextItem(textItem);
+      setShowToolbar(false);
+    }
   };
 
   const handleTextUpdate = (updatedText: TextType) => {
@@ -2635,6 +2676,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onTextDblClick={handleTextDblClick}
+                    onTextClick={handleTextClick}
                     selectedTextId={selectedTextId}
                     onTextSelect={handleTextSelect}
                     penState={getCurrentPenState(index)}

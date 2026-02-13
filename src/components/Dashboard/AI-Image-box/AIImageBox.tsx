@@ -267,9 +267,6 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId, existingImages = 
                     onDragStart={(e) => handleDragStart(e, img.url)}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-grab active:cursor-grabbing"
                   />
-                  <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3">
-                    <p className="text-xs text-foreground line-clamp-2">{img.prompt}</p>
-                  </div>
                 </>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">

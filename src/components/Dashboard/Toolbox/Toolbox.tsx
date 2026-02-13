@@ -179,6 +179,7 @@ interface ToolboxProps {
   };
   selectedTableId?: string | null;
   onShapePropertiesChange?: (properties: any) => void;
+  onTargetColorPageChange?: (page: 'left' | 'right') => void; // NEW
 }
 
 const Toolbox = ({ 
@@ -215,6 +216,7 @@ const Toolbox = ({
   tableProperties,
   selectedTableId,
   onShapePropertiesChange,
+  onTargetColorPageChange,
 }: ToolboxProps) => {
   const [selectedBook, setSelectedBook] = useState(selectedSizeId || 6);
   const [fontSize, setFontSize] = useState(24);
@@ -242,6 +244,9 @@ const Toolbox = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageTargetPage, setImageTargetPage] = useState<'left' | 'right'>('left');
   const [showPageSelection, setShowPageSelection] = useState(false);
+  
+  // INDIVIDUAL PAGE COLOR (Requirement 4)
+  const [targetColorPage, setTargetColorPage] = useState<'left' | 'right'>('left');
 
   // Fetch Book Sizes from API
   const { data: bookSizesData, isLoading: isSizesLoading } = useGetBookSizesQuery();
@@ -679,6 +684,42 @@ const Toolbox = ({
           <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
         </div>
         <Divider />
+        
+        {/* PAGE SELECTOR (Requirement 4) */}
+        <div className="flex flex-col gap-2 mr-4">
+          <h3 className="text-white text-xs font-medium tracking-wide">Target Page</h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setTargetColorPage('left');
+                onTargetColorPageChange?.('left');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                targetColorPage === 'left'
+                  ? 'bg-indigo-600 text-white shadow-lg'
+                  : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+              }`}
+            >
+              Left Page
+            </button>
+            <button
+              onClick={() => {
+                setTargetColorPage('right');
+                onTargetColorPageChange?.('right');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                targetColorPage === 'right'
+                  ? 'bg-indigo-600 text-white shadow-lg'
+                  : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+              }`}
+            >
+              Right Page
+            </button>
+          </div>
+        </div>
+        
+        <Divider />
+        
         <div className="relative group cursor-pointer" onClick={() => setShowColorPicker(!showColorPicker)}>
           <div className="w-16 h-16 rounded-full shadow-lg border-2 border-white/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
             <div className="absolute inset-0 bg-[conic-gradient(from_90deg,red,yellow,lime,aqua,blue,magenta,red)]" />
