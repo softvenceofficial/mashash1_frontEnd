@@ -1749,39 +1749,16 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   };
 
   // --- Drag and Drop Logic ---
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  const handlePageDrop = (e: React.DragEvent<HTMLDivElement>, pageIndex: number) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  };
+    e.stopPropagation();
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const imageSrc = e.dataTransfer.getData('imageSrc');
-    if (!imageSrc || !bookRef.current) return;
-
-    const bookNode = (bookRef.current as any).el as HTMLElement;
-    if (!bookNode) return;
-
-    const rect = bookNode.getBoundingClientRect();
-    const xInBook = (e.clientX - rect.left) / zoom;
-    const yInBook = (e.clientY - rect.top) / zoom;
-
-    let targetPageIndex = currentPageIndex;
-
-    const isCover = currentPageIndex === 0;
+    const imageUrl = e.dataTransfer.getData('image');
     
-    if (!isCover) {
-      const spineX = rect.width / (2 * zoom);
-      if (xInBook > spineX) {
-        targetPageIndex = currentPageIndex + 1;
-      }
-    }
+    if (!imageUrl) return;
 
-    if (targetPageIndex >= pages.length) return;
+    saveCurrentPageState(pageIndex);
 
-    saveCurrentPageState(targetPageIndex);
-
-    // AUTO-FIT: Image fills entire page (Requirement 2)
     const newImage: ImageType = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       type: 'image',
@@ -1790,12 +1767,12 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       width: WIDTH,
       height: HEIGHT,
       rotation: 0,
-      src: imageSrc,
-      zIndex: 0 // Place behind text
+      src: imageUrl,
+      zIndex: 10
     };
 
-    const currentImages = pages[targetPageIndex].images || [];
-    updatePageData(targetPageIndex, 'images', [...currentImages, newImage]);
+    const currentImages = pages[pageIndex].images || [];
+    updatePageData(pageIndex, 'images', [...currentImages, newImage]);
   };
 
   // --- Image Upload Logic ---
@@ -2523,8 +2500,6 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       onMouseDown={handleContainerMouseDown}
       onMouseMove={handleContainerMouseMove}
       onMouseUp={handleContainerMouseUp}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
     >
       
       {/* Undo/Redo Controls */}
@@ -2663,45 +2638,50 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
             disableFlipByClick={true} 
             style={{}}        >
             {pages.map((pageData, index) => (
-                <BookPage 
+                <div
                     key={index}
-                    pageIndex={index}
-                    data={pageData}
-                    activeTool={activeTool}
-                    isSelectMode={isSelectMode}
-                    isPenMode={isPenMode}
-                    width={WIDTH}
-                    height={HEIGHT}
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onTextDblClick={handleTextDblClick}
-                    onTextClick={handleTextClick}
-                    selectedTextId={selectedTextId}
-                    onTextSelect={handleTextSelect}
-                    penState={getCurrentPenState(index)}
-                    snapToStart={snapToStart}
-                    mousePos={mousePos}
-                    strokeColor={strokeColor}
-                    strokeWidth={strokeWidth}
-                    penFillColor={penFillColor}
-                    penFillOpacity={penFillOpacity}
-                    penMode={penMode}
-                    onStageDoubleClick={handleStageDoubleClick}
-                    handleStickyNoteDoubleClick={handleStickyNoteDoubleClick}
-                    handleStickyNoteUpdate={handleStickyNoteUpdate}
-                    handleStickyNoteDelete={handleStickyNoteDelete}
-                    handleTableCellClick={handleTableCellClick}
-                    handleTableCellDoubleClick={handleTableCellDoubleClick}
-                    handleTableContextMenu={handleTableContextMenu}
-                    pages={pages}
-                    shapeTransformerRef={shapeTransformerRef}
-                    setContextMenu={setContextMenu}
-                    onImageUpdate={handleImageUpdate}
-                    onShapeUpdate={handleShapeUpdate}
-                    onTableUpdate={handleTableUpdate}
-                    onTextUpdate={handleDirectTextUpdate}
-                />
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handlePageDrop(e, index)}
+                >
+                    <BookPage 
+                        pageIndex={index}
+                        data={pageData}
+                        activeTool={activeTool}
+                        isSelectMode={isSelectMode}
+                        isPenMode={isPenMode}
+                        width={WIDTH}
+                        height={HEIGHT}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onTextDblClick={handleTextDblClick}
+                        onTextClick={handleTextClick}
+                        selectedTextId={selectedTextId}
+                        onTextSelect={handleTextSelect}
+                        penState={getCurrentPenState(index)}
+                        snapToStart={snapToStart}
+                        mousePos={mousePos}
+                        strokeColor={strokeColor}
+                        strokeWidth={strokeWidth}
+                        penFillColor={penFillColor}
+                        penFillOpacity={penFillOpacity}
+                        penMode={penMode}
+                        onStageDoubleClick={handleStageDoubleClick}
+                        handleStickyNoteDoubleClick={handleStickyNoteDoubleClick}
+                        handleStickyNoteUpdate={handleStickyNoteUpdate}
+                        handleStickyNoteDelete={handleStickyNoteDelete}
+                        handleTableCellClick={handleTableCellClick}
+                        handleTableCellDoubleClick={handleTableCellDoubleClick}
+                        handleTableContextMenu={handleTableContextMenu}
+                        pages={pages}
+                        shapeTransformerRef={shapeTransformerRef}
+                        setContextMenu={setContextMenu}
+                        onImageUpdate={handleImageUpdate}
+                        onShapeUpdate={handleShapeUpdate}
+                        onTableUpdate={handleTableUpdate}
+                        onTextUpdate={handleDirectTextUpdate}
+                    />
+                </div>
             ))}
         </HTMLFlipBook>
       </div>

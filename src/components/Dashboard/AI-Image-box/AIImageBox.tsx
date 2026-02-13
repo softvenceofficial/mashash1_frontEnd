@@ -171,7 +171,7 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId, existingImages = 
   
 
   const handleDragStart = (e: React.DragEvent<HTMLImageElement>, url: string) => {
-    e.dataTransfer.setData('imageSrc', url);
+    e.dataTransfer.setData('image', url);
     e.dataTransfer.effectAllowed = 'copy';
   };
 
