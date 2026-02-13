@@ -32,33 +32,23 @@ import {
   ZoomIn,
   ZoomOut,
   RectangleHorizontal,
+  Loader2,
 } from 'lucide-react';
 import { SketchPicker } from 'react-color';
 import { cn } from '@/lib/utils';
-import book1 from "@/assets/images/Books/5x7.png";
-import book2 from "@/assets/images/Books/6x4.png";
-import book3 from "@/assets/images/Books/6x8.png";
-import book4 from "@/assets/images/Books/6x9.png";
-import book5 from "@/assets/images/Books/7x10.png";
-import book6 from "@/assets/images/Books/8.5x11.png";
-import book7 from "@/assets/images/Books/8x10.png";
-import book8 from "@/assets/images/Books/12x9.png";
-import book9 from "@/assets/images/Books/Square.png";
 import { Button } from '@/components/ui/button';
 import BrushIcon from '@/assets/icons/BrushIcon.svg';
 import paint_bucket_icon from '@/assets/icons/paint-bucket-icon.svg';
 import eraser_color_icon from '@/assets/icons/eraser-color-icon.svg';
-// icons for the tools
 import select from '@/assets/icons/select.svg';
 import hand from '@/assets/icons/hand.svg';
 import import_image from '@/assets/icons/import_image.svg';
 import Pen_tool from '@/assets/icons/Pen_tool.svg';
 import Sticky_note from '@/assets/icons/Sticky_note.svg';
 import TableIcon from '@/assets/icons/table.svg';
-// import zoom_lens from '@/assets/icons/zoom_lens.svg';
-// icons for the tools
 import { ReactSVG } from 'react-svg';
 import PageSelectionPopup from '../PageSelectionPopup';
+import { useGetBookSizesQuery } from '@/redux/endpoints/bookApi';
 
 export const DrawingMode = {
   BRUSH: 'brush',
@@ -67,19 +57,6 @@ export const DrawingMode = {
 } as const;
 
 export type DrawingMode = typeof DrawingMode[keyof typeof DrawingMode];
-
-// This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
-const BOOK_SIZES = [
-  { id: 1, label: "5 x 7", image: book1 },
-  { id: 2, label: "6 x 4", image: book2 },
-  { id: 3, label: "6 x 8", image: book3 },
-  { id: 4, label: "6 x 9", image: book4 },
-  { id: 5, label: "7 x 10", image: book5 },
-  { id: 6, label: "8.5 x 11", image: book6 },
-  { id: 7, label: "8 x 10", image: book7 },
-  { id: 8, label: "12 x 9", image: book8 },
-  { id: 9, label: "Square", image: book9 },
-];
 
 const DRAWING_MODE_CONFIG = {
   [DrawingMode.BRUSH]: {
@@ -262,7 +239,10 @@ const Toolbox = ({
   const [imageTargetPage, setImageTargetPage] = useState<'left' | 'right'>('left');
   const [showPageSelection, setShowPageSelection] = useState(false);
 
-  // Pen Tool specific states
+  // Fetch Book Sizes from API
+  const { data: bookSizesData, isLoading: isSizesLoading } = useGetBookSizesQuery();
+
+  // Pen tool specific states
   const [penMode, setPenMode] = useState<'polygon' | 'freehand'>('polygon');
   const [penFillColor, setPenFillColor] = useState('rgba(255, 255, 255, 0)');
   const [penFillOpacity, setPenFillOpacity] = useState(0);
@@ -488,34 +468,40 @@ const Toolbox = ({
 
   const renderBookSizePanel = () => (
     <div className="flex items-center justify-around w-full gap-4 px-2">
-      {BOOK_SIZES.map((book) => (
-        <div
-          key={book.id}
-          onClick={() => handleBookSelect(book.id, book.label)}
-          className={cn(
-            "cursor-pointer transition-all duration-300 relative group",
-            selectedBook === book.id ? "scale-105" : "opacity-70 hover:opacity-100 hover:scale-102"
-          )}
-        >
-          <div className={cn(
-            "absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] rounded-lg border border-gray-500 bg-white/5 z-0 transition-opacity duration-300 w-full h-[90px] px-1.5 box-content",
-            selectedBook === book.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-          )} />
-          <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
-            <div className="w-full h-full">
-              <img className="w-auto h-[80px] object-cover" src={book.image} alt="" />
-            </div>
+      {isSizesLoading ? (
+        <div className="w-full flex justify-center py-4">
+          <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+        </div>
+      ) : (
+        bookSizesData?.data?.map((book) => (
+          <div
+            key={book.id}
+            onClick={() => handleBookSelect(book.id, book.name)}
+            className={cn(
+              "cursor-pointer transition-all duration-300 relative group",
+              selectedBook === book.id ? "scale-105" : "opacity-70 hover:opacity-100 hover:scale-102"
+            )}
+          >
             <div className={cn(
-              "text-center absolute top-[50%] left-[50%] w-max translate-x-[-50%] translate-y-[-50%] transition-all duration-300",
-              selectedBook === book.id ? "opacity-100 scale-100" : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"
-            )}>
-              <p className="text-center text-indigo-50 text-2xl font-medium font-Inter [text-shadow:_0px_4px_4px_rgb(177_177_177_/_0.34)]">
-                {book.label}
-              </p>
+              "absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] rounded-lg border border-gray-500 bg-white/5 z-0 transition-opacity duration-300 w-full h-[90px] px-1.5 box-content",
+              selectedBook === book.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            )} />
+            <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
+              <div className="w-full h-full">
+                <img className="w-auto h-[80px] object-cover" src={book.image} alt={book.name} />
+              </div>
+              <div className={cn(
+                "text-center absolute top-[50%] left-[50%] w-max translate-x-[-50%] translate-y-[-50%] transition-all duration-300",
+                selectedBook === book.id ? "opacity-100 scale-100" : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"
+              )}>
+                <p className="text-center text-indigo-50 text-2xl font-medium font-Inter [text-shadow:_0px_4px_4px_rgb(177_177_177_/_0.34)]">
+                  {book.name}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   );
 

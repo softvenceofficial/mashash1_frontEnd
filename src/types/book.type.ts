@@ -37,3 +37,12 @@ export interface ISize {
   width: number;
   height: number;
 }
+
+export interface IBookSize {
+  id: number;
+  name: string;
+  size: string;
+  aspect_ratio: string;
+  description: string;
+  image: string;
+}

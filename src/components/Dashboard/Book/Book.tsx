@@ -94,14 +94,14 @@ interface BookProps {
 
 // --- Constants ---
 const BOOK_SIZE_MAP: Record<string, { width: number; height: number }> = {
-  '5 x 7': { width: 350, height: 490 },
-  '6 x 4': { width: 400, height: 550 },
-  '6 x 8': { width: 420, height: 560 },
-  '6 x 9': { width: 420, height: 630 },
-  '1 x 10': { width: 280, height: 700 },
-  '8.5 x 11': { width: 476, height: 616 },
-  '8 x 10': { width: 560, height: 700 },
-  '12 x 9': { width: 672, height: 504 },
+  '5 X 7': { width: 350, height: 490 },
+  '6 X 4': { width: 400, height: 550 },
+  '6 X 8': { width: 420, height: 560 },
+  '6 X 9': { width: 420, height: 630 },
+  '7 X 10': { width: 280, height: 700 },
+  '8.5 X 11': { width: 476, height: 616 },
+  '8 X 10': { width: 560, height: 700 },
+  '12 X 9': { width: 672, height: 504 },
   'Square': { width: 500, height: 500 }
 };
 
@@ -810,7 +810,7 @@ BookPage.displayName = 'BookPage';
 
 // --- Main Book Component ---
 
-const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeColor = '#000000', strokeWidth = 5, selectedBookSize = '6 x 4', fontSize = 16, fontFamily = 'Roboto', onAdvancedTextChange, drawingMode, zoom: externalZoom, onZoomChange, selectedShape = 'rectangle', shapeFillColor = '#1e3a8a', shapeStrokeColor = '#60a5fa', shapeStrokeWidth = 2, isFillTransparent = false, onToolChange, initialData }: BookProps, ref: any) => {
+const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeColor = '#000000', strokeWidth = 5, selectedBookSize = '6 X 4', fontSize = 16, fontFamily = 'Roboto', onAdvancedTextChange, drawingMode, zoom: externalZoom, onZoomChange, selectedShape = 'rectangle', shapeFillColor = '#1e3a8a', shapeStrokeColor = '#60a5fa', shapeStrokeWidth = 2, isFillTransparent = false, onToolChange, initialData }: BookProps, ref: any) => {
   const [pages, setPages] = useState<PageData[]>(initialData || INITIAL_PAGES);
   const [currentZoom, setCurrentZoom] = useState(externalZoom ?? 1);
   const bookContainerRef = useRef<HTMLDivElement>(null);
@@ -849,7 +849,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     col: number;
   } | null>(null);
   
-  const bookDimensions = BOOK_SIZE_MAP[selectedBookSize] || BOOK_SIZE_MAP['6 x 4'];
+  const bookDimensions = BOOK_SIZE_MAP[selectedBookSize] || BOOK_SIZE_MAP['6 X 4'];
   const WIDTH = bookDimensions.width;
   const HEIGHT = bookDimensions.height;
 

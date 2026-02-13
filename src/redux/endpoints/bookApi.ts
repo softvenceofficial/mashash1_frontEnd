@@ -1,5 +1,5 @@
 import { baseApi } from "../api";
-import type { IBook, IBookDetails, IStyle, IGeneratedImage, IApiResponse } from "@/types/book.type";
+import type { IBook, IBookDetails, IStyle, IGeneratedImage, IApiResponse, IBookSize } from "@/types/book.type";
 
 export const bookApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
@@ -91,6 +91,13 @@ export const bookApi = baseApi.injectEndpoints({
         body: data,
       }),
     }),
+
+    getBookSizes: build.query<IApiResponse<IBookSize[]>, void>({
+      query: () => ({
+        url: "/book-size/",
+        method: "GET",
+      }),
+    }),
   }),
 });
 
@@ -106,4 +113,5 @@ export const {
   useDeleteBookPermanentlyMutation,
   useGetStylesQuery,
   useGenerateImageMutation,
+  useGetBookSizesQuery,
 } = bookApi;
