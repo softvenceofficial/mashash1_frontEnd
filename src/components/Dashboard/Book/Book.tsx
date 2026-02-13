@@ -1694,6 +1694,30 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   useEffect(() => {
     if (onAdvancedTextChange && selectedTextId) {
       const handleAdvancedChange = (property: string, value: any) => {
+        if (property === 'importText') {
+          // Create new text element with imported text
+          const newText: TextType = {
+            id: Date.now().toString(),
+            x: 50,
+            y: 50,
+            text: value,
+            fontSize: fontSize,
+            fontFamily: fontFamily,
+            fill: strokeColor,
+            fontStyle: 'normal',
+            textDecoration: 'none',
+            textAlign: 'left',
+            width: WIDTH - 100,
+            opacity: 1
+          };
+          
+          saveCurrentPageState();
+          const newTexts = [...pages[currentPageIndex].texts, newText];
+          updatePageData(currentPageIndex, 'texts', newTexts);
+          setSelectedIds([newText.id]);
+          return;
+        }
+
         const textItem = pages[currentPageIndex]?.texts.find(t => t.id === selectedTextId);
         if (!textItem) return;
 
@@ -1725,7 +1749,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       // Store the handler so Toolbox can call it
       (window as any).__handleAdvancedTextChange = handleAdvancedChange;
     }
-  }, [selectedTextId, currentPageIndex, pages, onAdvancedTextChange]);
+  }, [selectedTextId, currentPageIndex, pages, onAdvancedTextChange, fontSize, fontFamily, strokeColor, WIDTH, saveCurrentPageState, updatePageData]);
 
   // --- Hand Tool Logic ---
   const handleContainerMouseDown = (e: React.MouseEvent) => {

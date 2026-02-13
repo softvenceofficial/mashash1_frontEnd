@@ -242,6 +242,7 @@ const Toolbox = ({
   const [, setIsBrushMode] = useState(true);
   const [textTransform, setTextTransform] = useState<'none' | 'uppercase' | 'lowercase' | 'capitalize'>('none');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textFileInputRef = useRef<HTMLInputElement>(null);
   const [imageTargetPage, setImageTargetPage] = useState<'left' | 'right'>('left');
   const [showPageSelection, setShowPageSelection] = useState(false);
   
@@ -1236,6 +1237,21 @@ const Toolbox = ({
       if (e.target.value) e.target.value = '';
     };
 
+    const handleTextFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file && file.type === 'text/plain') {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const text = event.target?.result as string;
+          if (text && onAdvancedTextChange) {
+            onAdvancedTextChange('importText', text);
+          }
+        };
+        reader.readAsText(file);
+      }
+      if (e.target.value) e.target.value = '';
+    };
+
     return (
       <>
         <PageSelectionPopup
@@ -1252,6 +1268,14 @@ const Toolbox = ({
           className="hidden" 
           accept="image/*"
           onChange={handleFileChange}
+        />
+
+        <input 
+          type="file" 
+          ref={textFileInputRef} 
+          className="hidden" 
+          accept=".txt"
+          onChange={handleTextFileChange}
         />
 
         <div 
@@ -1290,6 +1314,16 @@ const Toolbox = ({
             >
               <img src={import_image} alt="Import" className="w-10 h-10" />
               <span className="text-[9px] text-gray-400 group-hover:text-white">Image</span>
+            </div>
+
+          <div
+              className="flex flex-col items-center gap-1 cursor-pointer group p-2 rounded-md hover:bg-white/5 min-w-[100px]"
+              onClick={() => textFileInputRef.current?.click()}
+            >
+              <div className="w-10 h-10 flex items-center justify-center">
+                <span className="text-2xl">📄</span>
+              </div>
+              <span className="text-[9px] text-gray-400 group-hover:text-white">Text</span>
             </div>
         </div>
         
