@@ -660,9 +660,6 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                       onClick={(e) => {
                         e.cancelBubble = true;
                         onTextSelect(element.id);
-                        if ((isSelectMode || activeTool === 'Text') && onTextClick) {
-                          onTextClick(pageIndex, element);
-                        }
                       }}
                       onDblClick={(e) => onTextDblClick(e, pageIndex, element)}
                       onContextMenu={(e) => {
@@ -942,7 +939,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   const selectedShapeId = selectedIds.length === 1 ? selectedIds[0] : null;
 
   const handleObjectSelect = useCallback((id: string, e?: any) => {
-    if (!isSelectMode) return;
+    if (!isSelectMode && activeTool !== 'Text') return;
 
     const isCtrlPressed = e?.evt?.ctrlKey || e?.evt?.metaKey;
     
@@ -963,7 +960,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     } else {
       setShowToolbar(false);
     }
-  }, [isSelectMode, pages, currentPageIndex]);
+  }, [isSelectMode, activeTool, pages, currentPageIndex]);
 
   const handleDeleteSelected = useCallback(() => {
     if (selectedIds.length === 0) return;
@@ -1784,6 +1781,8 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
 
     saveCurrentPageState(pageIndex);
 
+    const minZ = getMinZIndex(pages[pageIndex]);
+
     const newImage: ImageType = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       type: 'image',
@@ -1793,7 +1792,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       height: HEIGHT,
       rotation: 0,
       src: imageUrl,
-      zIndex: 10
+      zIndex: minZ - 1
     };
 
     const currentImages = pages[pageIndex].images || [];
@@ -1821,6 +1820,8 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       
       addToHistory(targetPageIndex, pages[targetPageIndex]);
       
+      const minZ = getMinZIndex(pages[targetPageIndex]);
+      
       const newImage: ImageType = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
         type: 'image',
@@ -1829,7 +1830,8 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
         width: WIDTH * 0.3,
         height: HEIGHT * 0.3,
         rotation: 0,
-        src: reader.result as string
+        src: reader.result as string,
+        zIndex: minZ - 1
       };
 
       const currentImages = pages[targetPageIndex].images || [];
@@ -2384,11 +2386,9 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     setShowToolbar(false);
   };
   
-  // SINGLE-CLICK TEXT EDIT (Requirement 3)
-  const handleTextClick = (pageIndex: number, textItem: TextType) => {
-    setCurrentPageIndex(pageIndex);
-    setEditingTextItem(textItem);
-    setShowToolbar(false);
+  // Double-click opens text editor
+  const handleTextClick = (_pageIndex: number, _textItem: TextType) => {
+    // Intentionally empty - single click now only shows toolbar
   };
 
   const handleTextUpdate = useCallback((updatedText: TextType) => {
