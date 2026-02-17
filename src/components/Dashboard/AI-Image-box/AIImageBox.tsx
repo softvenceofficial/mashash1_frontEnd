@@ -269,15 +269,10 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId, existingImages = 
                     onClick={() => setPreviewImage(img.url)}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer"
                   />
-                  <div 
-                    onClick={() => setPreviewImage(img.url)}
-                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center cursor-pointer"
-                  >
                     <div className="bg-background/90 text-foreground px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg backdrop-blur-sm">
                       <Eye size={16} />
                       <span className="text-sm font-medium">Preview</span>
                     </div>
-                  </div>
                 </>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
