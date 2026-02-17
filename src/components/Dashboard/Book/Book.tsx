@@ -636,7 +636,7 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                       }}
                       x={element.x}
                       y={element.y}
-                      text={element.text}
+                      text={element.text || ' '}
                       fontSize={element.fontSize}
                       fontFamily={element.fontFamily || 'Roboto'}
                       fontStyle={getKonvaFontStyle(element.fontStyle)}
@@ -657,9 +657,10 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(({
                       stroke={element.stroke}
                       strokeWidth={element.strokeWidth || 0}
                       draggable={isSelectMode}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.cancelBubble = true;
                         onTextSelect(element.id);
-                        if (isSelectMode && onTextClick) {
+                        if ((isSelectMode || activeTool === 'Text') && onTextClick) {
                           onTextClick(pageIndex, element);
                         }
                       }}
@@ -2139,6 +2140,8 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     
     // SINGLE-CLICK TEXT CREATION (Requirement 3)
     if (clickedOnEmpty && activeTool === 'Text') {
+      if (editingTextItem) return;
+      
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
       
@@ -2148,7 +2151,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
         id: Date.now().toString(),
         x: pos.x,
         y: pos.y,
-        text: 'Type here...',
+        text: '',
         fontSize: fontSize,
         fontFamily: fontFamily,
         fill: strokeColor,
@@ -2159,10 +2162,15 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
         opacity: 1
       };
       
-      const newTexts = [...pages[pageIndex].texts, newText];
-      updatePageData(pageIndex, 'texts', newTexts);
+      setPages(prev => {
+        const newPages = [...prev];
+        newPages[pageIndex] = {
+          ...newPages[pageIndex],
+          texts: [...newPages[pageIndex].texts, newText]
+        };
+        return newPages;
+      });
       
-      // Immediately enter edit mode
       setCurrentPageIndex(pageIndex);
       setEditingTextItem(newText);
       return;
@@ -2309,30 +2317,6 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       }];
 
       updatePageData(pageIndex, 'lines', newLines);
-    } 
-    else if (activeTool === 'Text') {
-      const pos = e.target.getStage()?.getPointerPosition();
-      if (!pos) return;
-      
-      saveCurrentPageState(pageIndex);
-      
-      const newText: TextType = {
-        id: Date.now().toString(),
-        x: pos.x,
-        y: pos.y,
-        text: 'Double click to edit',
-        fontSize: fontSize,
-        fontFamily: fontFamily,
-        fill: strokeColor,
-        fontStyle: 'normal',
-        textDecoration: 'none',
-        textAlign: 'left',
-        width: 200,
-        opacity: 1
-      };
-      
-      const newTexts = [...pages[pageIndex].texts, newText];
-      updatePageData(pageIndex, 'texts', newTexts);
     }
   };
 
@@ -2402,29 +2386,30 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   
   // SINGLE-CLICK TEXT EDIT (Requirement 3)
   const handleTextClick = (pageIndex: number, textItem: TextType) => {
-    if (isSelectMode) {
-      setCurrentPageIndex(pageIndex);
-      setEditingTextItem(textItem);
-      setShowToolbar(false);
-    }
+    setCurrentPageIndex(pageIndex);
+    setEditingTextItem(textItem);
+    setShowToolbar(false);
   };
 
-  const handleTextUpdate = (updatedText: TextType) => {
+  const handleTextUpdate = useCallback((updatedText: TextType) => {
     saveCurrentPageState();
     
-    const newPages = pages.map((page, idx) => {
-      if (idx === currentPageIndex) {
-        const textIndex = page.texts.findIndex(t => t.id === updatedText.id);
-        if (textIndex !== -1) {
-          const newTexts = [...page.texts];
-          newTexts[textIndex] = updatedText;
-          return { ...page, texts: newTexts };
+    setPages(prevPages => {
+      return prevPages.map((page, idx) => {
+        if (idx === currentPageIndex) {
+          const textIndex = page.texts.findIndex(t => t.id === updatedText.id);
+          if (textIndex !== -1) {
+            const newTexts = [...page.texts];
+            newTexts[textIndex] = updatedText;
+            return { ...page, texts: newTexts };
+          } else {
+            return { ...page, texts: [...page.texts, updatedText] };
+          }
         }
-      }
-      return page;
+        return page;
+      });
     });
-    setPages(newPages);
-  };
+  }, [currentPageIndex, saveCurrentPageState]);
 
   const handleTextSelect = (id: string | null) => {
     if (!id) {
@@ -2766,6 +2751,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       {/* In-Place Text Editor */}
       {editingTextItem && (
         <InPlaceTextEditor
+          key={editingTextItem.id}
           textItem={editingTextItem}
           onUpdate={handleTextUpdate}
           onBlur={() => setEditingTextItem(null)}

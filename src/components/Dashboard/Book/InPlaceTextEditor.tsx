@@ -10,35 +10,44 @@ interface InPlaceTextEditorProps {
 export const InPlaceTextEditor = ({ textItem, onUpdate, onBlur }: InPlaceTextEditorProps) => {
   const [text, setText] = useState(textItem.text);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isSaved = useRef(false);
 
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.select();
-      // Auto-resize
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-    }
-  }, []);
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        const length = textareaRef.current.value.length;
+        textareaRef.current.setSelectionRange(length, length);
+        
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+      }
+    }, 50);
+  }, [textItem.id]);
+
+  const saveAndClose = () => {
+    if (isSaved.current) return;
+    isSaved.current = true;
+    onUpdate({ ...textItem, text });
+    onBlur();
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     e.stopPropagation();
     
     if (e.key === 'Enter' && e.shiftKey) {
-      e.preventDefault();
-      setText(prev => prev + '\n');
+      return;
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      onUpdate({ ...textItem, text });
-      onBlur();
+      saveAndClose();
     } else if (e.key === 'Escape') {
-      onBlur();
+      e.preventDefault();
+      saveAndClose();
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
-    // Auto-resize
     e.target.style.height = 'auto';
     e.target.style.height = e.target.scrollHeight + 'px';
   };
@@ -49,10 +58,7 @@ export const InPlaceTextEditor = ({ textItem, onUpdate, onBlur }: InPlaceTextEdi
       value={text}
       onChange={handleChange}
       onKeyDown={handleKeyDown}
-      onBlur={() => {
-        onUpdate({ ...textItem, text });
-        onBlur();
-      }}
+      onBlur={saveAndClose}
       style={{
         position: 'absolute',
         left: `${textItem.x}px`,
