@@ -28,7 +28,7 @@ interface ApiImage {
   id: number;
   image: string;
   generated_at: string;
-  book: number;
+  book?: number;
 }
 
 interface AIImageBoxProps {

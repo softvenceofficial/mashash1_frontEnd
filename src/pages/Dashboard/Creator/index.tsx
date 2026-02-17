@@ -14,7 +14,7 @@ import { HelpOverlay } from "@/components/Dashboard/HelpOverlay";
 import { useCreateBookMutation, useGetBookDetailsQuery, useUpdateBookMutation } from "@/redux/endpoints/bookApi";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Save, Loader2, Edit2Icon } from "lucide-react";
+import { Save, Loader2 } from "lucide-react";
 import type { PageData } from "@/components/Dashboard/Book/types";
 import { fetchBookContent, processBookData } from "@/utils/bookDataLoader";
 
@@ -150,10 +150,10 @@ export default function Creator() {
   }, [activeTool, getToolColor]);
 
   // Save color when it changes
-  const handleStrokeColorChange = (color: string) => {
-    setStrokeColor(color);
-    updateToolColor(activeTool, color);
-  };
+  // const handleStrokeColorChange = (color: string) => {
+  //   setStrokeColor(color);
+  //   updateToolColor(activeTool, color);
+  // };
 
   // Setup keyboard shortcuts
   useEffect(() => {

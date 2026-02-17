@@ -252,7 +252,7 @@ const Toolbox = ({
   redo,
   canUndo = false,
   canRedo = false,
-  updatePageData,
+  
   currentPageIndex = 0,
   onAdvancedTextChange,
   onDrawingModeChange,

@@ -1,6 +1,7 @@
 import * as React from "react";
 import Chart from "react-apexcharts";
 import { cn } from "@/lib/utils";
+// cSpell:ignore apexcharts
 import type { ApexOptions } from "apexcharts";
 
 // Format: { THEME_NAME: CSS_SELECTOR }
