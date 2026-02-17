@@ -1,22 +1,22 @@
 /* eslint-disable react-refresh/only-export-components */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  RotateCw, 
-  Undo2, 
-  Redo2, 
-  ChevronDown, 
+import { useState, useMemo, useEffect, useRef } from "react";
+import {
+  RotateCw,
+  Undo2,
+  Redo2,
+  ChevronDown,
   ChevronLeft,
-  Minus, 
-  Plus, 
-  Bold, 
-  Italic, 
-  Underline, 
+  Minus,
+  Plus,
+  Bold,
+  Italic,
+  Underline,
   Check,
-  Strikethrough, 
-  AlignLeft, 
-  AlignCenter, 
+  Strikethrough,
+  AlignLeft,
+  AlignCenter,
   AlignRight,
   List,
   ListOrdered,
@@ -33,56 +33,68 @@ import {
   ZoomOut,
   RectangleHorizontal,
   Loader2,
-} from 'lucide-react';
-import { SketchPicker } from 'react-color';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import BrushIcon from '@/assets/icons/BrushIcon.svg';
-import paint_bucket_icon from '@/assets/icons/paint-bucket-icon.svg';
-import eraser_color_icon from '@/assets/icons/eraser-color-icon.svg';
-import select from '@/assets/icons/select.svg';
-import hand from '@/assets/icons/hand.svg';
-import import_image from '@/assets/icons/import_image.svg';
-import Pen_tool from '@/assets/icons/Pen_tool.svg';
-import Sticky_note from '@/assets/icons/Sticky_note.svg';
-import TableIcon from '@/assets/icons/table.svg';
-import { ReactSVG } from 'react-svg';
-import PageSelectionPopup from '../PageSelectionPopup';
-import { useGetBookSizesQuery } from '@/redux/endpoints/bookApi';
+} from "lucide-react";
+import { SketchPicker } from "react-color";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import BrushIcon from "@/assets/icons/BrushIcon.svg";
+import paint_bucket_icon from "@/assets/icons/paint-bucket-icon.svg";
+import eraser_color_icon from "@/assets/icons/eraser-color-icon.svg";
+import select from "@/assets/icons/select.svg";
+import hand from "@/assets/icons/hand.svg";
+import import_image from "@/assets/icons/import_image.svg";
+import Pen_tool from "@/assets/icons/Pen_tool.svg";
+import Sticky_note from "@/assets/icons/Sticky_note.svg";
+import TableIcon from "@/assets/icons/table.svg";
+import { ReactSVG } from "react-svg";
+import PageSelectionPopup from "../PageSelectionPopup";
+import { useGetBookSizesQuery } from "@/redux/endpoints/bookApi";
 
 export const DrawingMode = {
-  BRUSH: 'brush',
-  FILL: 'fill',
-  ERASER: 'eraser',
+  BRUSH: "brush",
+  FILL: "fill",
+  ERASER: "eraser",
 } as const;
 
-export type DrawingMode = typeof DrawingMode[keyof typeof DrawingMode];
+export type DrawingMode = (typeof DrawingMode)[keyof typeof DrawingMode];
 
 const DRAWING_MODE_CONFIG = {
   [DrawingMode.BRUSH]: {
     minSize: 1,
     maxSize: 300,
-    defaultSize: 5
+    defaultSize: 5,
   },
   [DrawingMode.FILL]: {
     minSize: 3000,
     maxSize: 3000,
-    defaultSize: 3000
+    defaultSize: 3000,
   },
   [DrawingMode.ERASER]: {
     minSize: 0,
     maxSize: 300,
-    defaultSize: 20
-  }
+    defaultSize: 20,
+  },
 } as const;
 
-const ToolbarButton = ({ children, isActive, onClick, className = "", ...props }: { children: React.ReactNode; isActive?: boolean; onClick?: () => void; className?: string; [key: string]: any } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+const ToolbarButton = ({
+  children,
+  isActive,
+  onClick,
+  className = "",
+  ...props
+}: {
+  children: React.ReactNode;
+  isActive?: boolean;
+  onClick?: () => void;
+  className?: string;
+  [key: string]: any;
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
   <button
     onClick={onClick}
     className={cn(
       "h-9 min-w-[36px] px-2 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-white/10 active:scale-95",
-      isActive ? 'bg-[#6366f1] text-white' : 'text-gray-400 hover:text-white',
-      className
+      isActive ? "bg-[#6366f1] text-white" : "text-gray-400 hover:text-white",
+      className,
     )}
     {...props}
   >
@@ -90,19 +102,18 @@ const ToolbarButton = ({ children, isActive, onClick, className = "", ...props }
   </button>
 );
 
-
 // Helper function to convert rgba to hex
 const rgbaToHex = (rgba: string): string => {
-  if (!rgba || !rgba.startsWith('rgba')) return rgba; // Return if not rgba, could be hex already
-  
+  if (!rgba || !rgba.startsWith("rgba")) return rgba; // Return if not rgba, could be hex already
+
   const match = rgba.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
-  if (!match) return '#000000';
-  
+  if (!match) return "#000000";
+
   const r = parseInt(match[1]);
   const g = parseInt(match[2]);
   const b = parseInt(match[3]);
-  
-  const toHex = (c: number) => ('0' + c.toString(16)).slice(-2);
+
+  const toHex = (c: number) => ("0" + c.toString(16)).slice(-2);
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
 
@@ -110,21 +121,61 @@ const rgbaToHex = (rgba: string): string => {
 const hexToRgba = (hex: string, opacity: number = 1): string => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return `rgba(0, 0, 0, ${opacity})`;
-  
+
   const r = parseInt(result[1], 16);
   const g = parseInt(result[2], 16);
   const b = parseInt(result[3], 16);
-  
+
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 };
 
 const Divider = () => <div className="w-px h-6 bg-zinc-700 mx-2 self-center" />;
 
-const ColorSwatch = ({ color, isSelected, onClick }: { color: string, isSelected: boolean, onClick: () => void }) => (
+const UndoRedoControls = ({ undo, redo, canUndo, canRedo }: { undo?: () => any; redo?: () => any; canUndo?: boolean; canRedo?: boolean }) => (
+  <div className="flex items-center gap-2 ml-auto px-4 border-l border-zinc-700">
+    <div className="flex flex-col items-center group cursor-pointer">
+      <Button
+        size="icon"
+        variant="secondary"
+        className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
+        onClick={undo}
+        disabled={!canUndo}
+      >
+        <Undo2 className="w-5 h-5" />
+      </Button>
+      <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Undo</span>
+    </div>
+    <div className="flex flex-col items-center group cursor-pointer">
+      <Button
+        size="icon"
+        variant="secondary"
+        className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
+        onClick={redo}
+        disabled={!canRedo}
+      >
+        <Redo2 className="w-5 h-5" />
+      </Button>
+      <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Redo</span>
+    </div>
+  </div>
+);
+
+const ColorSwatch = ({
+  color,
+  isSelected,
+  onClick,
+}: {
+  color: string;
+  isSelected: boolean;
+  onClick: () => void;
+}) => (
   <button
     onClick={onClick}
-    className={cn(`w-8 h-8 rounded-md transition-all duration-200 relative group`,
-      isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-800 scale-110 z-10' : 'hover:scale-105 border border-white/10'
+    className={cn(
+      `w-8 h-8 rounded-md transition-all duration-200 relative group`,
+      isSelected
+        ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-800 scale-110 z-10"
+        : "hover:scale-105 border border-white/10",
     )}
     style={{ backgroundColor: color }}
     aria-label={`Select color ${color}`}
@@ -166,7 +217,7 @@ interface ToolboxProps {
   onBackgroundChange?: (color: string) => void;
   onZoomChange?: (zoom: number) => void;
   currentZoom?: number;
-  onImageUpload?: (file: File, targetPage?: 'left' | 'right') => void;
+  onImageUpload?: (file: File, targetPage?: "left" | "right") => void;
   onTableChange?: (property: string, value: any) => void;
   onPenOptionChange?: (property: string, value: any) => void;
   onPenAction?: (action: string) => void;
@@ -179,11 +230,11 @@ interface ToolboxProps {
   };
   selectedTableId?: string | null;
   onShapePropertiesChange?: (properties: any) => void;
-  onTargetColorPageChange?: (page: 'left' | 'right') => void; // NEW
+  onTargetColorPageChange?: (page: "left" | "right") => void; // NEW
 }
 
-const Toolbox = ({ 
-  activeTool, 
+const Toolbox = ({
+  activeTool,
   activeSubTool,
   onBookSizeChange,
   selectedSizeId = 6,
@@ -195,7 +246,7 @@ const Toolbox = ({
   onTextFormatChange,
   onShapeChange,
   onToolChange,
-  strokeColor = '#000000',
+  strokeColor = "#000000",
   strokeWidth = 5,
   undo,
   redo,
@@ -220,55 +271,76 @@ const Toolbox = ({
 }: ToolboxProps) => {
   const [selectedBook, setSelectedBook] = useState(selectedSizeId || 6);
   const [fontSize, setFontSize] = useState(24);
-  const [fontFamily, setFontFamily] = useState('Roboto');
+  const [fontFamily, setFontFamily] = useState("Roboto");
   const [activeFormats, setActiveFormats] = useState<string[]>([]);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [customColors, setCustomColors] = useState(['rgba(96, 165, 250, 1)']);
-  const [selectedShape, setSelectedShape] = useState('square');
+  const [customColors, setCustomColors] = useState(["rgba(96, 165, 250, 1)"]);
+  const [selectedShape, setSelectedShape] = useState("square");
   const [brushSize, setBrushSize] = useState(strokeWidth);
-  const [textColor, setTextColor] = useState('rgba(0, 0, 0, 1)');
+  const [textColor, setTextColor] = useState("rgba(0, 0, 0, 1)");
   const [brushColor, setBrushColor] = useState(strokeColor);
-  const currentSubTool = activeSubTool || 'select';
+  const currentSubTool = activeSubTool || "select";
   const [shapeColor, setShapeColor] = useState(strokeColor);
-  const [shapeFillColor, setShapeFillColor] = useState('#1e3a8a');
-  const [shapeStrokeColor, setShapeStrokeColor] = useState('#60a5fa');
+  const [shapeFillColor, setShapeFillColor] = useState("#1e3a8a");
+  const [shapeStrokeColor, setShapeStrokeColor] = useState("#60a5fa");
   const [shapeStrokeWeight, setShapeStrokeWeight] = useState(2);
   const [isFillTransparent, setIsFillTransparent] = useState(false);
   const [showShapeFillPicker, setShowShapeFillPicker] = useState(false);
   const [showShapeStrokePicker, setShowShapeStrokePicker] = useState(false);
-  const [backgroundColor, setBackgroundColor] = useState('#6C6BCF');
+  const [backgroundColor, setBackgroundColor] = useState("#6C6BCF");
   const [opacity, setOpacity] = useState(100);
-  const [textAlignment, setTextAlignment] = useState<'left' | 'center' | 'right'>('left');
+  const [textAlignment, setTextAlignment] = useState<
+    "left" | "center" | "right"
+  >("left");
   const [, setIsBrushMode] = useState(true);
-  const [textTransform, setTextTransform] = useState<'none' | 'uppercase' | 'lowercase' | 'capitalize'>('none');
+  const [textTransform, setTextTransform] = useState<
+    "none" | "uppercase" | "lowercase" | "capitalize"
+  >("none");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textFileInputRef = useRef<HTMLInputElement>(null);
-  const [imageTargetPage, setImageTargetPage] = useState<'left' | 'right'>('left');
+  const [imageTargetPage, setImageTargetPage] = useState<"left" | "right">(
+    "left",
+  );
   const [showPageSelection, setShowPageSelection] = useState(false);
-  
+
   // INDIVIDUAL PAGE COLOR (Requirement 4)
-  const [targetColorPage, setTargetColorPage] = useState<'left' | 'right'>('left');
+  const [targetColorPage, setTargetColorPage] = useState<"left" | "right">(
+    "left",
+  );
 
   // Fetch Book Sizes from API
-  const { data: bookSizesData, isLoading: isSizesLoading } = useGetBookSizesQuery();
+  const { data: bookSizesData, isLoading: isSizesLoading } =
+    useGetBookSizesQuery();
 
   // Pen tool specific states
-  const [penMode, setPenMode] = useState<'polygon' | 'freehand'>('polygon');
-  const [penFillColor, setPenFillColor] = useState('rgba(255, 255, 255, 0)');
+  const [penMode, setPenMode] = useState<"polygon" | "freehand">("polygon");
+  const [penFillColor, setPenFillColor] = useState("rgba(255, 255, 255, 0)");
   const [penFillOpacity, setPenFillOpacity] = useState(0);
   const [showFillPicker, setShowFillPicker] = useState(false);
 
   // Table specific states
   const [tableRows, setTableRows] = useState(tableProperties?.rows || 3);
   const [tableCols, setTableCols] = useState(tableProperties?.cols || 3);
-  const [tableBorderColor, setTableBorderColor] = useState(tableProperties?.borderColor || '#000000');
-  const [tableFillColor, setTableFillColor] = useState(tableProperties?.fillColor || '#ffffff');
-  const [tableBorderWidth, setTableBorderWidth] = useState(tableProperties?.borderWidth || 1);
-  const [tableColorTarget, setTableColorTarget] = useState<'border' | 'fill'>('border');
-  const [activeTableTab, setActiveTableTab] = useState<'layout' | 'design'>('layout');
+  const [tableBorderColor, setTableBorderColor] = useState(
+    tableProperties?.borderColor || "#000000",
+  );
+  const [tableFillColor, setTableFillColor] = useState(
+    tableProperties?.fillColor || "#ffffff",
+  );
+  const [tableBorderWidth, setTableBorderWidth] = useState(
+    tableProperties?.borderWidth || 1,
+  );
+  const [tableColorTarget, setTableColorTarget] = useState<"border" | "fill">(
+    "border",
+  );
+  const [activeTableTab, setActiveTableTab] = useState<"layout" | "design">(
+    "layout",
+  );
 
   // Brush specific states
-  const [internalDrawingMode, setInternalDrawingMode] = useState<DrawingMode>(DrawingMode.BRUSH);
+  const [internalDrawingMode, setInternalDrawingMode] = useState<DrawingMode>(
+    DrawingMode.BRUSH,
+  );
   const currentDrawingMode = drawingMode ?? internalDrawingMode;
   const [brushOpacity, setBrushOpacity] = useState(100);
 
@@ -292,33 +364,35 @@ const Toolbox = ({
 
   // Helper to extract opacity for the slider when switching
   const parseOpacity = (rgbaString: string) => {
-    const match = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/);
+    const match = rgbaString.match(
+      /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/,
+    );
     if (match && match[4]) {
       return Math.round(parseFloat(match[4]) * 100);
     }
     return 100;
   };
 
-  const validateBrushSize = (mode: DrawingMode, currentSize: number): number => {
+  const validateBrushSize = (
+    mode: DrawingMode,
+    currentSize: number,
+  ): number => {
     const config = DRAWING_MODE_CONFIG[mode];
-    
+
     if (mode === DrawingMode.FILL) {
       return config.defaultSize; // Always 3000px for fill
     }
-    
+
     // For brush and eraser, clamp to min/max
-    return Math.max(
-      config.minSize,
-      Math.min(config.maxSize, currentSize)
-    );
+    return Math.max(config.minSize, Math.min(config.maxSize, currentSize));
   };
 
   // FIX: Restore the saved local color when switching tools
   useEffect(() => {
-    if (activeTool === 'Text') {
+    if (activeTool === "Text") {
       onStrokeColorChange?.(textColor);
-      setOpacity(parseOpacity(textColor)); 
-    } else if (activeTool === 'Brush') {
+      setOpacity(parseOpacity(textColor));
+    } else if (activeTool === "Brush") {
       const validatedSize = validateBrushSize(currentDrawingMode, brushSize);
       if (validatedSize !== brushSize) {
         setBrushSize(validatedSize);
@@ -327,10 +401,10 @@ const Toolbox = ({
       onStrokeColorChange?.(brushColor);
       setOpacity(parseOpacity(brushColor));
       setBrushOpacity(parseOpacity(brushColor));
-    } else if (activeTool === 'Shapes') {
+    } else if (activeTool === "Shapes") {
       onStrokeColorChange?.(shapeColor);
       setOpacity(parseOpacity(shapeColor));
-    } else if (activeTool === 'Color') {
+    } else if (activeTool === "Color") {
       onStrokeColorChange?.(backgroundColor);
       setOpacity(parseOpacity(backgroundColor));
     }
@@ -341,8 +415,10 @@ const Toolbox = ({
   }, [strokeColor]);
 
   const toggleFormat = (format: string) => {
-    setActiveFormats(prev => 
-      prev.includes(format) ? prev.filter(f => f !== format) : [...prev, format]
+    setActiveFormats((prev) =>
+      prev.includes(format)
+        ? prev.filter((f) => f !== format)
+        : [...prev, format],
     );
     onTextFormatChange?.(format);
   };
@@ -353,8 +429,8 @@ const Toolbox = ({
     onFontSizeChange?.(newSize);
   };
 
-
-  const handleColorChange = (color: any) => { // color is from react-color
+  const handleColorChange = (color: any) => {
+    // color is from react-color
     const alpha = color.rgb.a !== undefined ? color.rgb.a : 1;
     const newRgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${alpha})`;
 
@@ -362,14 +438,14 @@ const Toolbox = ({
     setOpacity(Math.round(alpha * 100));
 
     // FIX: Only update the local state for the currently active tool
-    if (activeTool === 'Text') {
+    if (activeTool === "Text") {
       setTextColor(newRgba);
-    } else if (activeTool === 'Brush') {
+    } else if (activeTool === "Brush") {
       setBrushColor(newRgba);
       setBrushOpacity(Math.round(alpha * 100));
-    } else if (activeTool === 'Shapes') {
+    } else if (activeTool === "Shapes") {
       setShapeColor(newRgba);
-    } else if (activeTool === 'Color') {
+    } else if (activeTool === "Color") {
       setBackgroundColor(newRgba);
     }
 
@@ -394,34 +470,34 @@ const Toolbox = ({
   };
 
   const handleRefresh = () => {
-    if (activeTool === 'Text') {
+    if (activeTool === "Text") {
       setFontSize(24);
-      setFontFamily('Roboto');
+      setFontFamily("Roboto");
       setActiveFormats([]);
-      setTextColor('rgba(0, 0, 0, 1)');
-      setTextAlignment('left');
+      setTextColor("rgba(0, 0, 0, 1)");
+      setTextAlignment("left");
       onFontSizeChange?.(24);
-      onFontFamilyChange?.('Roboto');
-    } else if (activeTool === 'Brush') {
+      onFontFamilyChange?.("Roboto");
+    } else if (activeTool === "Brush") {
       const config = DRAWING_MODE_CONFIG[DrawingMode.BRUSH];
       setBrushSize(config.defaultSize);
-      setBrushColor('#000000');
+      setBrushColor("#000000");
       setIsBrushMode(true);
       if (drawingMode === undefined) setInternalDrawingMode(DrawingMode.BRUSH);
       setBrushOpacity(100);
       onStrokeWidthChange?.(config.defaultSize);
       onDrawingModeChange?.(DrawingMode.BRUSH);
-    } else if (activeTool === 'Color') {
+    } else if (activeTool === "Color") {
       setOpacity(100);
-      onStrokeColorChange?.('rgba(0, 0, 0, 1)');
-    } else if (activeTool === 'Table') {
+      onStrokeColorChange?.("rgba(0, 0, 0, 1)");
+    } else if (activeTool === "Table") {
       setTableRows(3);
       setTableCols(3);
-      setTableBorderColor('#000000');
-      setTableFillColor('#ffffff');
+      setTableBorderColor("#000000");
+      setTableFillColor("#ffffff");
       setTableBorderWidth(1);
-      setActiveTableTab('layout');
-      onTableChange?.('reset', null);
+      setActiveTableTab("layout");
+      onTableChange?.("reset", null);
     }
   };
 
@@ -432,8 +508,11 @@ const Toolbox = ({
     const rgbaMatch = strokeColor.match(/rgba\((\d+,\s*\d+,\s*\d+)/);
     if (rgbaMatch) {
       onStrokeColorChange?.(`rgba(${rgbaMatch[1]}, ${value / 100})`);
-    } else { // Assume hex
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(strokeColor);
+    } else {
+      // Assume hex
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(
+        strokeColor,
+      );
       if (result) {
         const r = parseInt(result[1], 16);
         const g = parseInt(result[2], 16);
@@ -443,7 +522,7 @@ const Toolbox = ({
     }
   };
 
-  const handleAlignmentChange = (align: 'left' | 'center' | 'right') => {
+  const handleAlignmentChange = (align: "left" | "center" | "right") => {
     setTextAlignment(align);
   };
 
@@ -451,38 +530,39 @@ const Toolbox = ({
     onToolChange?.(tool);
   };
 
-  const handleTextTransform = (type: 'uppercase' | 'lowercase' | 'capitalize') => {
+  const handleTextTransform = (
+    type: "uppercase" | "lowercase" | "capitalize",
+  ) => {
     setTextTransform(type);
-    onAdvancedTextChange?.('textTransform', type);
+    onAdvancedTextChange?.("textTransform", type);
   };
 
-  const handleListToggle = (type: 'bullet' | 'number') => {
-    onAdvancedTextChange?.('listType', type);
+  const handleListToggle = (type: "bullet" | "number") => {
+    onAdvancedTextChange?.("listType", type);
   };
 
-  const handleTablePropertyChange = (prop: 'rows' | 'cols', value: number) => {
+  const handleTablePropertyChange = (prop: "rows" | "cols", value: number) => {
     const newValue = Math.max(1, value);
-    if (prop === 'rows') {
+    if (prop === "rows") {
       setTableRows(newValue);
       onTableChange?.(prop, newValue);
     }
-    if (prop === 'cols') {
+    if (prop === "cols") {
       setTableCols(newValue);
       onTableChange?.(prop, newValue);
     }
   };
 
-  const handleTableColorChange = (color: any, target: 'border' | 'fill') => {
+  const handleTableColorChange = (color: any, target: "border" | "fill") => {
     const hex = color.hex;
-    if (target === 'border') {
+    if (target === "border") {
       setTableBorderColor(hex);
-      onTableChange?.('borderColor', hex);
+      onTableChange?.("borderColor", hex);
     } else {
       setTableFillColor(hex);
-      onTableChange?.('fill', hex);
+      onTableChange?.("fill", hex);
     }
   };
-  
 
   const renderBookSizePanel = () => (
     <div className="flex items-center justify-around w-full gap-4 px-2">
@@ -497,21 +577,35 @@ const Toolbox = ({
             onClick={() => handleBookSelect(book.id, book.name)}
             className={cn(
               "cursor-pointer transition-all duration-300 relative group",
-              selectedBook === book.id ? "scale-105" : "opacity-70 hover:opacity-100 hover:scale-102"
+              selectedBook === book.id
+                ? "scale-105"
+                : "opacity-70 hover:opacity-100 hover:scale-102",
             )}
           >
-            <div className={cn(
-              "absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] rounded-lg border border-gray-500 bg-white/5 z-0 transition-opacity duration-300 w-full h-[90px] px-1.5 box-content",
-              selectedBook === book.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-            )} />
+            <div
+              className={cn(
+                "absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] rounded-lg border border-gray-500 bg-white/5 z-0 transition-opacity duration-300 w-full h-[90px] px-1.5 box-content",
+                selectedBook === book.id
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100",
+              )}
+            />
             <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
               <div className="w-full h-full">
-                <img className="w-auto h-[80px] object-cover" src={book.image} alt={book.name} />
+                <img
+                  className="w-auto h-[80px] object-cover"
+                  src={book.image}
+                  alt={book.name}
+                />
               </div>
-              <div className={cn(
-                "text-center absolute top-[50%] left-[50%] w-max translate-x-[-50%] translate-y-[-50%] transition-all duration-300",
-                selectedBook === book.id ? "opacity-100 scale-100" : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"
-              )}>
+              <div
+                className={cn(
+                  "text-center absolute top-[50%] left-[50%] w-max translate-x-[-50%] translate-y-[-50%] transition-all duration-300",
+                  selectedBook === book.id
+                    ? "opacity-100 scale-100"
+                    : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100",
+                )}
+              >
                 <p className="text-center text-indigo-50 text-2xl font-medium font-Inter [text-shadow:_0px_4px_4px_rgb(177_177_177_/_0.34)]">
                   {book.name}
                 </p>
@@ -525,12 +619,14 @@ const Toolbox = ({
 
   const renderTextPanel = () => (
     <>
-      <div 
+      <div
         onClick={handleRefresh}
         className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
       >
         <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
-        <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
+        <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">
+          Refresh
+        </span>
       </div>
 
       <Divider />
@@ -541,10 +637,35 @@ const Toolbox = ({
           <ChevronDown className="w-4 h-4 text-zinc-500" />
         </button>
         <div className="absolute top-full left-0 mt-2 w-48 max-h-64 overflow-y-auto bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-left z-50">
-          {['Anton', 'Bebas Neue', 'Caveat', 'Comfortaa', 'Dancing Script', 'Fredoka', 'Heebo', 'Josefin Sans', 'Lobster', 'Lora', 'Merriweather', 'Montserrat', 'Oswald', 'Pacifico', 'Playfair Display', 'Quicksand', 'Raleway', 'Roboto', 'Roboto Slab', 'Source Code Pro', 'Work Sans'].map(font => (
-            <div 
+          {[
+            "Anton",
+            "Bebas Neue",
+            "Caveat",
+            "Comfortaa",
+            "Dancing Script",
+            "Fredoka",
+            "Heebo",
+            "Josefin Sans",
+            "Lobster",
+            "Lora",
+            "Merriweather",
+            "Montserrat",
+            "Oswald",
+            "Pacifico",
+            "Playfair Display",
+            "Quicksand",
+            "Raleway",
+            "Roboto",
+            "Roboto Slab",
+            "Source Code Pro",
+            "Work Sans",
+          ].map((font) => (
+            <div
               key={font}
-              onClick={() => { setFontFamily(font); onFontFamilyChange?.(font); }}
+              onClick={() => {
+                setFontFamily(font);
+                onFontFamilyChange?.(font);
+              }}
               className="px-4 py-2 text-sm text-zinc-300 hover:bg-indigo-600 hover:text-white cursor-pointer first:rounded-t-lg last:rounded-b-lg"
               style={{ fontFamily: font }}
             >
@@ -555,25 +676,36 @@ const Toolbox = ({
       </div>
 
       <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700 mx-2">
-        <button onClick={() => handleFontSizeChange(-1)} className="h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg">
+        <button
+          onClick={() => handleFontSizeChange(-1)}
+          className="h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg"
+        >
           <Minus className="w-4 h-4" />
         </button>
-        <div className="w-10 text-center text-sm font-medium text-zinc-200 font-mono">{fontSize}</div>
-        <button onClick={() => handleFontSizeChange(1)} className="h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg">
+        <div className="w-10 text-center text-sm font-medium text-zinc-200 font-mono">
+          {fontSize}
+        </div>
+        <button
+          onClick={() => handleFontSizeChange(1)}
+          className="h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg"
+        >
           <Plus className="w-4 h-4" />
         </button>
       </div>
 
       <div className="relative">
-        <div 
+        <div
           onClick={() => setShowColorPicker(!showColorPicker)}
-          className="w-9 h-9 rounded-full cursor-pointer hover:scale-110 transition-transform shadow-lg ring-2 ring-transparent hover:ring-white/20" 
+          className="w-9 h-9 rounded-full cursor-pointer hover:scale-110 transition-transform shadow-lg ring-2 ring-transparent hover:ring-white/20"
           style={{ backgroundColor: textColor }}
           title="Text Color"
         />
         {showColorPicker && (
           <div className="absolute top-12 left-0 z-50">
-            <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
+            <div
+              className="fixed inset-0"
+              onClick={() => setShowColorPicker(false)}
+            />
             <SketchPicker color={textColor} onChange={handleColorChange} />
           </div>
         )}
@@ -582,16 +714,28 @@ const Toolbox = ({
       <Divider />
 
       <div className="flex items-center gap-1">
-        <ToolbarButton isActive={activeFormats.includes('bold')} onClick={() => toggleFormat('bold')}>
+        <ToolbarButton
+          isActive={activeFormats.includes("bold")}
+          onClick={() => toggleFormat("bold")}
+        >
           <Bold className="w-5 h-5" strokeWidth={2.5} />
         </ToolbarButton>
-        <ToolbarButton isActive={activeFormats.includes('italic')} onClick={() => toggleFormat('italic')}>
+        <ToolbarButton
+          isActive={activeFormats.includes("italic")}
+          onClick={() => toggleFormat("italic")}
+        >
           <Italic className="w-5 h-5" />
         </ToolbarButton>
-        <ToolbarButton isActive={activeFormats.includes('underline')} onClick={() => toggleFormat('underline')}>
+        <ToolbarButton
+          isActive={activeFormats.includes("underline")}
+          onClick={() => toggleFormat("underline")}
+        >
           <Underline className="w-5 h-5" />
         </ToolbarButton>
-        <ToolbarButton isActive={activeFormats.includes('strike')} onClick={() => toggleFormat('strike')}>
+        <ToolbarButton
+          isActive={activeFormats.includes("strike")}
+          onClick={() => toggleFormat("strike")}
+        >
           <Strikethrough className="w-5 h-5" />
         </ToolbarButton>
       </div>
@@ -599,25 +743,40 @@ const Toolbox = ({
       <Divider />
 
       <div className="flex items-center gap-1">
-        <ToolbarButton isActive={textAlignment === 'left'} onClick={() => handleAlignmentChange('left')}>
+        <ToolbarButton
+          isActive={textAlignment === "left"}
+          onClick={() => handleAlignmentChange("left")}
+        >
           <AlignLeft className="w-5 h-5" />
         </ToolbarButton>
-        <ToolbarButton isActive={textAlignment === 'center'} onClick={() => handleAlignmentChange('center')}>
+        <ToolbarButton
+          isActive={textAlignment === "center"}
+          onClick={() => handleAlignmentChange("center")}
+        >
           <AlignCenter className="w-5 h-5" />
         </ToolbarButton>
-        <ToolbarButton isActive={textAlignment === 'right'} onClick={() => handleAlignmentChange('right')}>
+        <ToolbarButton
+          isActive={textAlignment === "right"}
+          onClick={() => handleAlignmentChange("right")}
+        >
           <AlignRight className="w-5 h-5" />
         </ToolbarButton>
       </div>
-      
+
       <Divider />
 
       {/* Text Transform */}
       <div className="flex items-center gap-1">
-        <ToolbarButton isActive={textTransform === 'uppercase'} onClick={() => handleTextTransform('uppercase')}>
+        <ToolbarButton
+          isActive={textTransform === "uppercase"}
+          onClick={() => handleTextTransform("uppercase")}
+        >
           <span className="text-xs font-bold">AA</span>
         </ToolbarButton>
-        <ToolbarButton isActive={textTransform === 'capitalize'} onClick={() => handleTextTransform('capitalize')}>
+        <ToolbarButton
+          isActive={textTransform === "capitalize"}
+          onClick={() => handleTextTransform("capitalize")}
+        >
           <span className="text-xs font-bold">Aa</span>
         </ToolbarButton>
       </div>
@@ -626,248 +785,233 @@ const Toolbox = ({
 
       {/* Lists */}
       <div className="flex items-center gap-1">
-        <ToolbarButton onClick={() => handleListToggle('bullet')}><List className="w-5 h-5" /></ToolbarButton>
-        <ToolbarButton onClick={() => handleListToggle('number')}><ListOrdered className="w-5 h-5" /></ToolbarButton>
+        <ToolbarButton onClick={() => handleListToggle("bullet")}>
+          <List className="w-5 h-5" />
+        </ToolbarButton>
+        <ToolbarButton onClick={() => handleListToggle("number")}>
+          <ListOrdered className="w-5 h-5" />
+        </ToolbarButton>
       </div>
 
       <div className="flex-grow" />
 
-      <div className="flex items-center gap-4 ml-4 px-4 border-l border-zinc-700">
-        <div className="flex flex-col items-center group cursor-pointer">
-          <Button 
-            size="icon" 
-            variant="secondary" 
-            className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-            onClick={() => {
-              const undoTexts = undo?.();
-              if (undoTexts) updatePageData?.(currentPageIndex, 'texts', undoTexts);
-            }}
-            disabled={!canUndo}
-          >
-            <Undo2 className="w-5 h-5" />
-          </Button>
-          <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Undo</span>
-        </div>
-        <div className="flex flex-col items-center group cursor-pointer">
-          <Button 
-            size="icon" 
-            variant="secondary" 
-            className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-            onClick={() => {
-              const redoTexts = redo?.();
-              if (redoTexts) updatePageData?.(currentPageIndex, 'texts', redoTexts);
-            }}
-            disabled={!canRedo}
-          >
-            <Redo2 className="w-5 h-5" />
-          </Button>
-          <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Redo</span>
-        </div>
-      </div>
+      <UndoRedoControls undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo} />
     </>
   );
 
   const renderColorPanel = () => {
     const basicColors = [
-      '#60a5fa', // Blue-400
-      '#67e8f9', // Cyan-300
-      '#86efac', // Green-300
-      '#ef4444', // Red-500
-      '#be185d', // Pink-700
-      '#9333ea', // Purple-600
+      "#60a5fa", // Blue-400
+      "#67e8f9", // Cyan-300
+      "#86efac", // Green-300
+      "#ef4444", // Red-500
+      "#be185d", // Pink-700
+      "#9333ea", // Purple-600
     ];
 
     return (
       <>
-      <div className='w-full flex justify-around'>
-        <div onClick={handleRefresh} className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group">
-          <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
-          <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
-        </div>
-        <Divider />
-        
-        {/* PAGE SELECTOR (Requirement 4) */}
-        <div className="flex flex-col gap-2 mr-4">
-          <h3 className="text-white text-xs font-medium tracking-wide">Target Page</h3>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setTargetColorPage('left');
-                onTargetColorPageChange?.('left');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                targetColorPage === 'left'
-                  ? 'bg-indigo-600 text-white shadow-lg'
-                  : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-              }`}
-            >
-              Left Page
-            </button>
-            <button
-              onClick={() => {
-                setTargetColorPage('right');
-                onTargetColorPageChange?.('right');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                targetColorPage === 'right'
-                  ? 'bg-indigo-600 text-white shadow-lg'
-                  : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-              }`}
-            >
-              Right Page
-            </button>
-          </div>
-        </div>
-        
-        <Divider />
-        
-        <div className="relative group cursor-pointer" onClick={() => setShowColorPicker(!showColorPicker)}>
-          <div className="w-16 h-16 rounded-full shadow-lg border-2 border-white/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
-            <div className="absolute inset-0 bg-[conic-gradient(from_90deg,red,yellow,lime,aqua,blue,magenta,red)]" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 to-black/20 mix-blend-overlay" />
-            <div className="absolute inset-0 bg-radial-gradient(circle_at_30%_30%,white_0%,transparent_40%) opacity-50" />
-          </div>
-          {showColorPicker && (
-            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50">
-              <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
-              <SketchPicker color={pickerColor} onChange={handleColorChange} />
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 ml-4">
-          <h3 className="text-white text-xs font-medium tracking-wide">Basic colors</h3>
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto max-w-[250px]">
-            {basicColors.map((color, index) => (
-              <ColorSwatch 
-                key={`basic-${index}`} 
-                color={color} 
-                isSelected={rgbaToHex(strokeColor) === color}
-                onClick={() => {
-                  const rgbaColor = hexToRgba(color, opacity / 100);
-                  setBackgroundColor(rgbaColor);
-                  onStrokeColorChange?.(rgbaColor);
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2 ml-4">
-          <h3 className="text-white text-xs font-medium tracking-wide">Custom Colors</h3>
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto max-w-[250px]">
-            {customColors.map((color) => (
-              <ColorSwatch 
-                key={color}
-                color={color}
-                isSelected={strokeColor === color}
-                onClick={() => {
-                  setBackgroundColor(color);
-                  onStrokeColorChange?.(color);
-                }}
-              />
-            ))}
-            <button 
-              onClick={handleAddColor}
-              className="w-8 h-8 rounded-md bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group"
-              title="Add current color"
-              disabled={customColors.length >= 14 || customColors.includes(strokeColor)}
-            >
-              <Plus className="w-4 h-4 text-slate-400 group-hover:text-white" />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2 items-center ml-4">
-          <span className="text-xs text-zinc-400">Opacity</span>
-          <div className="relative w-32 h-4 rounded-full overflow-hidden border border-white/20 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAAXNSR0IArs4c6QAAAB5JREFUKFNjZGRiYGD4/58BCQYwmoHBAABjIwH8qceD4wAAAABJRU5ErkJggg==')] bg-repeat">
-              <div 
-                className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent to-white pointer-events-none"
-                style={{ background: `linear-gradient(to right, transparent, ${strokeColor})` }}
-              />
-          </div>
-          <div className="relative w-32 h-6 flex items-center">
-               <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={opacity}
-                  onChange={handleOpacityChange}
-                  className="w-full h-1 bg-transparent rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-indigo-500 [&::-webkit-slider-thumb]:shadow-lg hover:[&::-webkit-slider-thumb]:scale-110 transition-all"
-                />
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-indigo-500 pointer-events-none" style={{ width: `${opacity}%` }} />
-          </div>
-          <span className="text-xs text-zinc-300 w-8 text-center">{opacity}%</span>
-        </div>
-
-        <Divider />
-
-        <div className="flex items-center gap-4 ml-4 px-4">
-          <div className="flex flex-col items-center group cursor-pointer">
-            <Button 
-              size="icon" 
-              variant="secondary" 
-              className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-              onClick={() => undo?.()}
-              disabled={!canUndo}
-            >
-              <Undo2 className="w-5 h-5" />
-            </Button>
-            <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Undo</span>
-          </div>
-          <div className="flex flex-col items-center group cursor-pointer">
-            <Button 
-            size="icon" 
-            variant="secondary" 
-            className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-            onClick={() => {
-              const redoTexts = redo?.();
-              if (redoTexts) updatePageData?.(currentPageIndex, 'texts', redoTexts);
-            }}
-            disabled={!canRedo}
+        <div className="w-full flex justify-around">
+          <div
+            onClick={handleRefresh}
+            className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
           >
-            <Redo2 className="w-5 h-5" />
-          </Button>
-          <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Redo</span>
+            <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
+            <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">
+              Refresh
+            </span>
           </div>
-        </div>
+          <Divider />
+
+          {/* PAGE SELECTOR (Requirement 4) */}
+          <div className="flex flex-col gap-2 mr-4">
+            <h3 className="text-white text-xs font-medium tracking-wide">
+              Target Page
+            </h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setTargetColorPage("left");
+                  onTargetColorPageChange?.("left");
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  targetColorPage === "left"
+                    ? "bg-indigo-600 text-white shadow-lg"
+                    : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
+                }`}
+              >
+                Left Page
+              </button>
+              <button
+                onClick={() => {
+                  setTargetColorPage("right");
+                  onTargetColorPageChange?.("right");
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  targetColorPage === "right"
+                    ? "bg-indigo-600 text-white shadow-lg"
+                    : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
+                }`}
+              >
+                Right Page
+              </button>
+            </div>
+          </div>
+
+          <Divider />
+
+          <div
+            className="relative group cursor-pointer"
+            onClick={() => setShowColorPicker(!showColorPicker)}
+          >
+            <div className="w-16 h-16 rounded-full shadow-lg border-2 border-white/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
+              <div className="absolute inset-0 bg-[conic-gradient(from_90deg,red,yellow,lime,aqua,blue,magenta,red)]" />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 to-black/20 mix-blend-overlay" />
+              <div className="absolute inset-0 bg-radial-gradient(circle_at_30%_30%,white_0%,transparent_40%) opacity-50" />
+            </div>
+            {showColorPicker && (
+              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50">
+                <div
+                  className="fixed inset-0"
+                  onClick={() => setShowColorPicker(false)}
+                />
+                <SketchPicker
+                  color={pickerColor}
+                  onChange={handleColorChange}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 ml-4">
+            <h3 className="text-white text-xs font-medium tracking-wide">
+              Basic colors
+            </h3>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto max-w-[250px]">
+              {basicColors.map((color, index) => (
+                <ColorSwatch
+                  key={`basic-${index}`}
+                  color={color}
+                  isSelected={rgbaToHex(strokeColor) === color}
+                  onClick={() => {
+                    const rgbaColor = hexToRgba(color, opacity / 100);
+                    setBackgroundColor(rgbaColor);
+                    onStrokeColorChange?.(rgbaColor);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 ml-4">
+            <h3 className="text-white text-xs font-medium tracking-wide">
+              Custom Colors
+            </h3>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto max-w-[250px]">
+              {customColors.map((color) => (
+                <ColorSwatch
+                  key={color}
+                  color={color}
+                  isSelected={strokeColor === color}
+                  onClick={() => {
+                    setBackgroundColor(color);
+                    onStrokeColorChange?.(color);
+                  }}
+                />
+              ))}
+              <button
+                onClick={handleAddColor}
+                className="w-8 h-8 rounded-md bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group"
+                title="Add current color"
+                disabled={
+                  customColors.length >= 14 ||
+                  customColors.includes(strokeColor)
+                }
+              >
+                <Plus className="w-4 h-4 text-slate-400 group-hover:text-white" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 items-center ml-4">
+            <span className="text-xs text-zinc-400">Opacity</span>
+            <div className="relative w-32 h-4 rounded-full overflow-hidden border border-white/20 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAAXNSR0IArs4c6QAAAB5JREFUKFNjZGRiYGD4/58BCQYwmoHBAABjIwH8qceD4wAAAABJRU5ErkJggg==')] bg-repeat">
+              <div
+                className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent to-white pointer-events-none"
+                style={{
+                  background: `linear-gradient(to right, transparent, ${strokeColor})`,
+                }}
+              />
+            </div>
+            <div className="relative w-32 h-6 flex items-center">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={opacity}
+                onChange={handleOpacityChange}
+                className="w-full h-1 bg-transparent rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-indigo-500 [&::-webkit-slider-thumb]:shadow-lg hover:[&::-webkit-slider-thumb]:scale-110 transition-all"
+              />
+              <div
+                className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-indigo-500 pointer-events-none"
+                style={{ width: `${opacity}%` }}
+              />
+            </div>
+            <span className="text-xs text-zinc-300 w-8 text-center">
+              {opacity}%
+            </span>
+          </div>
+
+          <Divider />
+
+          <UndoRedoControls undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo} />
         </div>
       </>
     );
-  }
+  };
 
   const renderBrushPanel = () => {
     const drawingModes = [
-      { id: DrawingMode.BRUSH, label: 'Brush', icon: BrushIcon, isSvg: true,  },
-      { id: DrawingMode.FILL, label: 'Fill', icon: paint_bucket_icon, isSvg: true,  },
-      { id: DrawingMode.ERASER, label: 'Eraser', icon: eraser_color_icon, isSvg: true,  },
+      { id: DrawingMode.BRUSH, label: "Brush", icon: BrushIcon, isSvg: true },
+      {
+        id: DrawingMode.FILL,
+        label: "Fill",
+        icon: paint_bucket_icon,
+        isSvg: true,
+      },
+      {
+        id: DrawingMode.ERASER,
+        label: "Eraser",
+        icon: eraser_color_icon,
+        isSvg: true,
+      },
     ];
- 
+
     // ENHANCED: Better mode change handler
     const handleModeChange = (mode: DrawingMode) => {
       if (drawingMode === undefined) setInternalDrawingMode(mode);
       onDrawingModeChange?.(mode);
-      
+
       // Get size configuration for the new mode
       const config = DRAWING_MODE_CONFIG[mode];
       const newSize = config.defaultSize;
-      
+
       // Update brush size based on mode
       setBrushSize(newSize);
       onStrokeWidthChange?.(newSize);
-      
+
       // Show color picker immediately for Fill mode
       if (mode === DrawingMode.FILL) {
         setShowColorPicker(true);
       } else {
         setShowColorPicker(false);
       }
-      
+
       // Additional actions based on mode
-      switch(mode) {
+      switch (mode) {
         case DrawingMode.ERASER:
           // Set color to canvas background color (or white for eraser)
-          onStrokeColorChange?.('#ffffff'); // Or use current canvas bg
+          onStrokeColorChange?.("#ffffff"); // Or use current canvas bg
           break;
         case DrawingMode.FILL:
           // Show color picker for fill
@@ -892,20 +1036,18 @@ const Toolbox = ({
     const handleFillColorChange = (color: any) => {
       const rgbaColor = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${brushOpacity / 100})`;
       setBrushColor(rgbaColor);
-      
+
       // If we're in fill mode, update immediately
       if (currentDrawingMode === DrawingMode.FILL) {
         onStrokeColorChange?.(rgbaColor);
         // Optional: Auto-apply fill could go here
       }
     };
-  
+
     return (
       <div className="w-full h-full flex flex-row items-center gap-6 px-4">
-        
         {/* Section 1: Drawing Modes */}
         <div className="flex items-center gap-2 border-r border-zinc-700 pr-6">
-
           <div className="flex gap-1">
             {drawingModes.map((mode) => (
               <ToolbarButton
@@ -916,34 +1058,37 @@ const Toolbox = ({
                   "flex-col h-14 px-3 min-w-[50px] relative",
                   currentDrawingMode === mode.id && mode.id === DrawingMode.FILL
                     ? "ring-2 ring-indigo-400 ring-offset-1 ring-offset-zinc-800"
-                    : ""
+                    : "",
                 )}
                 title={mode.label}
               >
-                {mode.isSvg && typeof mode.icon === 'string' ? (
+                {mode.isSvg && typeof mode.icon === "string" ? (
                   <ReactSVG src={mode.icon} className={cn("w-10 h-10")} />
                 ) : (
                   <span>icons</span>
                 )}
-                <span className="text-[10px] mt-1 font-medium">{mode.label}</span>
-                
+                <span className="text-[10px] mt-1 font-medium">
+                  {mode.label}
+                </span>
+
                 {/* Visual indicator for active mode */}
                 {currentDrawingMode === mode.id && (
-                  <div className={cn(
-                    "absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full",
-                    mode.id === DrawingMode.FILL
-                      ? "bg-indigo-400 animate-pulse"
-                      : "bg-indigo-400"
-                  )} />
+                  <div
+                    className={cn(
+                      "absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full",
+                      mode.id === DrawingMode.FILL
+                        ? "bg-indigo-400 animate-pulse"
+                        : "bg-indigo-400",
+                    )}
+                  />
                 )}
               </ToolbarButton>
             ))}
           </div>
         </div>
-  
+
         {/* Section 2: Properties */}
         <div className="flex items-center gap-6 flex-1">
-          
           {/* Color & Opacity Group */}
           <div className="flex items-center gap-4">
             {/* Color Picker */}
@@ -958,33 +1103,34 @@ const Toolbox = ({
                 }}
                 className={cn(
                   "w-10 h-10 rounded-full cursor-pointer border-2 shadow-lg hover:scale-105 transition-transform duration-200 relative overflow-hidden",
-                  currentDrawingMode === DrawingMode.FILL 
-                    ? "border-indigo-400 border-4 animate-pulse" 
+                  currentDrawingMode === DrawingMode.FILL
+                    ? "border-indigo-400 border-4 animate-pulse"
                     : currentDrawingMode === DrawingMode.ERASER
-                    ? "border-gray-400"
-                    : "border-white/20"
+                      ? "border-gray-400"
+                      : "border-white/20",
                 )}
-                style={{ 
-                  backgroundColor: currentDrawingMode === DrawingMode.ERASER 
-                    ? '#f0f0f0' // Gray for eraser
-                    : brushColor 
+                style={{
+                  backgroundColor:
+                    currentDrawingMode === DrawingMode.ERASER
+                      ? "#f0f0f0" // Gray for eraser
+                      : brushColor,
                 }}
                 title={
-                  currentDrawingMode === DrawingMode.FILL 
-                    ? "Click to fill page" 
+                  currentDrawingMode === DrawingMode.FILL
+                    ? "Click to fill page"
                     : currentDrawingMode === DrawingMode.ERASER
-                    ? "Eraser Active"
-                    : "Brush Color"
+                      ? "Eraser Active"
+                      : "Brush Color"
                 }
               >
-                  {/* Fill icon overlay for Fill mode */}
-                  {currentDrawingMode === DrawingMode.FILL && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <PaintBucket className="w-4 h-4 text-white/90 drop-shadow-lg" />
-                    </div>
-                  )}
+                {/* Fill icon overlay for Fill mode */}
+                {currentDrawingMode === DrawingMode.FILL && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <PaintBucket className="w-4 h-4 text-white/90 drop-shadow-lg" />
+                  </div>
+                )}
               </div>
-              
+
               {/* Different badge for different modes */}
               <div className="absolute -bottom-1 -right-1 bg-zinc-800 rounded-full p-1 pointer-events-none border border-zinc-700">
                 {currentDrawingMode === DrawingMode.ERASER ? (
@@ -998,7 +1144,10 @@ const Toolbox = ({
 
               {showColorPicker && currentDrawingMode !== DrawingMode.ERASER && (
                 <div className="absolute top-12 left-0 z-50">
-                  <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
+                  <div
+                    className="fixed inset-0"
+                    onClick={() => setShowColorPicker(false)}
+                  />
                   <div className="relative bg-zinc-800 rounded-lg shadow-2xl p-2 border border-zinc-700">
                     <SketchPicker
                       color={rgbaToHex(brushColor)}
@@ -1025,18 +1174,26 @@ const Toolbox = ({
                 </div>
               )}
             </div>
-            
+
             {/* Opacity Slider - Hide for Eraser mode */}
             {currentDrawingMode !== DrawingMode.ERASER && (
               <div className="flex flex-col gap-1 w-28">
                 <div className="flex justify-between items-center px-1">
-                  <span className={cn(
-                    "text-[10px] font-medium",
-                    currentDrawingMode === DrawingMode.FILL ? "text-indigo-300" : "text-zinc-400"
-                  )}>
-                    {currentDrawingMode === DrawingMode.FILL ? "Fill Opacity" : "Opacity"}
+                  <span
+                    className={cn(
+                      "text-[10px] font-medium",
+                      currentDrawingMode === DrawingMode.FILL
+                        ? "text-indigo-300"
+                        : "text-zinc-400",
+                    )}
+                  >
+                    {currentDrawingMode === DrawingMode.FILL
+                      ? "Fill Opacity"
+                      : "Opacity"}
                   </span>
-                  <span className="text-[10px] text-white font-mono">{brushOpacity}%</span>
+                  <span className="text-[10px] text-white font-mono">
+                    {brushOpacity}%
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -1046,7 +1203,9 @@ const Toolbox = ({
                   onChange={(e) => {
                     const value = parseInt(e.target.value);
                     setBrushOpacity(value);
-                    const match = brushColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
+                    const match = brushColor.match(
+                      /rgba\((\d+),\s*(\d+),\s*(\d+)/,
+                    );
                     if (match) {
                       const newColor = `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${value / 100})`;
                       setBrushColor(newColor);
@@ -1057,37 +1216,39 @@ const Toolbox = ({
                     "w-full h-1.5 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full hover:[&::-webkit-slider-thumb]:scale-110 transition-all",
                     currentDrawingMode === DrawingMode.FILL
                       ? "bg-indigo-900/30 [&::-webkit-slider-thumb]:bg-indigo-400"
-                      : "bg-zinc-600 [&::-webkit-slider-thumb]:bg-white"
+                      : "bg-zinc-600 [&::-webkit-slider-thumb]:bg-white",
                   )}
                 />
               </div>
             )}
           </div>
-  
+
           <Divider />
 
           {/* Size Controls */}
           <div className="flex flex-col gap-1 flex-1 max-w-[200px]">
             <div className="flex justify-between items-center px-1">
-              <span className={cn(
-                "text-[10px] font-medium",
-                currentDrawingMode === DrawingMode.FILL ? "text-indigo-300" : "text-zinc-400"
-              )}>
-                {currentDrawingMode === DrawingMode.ERASER 
-                  ? "Eraser Size" 
-                  : currentDrawingMode === DrawingMode.FILL 
-                    ? "Fill Area (3000px)" 
-                    : "Brush Size" 
-                }
+              <span
+                className={cn(
+                  "text-[10px] font-medium",
+                  currentDrawingMode === DrawingMode.FILL
+                    ? "text-indigo-300"
+                    : "text-zinc-400",
+                )}
+              >
+                {currentDrawingMode === DrawingMode.ERASER
+                  ? "Eraser Size"
+                  : currentDrawingMode === DrawingMode.FILL
+                    ? "Fill Area (3000px)"
+                    : "Brush Size"}
               </span>
               <span className="text-[10px] text-white font-mono">
-                {currentDrawingMode === DrawingMode.FILL 
-                  ? "Full Page" 
-                  : `${brushSize}px`
-                }
+                {currentDrawingMode === DrawingMode.FILL
+                  ? "Full Page"
+                  : `${brushSize}px`}
               </span>
             </div>
-            
+
             {currentDrawingMode !== DrawingMode.FILL ? (
               <div className="flex items-center gap-3">
                 <input
@@ -1104,30 +1265,30 @@ const Toolbox = ({
                     "w-full h-1.5 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full hover:[&::-webkit-slider-thumb]:scale-110 transition-all",
                     currentDrawingMode === DrawingMode.ERASER
                       ? "bg-gray-700 [&::-webkit-slider-thumb]:bg-gray-300"
-                      : "bg-zinc-600 [&::-webkit-slider-thumb]:bg-white"
+                      : "bg-zinc-600 [&::-webkit-slider-thumb]:bg-white",
                   )}
                 />
-                
+
                 {/* Visual Preview */}
                 <div className="shrink-0 flex items-center justify-center">
                   {currentDrawingMode === DrawingMode.ERASER ? (
                     <div className="relative">
-                      <div 
+                      <div
                         className="rounded-full bg-gray-300 border-2 border-white shadow-md"
-                        style={{ 
-                          width: Math.min(24, Math.max(4, brushSize / 8)), 
+                        style={{
+                          width: Math.min(24, Math.max(4, brushSize / 8)),
                           height: Math.min(24, Math.max(4, brushSize / 8)),
                         }}
                       />
                       <Eraser className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 text-gray-700" />
                     </div>
                   ) : (
-                    <div 
+                    <div
                       className="rounded-full bg-white transition-all"
-                      style={{ 
-                        width: Math.min(24, Math.max(4, brushSize / 8)), 
+                      style={{
+                        width: Math.min(24, Math.max(4, brushSize / 8)),
                         height: Math.min(24, Math.max(4, brushSize / 8)),
-                        backgroundColor: brushColor 
+                        backgroundColor: brushColor,
                       }}
                     />
                   )}
@@ -1141,9 +1302,9 @@ const Toolbox = ({
                     Full Page Fill (3000px)
                   </div>
                 </div>
-                
+
                 <div className="shrink-0">
-                  <div 
+                  <div
                     className="w-6 h-6 rounded-lg border-2 border-indigo-400 shadow-lg"
                     style={{ backgroundColor: brushColor }}
                   />
@@ -1155,73 +1316,56 @@ const Toolbox = ({
 
         {/* Section 3: Actions */}
         <div className="flex items-center gap-3 border-l border-zinc-700 pl-6">
-           {/* Fill Action Button - Only show in Fill mode */}
-           {currentDrawingMode === DrawingMode.FILL && (
-             <div 
-               className="flex flex-col items-center group cursor-pointer"
-               onClick={handleFill}
-               title="Fill entire page with current color"
-             >
-               <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center hover:scale-110 transition-transform duration-200 shadow-lg shadow-indigo-500/30">
-                 <PaintBucket className="w-4.5 h-4.5 text-white" />
-               </div>
-               <span className="text-[9px] text-indigo-300 mt-1 font-medium">Fill Page</span>
-             </div>
-           )}
-           
-           <div className="flex flex-col items-center group cursor-pointer" onClick={handleRefresh}>
-             <RefreshCcw className={cn(
-                "w-4 h-4 transition-colors",
-                currentDrawingMode === DrawingMode.FILL ? "text-indigo-400 group-hover:text-indigo-300" : "text-zinc-400 group-hover:text-white"
-             )} />
-             <span className={cn("text-[9px] mt-1", currentDrawingMode === DrawingMode.FILL ? "text-indigo-400" : "text-zinc-500")}>Reset</span>
-           </div>
-          
-           <div className="flex gap-1">
-              <ToolbarButton 
-                  onClick={() => {
-                      const undoTexts = undo?.();
-                      if (undoTexts) updatePageData?.(currentPageIndex, 'texts', undoTexts);
-                  }}
-                  disabled={!canUndo}
-                  className={`h-8 w-8 p-0 ${!canUndo ? 'opacity-50' : ''}`}
-              >
-                  <Undo2 className="w-4 h-4" />
-              </ToolbarButton>
-              <ToolbarButton 
-                  onClick={() => {
-                      const redoTexts = redo?.();
-                      if (redoTexts) updatePageData?.(currentPageIndex, 'texts', redoTexts);
-                  }}
-                  disabled={!canRedo}
-                  className={`h-8 w-8 p-0 ${!canRedo ? 'opacity-50' : ''}`}
-              >
-                  <Redo2 className="w-4 h-4" />
-              </ToolbarButton>
-           </div>
+          {/* Fill Action Button - Only show in Fill mode */}
+          {currentDrawingMode === DrawingMode.FILL && (
+            <div
+              className="flex flex-col items-center group cursor-pointer"
+              onClick={handleFill}
+              title="Fill entire page with current color"
+            >
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center hover:scale-110 transition-transform duration-200 shadow-lg shadow-indigo-500/30">
+                <PaintBucket className="w-4.5 h-4.5 text-white" />
+              </div>
+              <span className="text-[9px] text-indigo-300 mt-1 font-medium">
+                Fill Page
+              </span>
+            </div>
+          )}
+
+          <div
+            className="flex flex-col items-center group cursor-pointer"
+            onClick={handleRefresh}
+          >
+            <RefreshCcw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
+            <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">
+              Refresh
+            </span>
+          </div>
         </div>
+
+        <UndoRedoControls undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo} />
       </div>
     );
   };
 
   const renderToolPanel = () => {
     const tools: { id: string; icon: any; label: string }[] = [
-      { id: 'select', icon: select, label: 'Select' },
-      { id: 'hand', icon: hand, label: 'Hand' },
-      { id: 'pen', icon: Pen_tool, label: 'Pen' },
-      { id: 'sticky_note', icon: Sticky_note, label: 'Sticky Note' },
-      { id: 'table', icon: TableIcon, label: 'Table' },
+      { id: "select", icon: select, label: "Select" },
+      { id: "hand", icon: hand, label: "Hand" },
+      { id: "pen", icon: Pen_tool, label: "Pen" },
+      { id: "sticky_note", icon: Sticky_note, label: "Sticky Note" },
+      { id: "table", icon: TableIcon, label: "Table" },
     ];
 
     const handleImageClick = () => {
       setShowPageSelection(true);
     };
 
-    const handlePageSelect = (page: 'left' | 'right' | 'current') => {
-      const target = page === 'current' ? 'left' : page;
+    const handlePageSelect = (page: "left" | "right" | "current") => {
+      const target = page === "current" ? "left" : page;
       setImageTargetPage(target);
       setShowPageSelection(false);
-      
+
       setTimeout(() => {
         if (fileInputRef.current) {
           fileInputRef.current.click();
@@ -1234,22 +1378,22 @@ const Toolbox = ({
       if (file && onImageUpload) {
         onImageUpload(file, imageTargetPage);
       }
-      if (e.target.value) e.target.value = '';
+      if (e.target.value) e.target.value = "";
     };
 
     const handleTextFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file && file.type === 'text/plain') {
+      if (file && file.type === "text/plain") {
         const reader = new FileReader();
         reader.onload = (event) => {
           const text = event.target?.result as string;
           if (text && onAdvancedTextChange) {
-            onAdvancedTextChange('importText', text);
+            onAdvancedTextChange("importText", text);
           }
         };
         reader.readAsText(file);
       }
-      if (e.target.value) e.target.value = '';
+      if (e.target.value) e.target.value = "";
     };
 
     return (
@@ -1262,28 +1406,30 @@ const Toolbox = ({
           totalPages={10}
         />
 
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          className="hidden" 
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
           accept="image/*"
           onChange={handleFileChange}
         />
 
-        <input 
-          type="file" 
-          ref={textFileInputRef} 
-          className="hidden" 
+        <input
+          type="file"
+          ref={textFileInputRef}
+          className="hidden"
           accept=".txt"
           onChange={handleTextFileChange}
         />
 
-        <div 
+        <div
           onClick={handleRefresh}
           className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
         >
           <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
-          <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
+          <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">
+            Refresh
+          </span>
         </div>
 
         <Divider />
@@ -1294,93 +1440,86 @@ const Toolbox = ({
               key={t.id}
               className={cn(
                 "flex flex-col items-center gap-1 cursor-pointer group p-2 rounded-md transition-all min-w-[100px]",
-                currentSubTool === t.id ? "bg-white/10" : "hover:bg-white/5"
+                currentSubTool === t.id ? "bg-white/10" : "hover:bg-white/5",
               )}
               onClick={() => handleToolSelect(t.id)}
             >
-              {typeof t.icon === 'string' ? (
-                 <img src={t.icon} alt={t.label} className="w-10 h-10" />
+              {typeof t.icon === "string" ? (
+                <img src={t.icon} alt={t.label} className="w-10 h-10" />
               ) : (
-                 <t.icon size={40} className={cn(currentSubTool === t.id ? "text-primary" : "text-gray-300")} />
+                <t.icon
+                  size={40}
+                  className={cn(
+                    currentSubTool === t.id ? "text-primary" : "text-gray-300",
+                  )}
+                />
               )}
-              <span className={cn("text-[9px]", currentSubTool === t.id ? "text-white" : "text-gray-400")}>{t.label}</span>
-              {currentSubTool === t.id && <div className="h-0.5 w-10 bg-primary rounded-full mt-0.5"></div>}
+              <span
+                className={cn(
+                  "text-[9px]",
+                  currentSubTool === t.id ? "text-white" : "text-gray-400",
+                )}
+              >
+                {t.label}
+              </span>
+              {currentSubTool === t.id && (
+                <div className="h-0.5 w-10 bg-primary rounded-full mt-0.5"></div>
+              )}
             </div>
           ))}
-          
-          <div
-              className="flex flex-col items-center gap-1 cursor-pointer group p-2 rounded-md hover:bg-white/5 min-w-[100px]"
-              onClick={handleImageClick}
-            >
-              <img src={import_image} alt="Import" className="w-10 h-10" />
-              <span className="text-[9px] text-gray-400 group-hover:text-white">Image</span>
-            </div>
 
           <div
-              className="flex flex-col items-center gap-1 cursor-pointer group p-2 rounded-md hover:bg-white/5 min-w-[100px]"
-              onClick={() => textFileInputRef.current?.click()}
-            >
-              <div className="w-10 h-10 flex items-center justify-center">
-                <span className="text-2xl">📄</span>
-              </div>
-              <span className="text-[9px] text-gray-400 group-hover:text-white">Text</span>
+            className="flex flex-col items-center gap-1 cursor-pointer group p-2 rounded-md hover:bg-white/5 min-w-[100px]"
+            onClick={handleImageClick}
+          >
+            <img src={import_image} alt="Import" className="w-10 h-10" />
+            <span className="text-[9px] text-gray-400 group-hover:text-white">
+              Image
+            </span>
+          </div>
+
+          <div
+            className="flex flex-col items-center gap-1 cursor-pointer group p-2 rounded-md hover:bg-white/5 min-w-[100px]"
+            onClick={() => textFileInputRef.current?.click()}
+          >
+            <div className="w-10 h-10 flex items-center justify-center">
+              <span className="text-2xl">📄</span>
             </div>
+            <span className="text-[9px] text-gray-400 group-hover:text-white">
+              Text
+            </span>
+          </div>
         </div>
-        
+
         <Divider />
 
         <div className="flex items-center gap-2">
-           <button 
-             onClick={() => onZoomChange?.(Math.max(0.5, (currentZoom || 1) - 0.1))}
-             className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"
-             title="Zoom Out"
-           >
-             <ZoomOut className="w-5 h-5" />
-           </button>
-           <span className="text-xs text-zinc-400 w-8 text-center">{Math.round((currentZoom || 1) * 100)}%</span>
-           <button 
-             onClick={() => onZoomChange?.(Math.min(3, (currentZoom || 1) + 0.1))}
-             className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"
-             title="Zoom In"
-           >
-             <ZoomIn className="w-5 h-5" />
-           </button>
+          <button
+            onClick={() =>
+              onZoomChange?.(Math.max(0.5, (currentZoom || 1) - 0.1))
+            }
+            className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"
+            title="Zoom Out"
+          >
+            <ZoomOut className="w-5 h-5" />
+          </button>
+          <span className="text-xs text-zinc-400 w-8 text-center">
+            {Math.round((currentZoom || 1) * 100)}%
+          </span>
+          <button
+            onClick={() =>
+              onZoomChange?.(Math.min(3, (currentZoom || 1) + 0.1))
+            }
+            className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"
+            title="Zoom In"
+          >
+            <ZoomIn className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="flex-grow" />
 
-        <div className="flex items-center gap-4 ml-4 px-4 border-l border-zinc-700">
-          <div className="flex flex-col items-center group cursor-pointer">
-            <Button 
-              size="icon" 
-              variant="secondary" 
-              className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-              onClick={() => {
-                const undoTexts = undo?.();
-                if (undoTexts) updatePageData?.(currentPageIndex, 'texts', undoTexts);
-              }}
-              disabled={!canUndo}
-            >
-              <Undo2 className="w-5 h-5" />
-            </Button>
-            <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Undo</span>
-          </div>
-          <div className="flex flex-col items-center group cursor-pointer">
-            <Button 
-              size="icon" 
-              variant="secondary" 
-              className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-              onClick={() => {
-                const redoTexts = redo?.();
-                if (redoTexts) updatePageData?.(currentPageIndex, 'texts', redoTexts);
-              }}
-              disabled={!canRedo}
-            >
-              <Redo2 className="w-5 h-5" />
-            </Button>
-            <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Redo</span>
-          </div>
-        </div>
+        <UndoRedoControls undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo} />
       </>
     );
   };
@@ -1388,72 +1527,85 @@ const Toolbox = ({
   const renderTablePanel = () => {
     return (
       <>
-        <div 
+        <div
           onClick={handleRefresh}
           className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
         >
           <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
-          <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Refresh</span>
+          <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">
+            Refresh
+          </span>
         </div>
         <Divider />
 
         {/* Table Tabs */}
         <div className="flex gap-1">
-          <ToolbarButton 
-            isActive={activeTableTab === 'layout'}
-            onClick={() => setActiveTableTab('layout')}
+          <ToolbarButton
+            isActive={activeTableTab === "layout"}
+            onClick={() => setActiveTableTab("layout")}
             className="text-[10px] px-2 h-7"
           >
             Layout
           </ToolbarButton>
-          <ToolbarButton 
-            isActive={activeTableTab === 'design'}
-            onClick={() => setActiveTableTab('design')}
+          <ToolbarButton
+            isActive={activeTableTab === "design"}
+            onClick={() => setActiveTableTab("design")}
             className="text-[10px] px-2 h-7"
           >
             Design
           </ToolbarButton>
-
         </div>
 
         <Divider />
 
         {/* Layout Tab */}
-        {activeTableTab === 'layout' && (
+        {activeTableTab === "layout" && (
           <div className="flex items-center gap-2">
             <div className="flex flex-col items-center">
               <span className="text-[9px] text-zinc-400 mb-1">Rows</span>
               <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700">
-                <button 
-                  onClick={() => handleTablePropertyChange('rows', tableRows - 1)} 
+                <button
+                  onClick={() =>
+                    handleTablePropertyChange("rows", tableRows - 1)
+                  }
                   className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg"
                   disabled={tableRows <= 1}
                 >
                   <Minus className="w-3 h-3" />
                 </button>
-                <div className="w-8 text-center text-xs font-medium text-zinc-200 font-mono">{tableRows}</div>
-                <button 
-                  onClick={() => handleTablePropertyChange('rows', tableRows + 1)} 
+                <div className="w-8 text-center text-xs font-medium text-zinc-200 font-mono">
+                  {tableRows}
+                </div>
+                <button
+                  onClick={() =>
+                    handleTablePropertyChange("rows", tableRows + 1)
+                  }
                   className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
               </div>
             </div>
-            
+
             <div className="flex flex-col items-center">
               <span className="text-[9px] text-zinc-400 mb-1">Cols</span>
               <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700">
-                <button 
-                  onClick={() => handleTablePropertyChange('cols', tableCols - 1)} 
+                <button
+                  onClick={() =>
+                    handleTablePropertyChange("cols", tableCols - 1)
+                  }
                   className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg"
                   disabled={tableCols <= 1}
                 >
                   <Minus className="w-3 h-3" />
                 </button>
-                <div className="w-8 text-center text-xs font-medium text-zinc-200 font-mono">{tableCols}</div>
-                <button 
-                  onClick={() => handleTablePropertyChange('cols', tableCols + 1)} 
+                <div className="w-8 text-center text-xs font-medium text-zinc-200 font-mono">
+                  {tableCols}
+                </div>
+                <button
+                  onClick={() =>
+                    handleTablePropertyChange("cols", tableCols + 1)
+                  }
                   className="h-8 w-6 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg"
                 >
                   <Plus className="w-3 h-3" />
@@ -1464,16 +1616,18 @@ const Toolbox = ({
         )}
 
         {/* Design Tab */}
-        {activeTableTab === 'design' && (
+        {activeTableTab === "design" && (
           <div className="flex items-center gap-2">
             <div className="flex flex-col items-center gap-1">
               <span className="text-[9px] text-zinc-400">Border</span>
-              <div 
+              <div
                 onClick={() => {
-                  setTableColorTarget('border');
-                  setShowColorPicker(!showColorPicker || tableColorTarget !== 'border');
+                  setTableColorTarget("border");
+                  setShowColorPicker(
+                    !showColorPicker || tableColorTarget !== "border",
+                  );
                 }}
-                className="w-8 h-8 rounded-md cursor-pointer hover:scale-110 transition-transform shadow-lg ring-1 ring-white/10" 
+                className="w-8 h-8 rounded-md cursor-pointer hover:scale-110 transition-transform shadow-lg ring-1 ring-white/10"
                 style={{ backgroundColor: tableBorderColor }}
                 title="Border Color"
               />
@@ -1481,12 +1635,14 @@ const Toolbox = ({
 
             <div className="flex flex-col items-center gap-1 ml-2">
               <span className="text-[9px] text-zinc-400">Fill</span>
-              <div 
+              <div
                 onClick={() => {
-                  setTableColorTarget('fill');
-                  setShowColorPicker(!showColorPicker || tableColorTarget !== 'fill');
+                  setTableColorTarget("fill");
+                  setShowColorPicker(
+                    !showColorPicker || tableColorTarget !== "fill",
+                  );
                 }}
-                className="w-8 h-8 rounded-md cursor-pointer hover:scale-110 transition-transform shadow-lg ring-1 ring-white/10" 
+                className="w-8 h-8 rounded-md cursor-pointer hover:scale-110 transition-transform shadow-lg ring-1 ring-white/10"
                 style={{ backgroundColor: tableFillColor }}
                 title="Fill Color"
               />
@@ -1497,7 +1653,9 @@ const Toolbox = ({
             <div className="flex flex-col gap-1 w-20">
               <div className="flex justify-between">
                 <span className="text-[9px] text-zinc-400">Border Width</span>
-                <span className="text-[9px] text-zinc-300">{tableBorderWidth}px</span>
+                <span className="text-[9px] text-zinc-300">
+                  {tableBorderWidth}px
+                </span>
               </div>
               <input
                 type="range"
@@ -1507,7 +1665,7 @@ const Toolbox = ({
                 onChange={(e) => {
                   const width = parseInt(e.target.value);
                   setTableBorderWidth(width);
-                  onTableChange?.('borderWidth', width);
+                  onTableChange?.("borderWidth", width);
                 }}
                 className="w-full h-1.5 bg-zinc-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
               />
@@ -1515,83 +1673,77 @@ const Toolbox = ({
           </div>
         )}
 
-
-
-        {showColorPicker && (tableColorTarget === 'border' || tableColorTarget === 'fill') && (
-          <div className="absolute top-16 left-20 z-50">
-            <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
-            <SketchPicker 
-              color={tableColorTarget === 'border' ? tableBorderColor : tableFillColor} 
-              onChange={(color) => handleTableColorChange(color, tableColorTarget)} 
-            />
-          </div>
-        )}
+        {showColorPicker &&
+          (tableColorTarget === "border" || tableColorTarget === "fill") && (
+            <div className="absolute top-16 left-20 z-50">
+              <div
+                className="fixed inset-0"
+                onClick={() => setShowColorPicker(false)}
+              />
+              <SketchPicker
+                color={
+                  tableColorTarget === "border"
+                    ? tableBorderColor
+                    : tableFillColor
+                }
+                onChange={(color) =>
+                  handleTableColorChange(color, tableColorTarget)
+                }
+              />
+            </div>
+          )}
 
         <div className="flex-grow" />
 
-        <div className="flex items-center gap-4 ml-4 px-4 border-l border-zinc-700">
-          <div className="flex flex-col items-center group cursor-pointer">
-            <Button 
-              size="icon" 
-              variant="secondary" 
-              className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-              onClick={() => {
-                const undoTexts = undo?.();
-                if (undoTexts) updatePageData?.(currentPageIndex, 'texts', undoTexts);
-              }}
-              disabled={!canUndo}
-            >
-              <Undo2 className="w-5 h-5" />
-            </Button>
-            <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Undo</span>
-          </div>
-          <div className="flex flex-col items-center group cursor-pointer">
-            <Button 
-              size="icon" 
-              variant="secondary" 
-              className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
-              onClick={() => {
-                const redoTexts = redo?.();
-                if (redoTexts) updatePageData?.(currentPageIndex, 'texts', redoTexts);
-              }}
-              disabled={!canRedo}
-            >
-              <Redo2 className="w-5 h-5" />
-            </Button>
-            <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Redo</span>
-          </div>
-        </div>
+        <UndoRedoControls undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo} />
       </>
     );
   };
 
   const renderShapesPanel = () => {
     const shapes = [
-      { id: 'square', icon: Square, label: 'Square' },
-      { id: 'rectangle', icon: RectangleHorizontal, label: 'Rectangle' },
-      { id: 'ellipse', icon: Circle, label: 'Ellipse' },
-      { id: 'triangle', icon: Triangle, label: 'Triangle' },
-      { id: 'star', icon: Star, label: 'Star' },
-      { id: 'line', icon: LineIcon, label: 'Line' },
-      { id: 'arrow', icon: MoveRight, label: 'Arrow' },
+      { id: "square", icon: Square, label: "Square" },
+      { id: "rectangle", icon: RectangleHorizontal, label: "Rectangle" },
+      { id: "ellipse", icon: Circle, label: "Ellipse" },
+      { id: "triangle", icon: Triangle, label: "Triangle" },
+      { id: "star", icon: Star, label: "Star" },
+      { id: "line", icon: LineIcon, label: "Line" },
+      { id: "arrow", icon: MoveRight, label: "Arrow" },
     ];
 
-    const ShapeToolButton = ({ icon: Icon, label, isActive, onClick }: { icon: any; label: string; isActive: boolean; onClick: () => void }) => (
+    const ShapeToolButton = ({
+      icon: Icon,
+      label,
+      isActive,
+      onClick,
+    }: {
+      icon: any;
+      label: string;
+      isActive: boolean;
+      onClick: () => void;
+    }) => (
       <button
         onClick={onClick}
         className={cn(
           "flex flex-col items-center justify-center gap-2 p-2 rounded-lg transition-all duration-200 relative group min-w-[64px]",
-          isActive ? 'text-indigo-400' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+          isActive
+            ? "text-indigo-400"
+            : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5",
         )}
       >
-        <div className={cn(
-          "w-11 h-11 flex items-center justify-center rounded-lg transition-all",
-          isActive 
-            ? 'bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.3)]' 
-            : 'bg-zinc-700/50 group-hover:bg-zinc-700'
-        )}>
-          <Icon 
-            className={cn("w-6 h-6", isActive ? 'fill-current opacity-100' : 'opacity-80')} 
+        <div
+          className={cn(
+            "w-11 h-11 flex items-center justify-center rounded-lg transition-all",
+            isActive
+              ? "bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+              : "bg-zinc-700/50 group-hover:bg-zinc-700",
+          )}
+        >
+          <Icon
+            className={cn(
+              "w-6 h-6",
+              isActive ? "fill-current opacity-100" : "opacity-80",
+            )}
             strokeWidth={1.5}
           />
         </div>
@@ -1624,16 +1776,17 @@ const Toolbox = ({
       <div className="w-full flex items-center gap-6 px-4">
         {/* Left Actions */}
         <div className="flex items-center gap-3 pr-2 self-center">
-          <div 
+          <div
             onClick={handleRefresh}
             className="flex flex-col items-center gap-1 group cursor-pointer w-12"
           >
             <div className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
               <RotateCw className="w-4 h-4 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
             </div>
-            <span className="text-[10px] text-zinc-500 font-medium group-hover:text-zinc-300">Refresh</span>
+            <span className="text-[10px] text-zinc-500 font-medium group-hover:text-zinc-300">
+              Refresh
+            </span>
           </div>
-          
         </div>
 
         <Divider />
@@ -1657,35 +1810,51 @@ const Toolbox = ({
         <div className="flex items-center gap-4 pl-2 self-center">
           {/* Fill Color */}
           <div className="flex flex-col items-center gap-2 cursor-pointer group relative">
-            <div 
+            <div
               className="w-11 h-11 rounded-lg border border-zinc-600 shadow-inner flex items-center justify-center hover:scale-105 transition-transform"
-              style={{ 
-                backgroundColor: isFillTransparent ? 'transparent' : shapeFillColor,
-                backgroundImage: isFillTransparent 
-                  ? 'linear-gradient(45deg, #ef4444 25%, transparent 25%), linear-gradient(-45deg, #ef4444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ef4444 75%), linear-gradient(-45deg, transparent 75%, #ef4444 75%)'
-                  : 'none',
-                backgroundSize: isFillTransparent ? '20px 20px' : 'auto',
-                backgroundPosition: isFillTransparent ? '0 0, 0 10px, 10px -10px, -10px 0px' : 'center'
+              style={{
+                backgroundColor: isFillTransparent
+                  ? "transparent"
+                  : shapeFillColor,
+                backgroundImage: isFillTransparent
+                  ? "linear-gradient(45deg, #ef4444 25%, transparent 25%), linear-gradient(-45deg, #ef4444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ef4444 75%), linear-gradient(-45deg, transparent 75%, #ef4444 75%)"
+                  : "none",
+                backgroundSize: isFillTransparent ? "20px 20px" : "auto",
+                backgroundPosition: isFillTransparent
+                  ? "0 0, 0 10px, 10px -10px, -10px 0px"
+                  : "center",
               }}
               onClick={() => setShowShapeFillPicker(!showShapeFillPicker)}
-              title={isFillTransparent ? "Click to change fill color" : "Click to change fill color"}
+              title={
+                isFillTransparent
+                  ? "Click to change fill color"
+                  : "Click to change fill color"
+              }
             >
               {isFillTransparent && (
                 <div className="w-px h-full bg-red-500 rotate-45 transform origin-center" />
               )}
             </div>
-            <span className="text-xs text-zinc-400 font-medium group-hover:text-zinc-200">Fill</span>
-            
+            <span className="text-xs text-zinc-400 font-medium group-hover:text-zinc-200">
+              Fill
+            </span>
+
             {showShapeFillPicker && (
               <div className="absolute top-16 left-0 z-50">
-                <div className="fixed inset-0" onClick={() => setShowShapeFillPicker(false)} />
+                <div
+                  className="fixed inset-0"
+                  onClick={() => setShowShapeFillPicker(false)}
+                />
                 <div className="relative bg-zinc-800 rounded-lg shadow-2xl p-2 border border-zinc-700">
                   <SketchPicker
                     color={shapeFillColor}
                     onChangeComplete={(color) => {
                       setShapeFillColor(color.hex);
                       setIsFillTransparent(false);
-                      onShapePropertiesChange?.({ fillColor: color.hex, isFillTransparent: false });
+                      onShapePropertiesChange?.({
+                        fillColor: color.hex,
+                        isFillTransparent: false,
+                      });
                     }}
                     disableAlpha={true}
                   />
@@ -1694,11 +1863,13 @@ const Toolbox = ({
                       const newValue = !isFillTransparent;
                       setIsFillTransparent(newValue);
                       setShowShapeFillPicker(false);
-                      onShapePropertiesChange?.({ isFillTransparent: newValue });
+                      onShapePropertiesChange?.({
+                        isFillTransparent: newValue,
+                      });
                     }}
                     className="mt-2 w-full px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded text-xs text-white transition-colors"
                   >
-                    {isFillTransparent ? 'Enable Fill' : 'Remove Fill'}
+                    {isFillTransparent ? "Enable Fill" : "Remove Fill"}
                   </button>
                 </div>
               </div>
@@ -1707,17 +1878,22 @@ const Toolbox = ({
 
           {/* Stroke Color */}
           <div className="flex flex-col items-center gap-2 cursor-pointer group relative">
-            <div 
+            <div
               className="w-11 h-11 rounded-lg border-4 shadow-inner flex items-center justify-center hover:scale-105 transition-transform bg-zinc-800"
               style={{ borderColor: shapeStrokeColor }}
               onClick={() => setShowShapeStrokePicker(!showShapeStrokePicker)}
               title="Click to change stroke color"
             />
-            <span className="text-xs text-zinc-400 font-medium group-hover:text-zinc-200">Stroke</span>
-            
+            <span className="text-xs text-zinc-400 font-medium group-hover:text-zinc-200">
+              Stroke
+            </span>
+
             {showShapeStrokePicker && (
               <div className="absolute top-16 left-0 z-50">
-                <div className="fixed inset-0" onClick={() => setShowShapeStrokePicker(false)} />
+                <div
+                  className="fixed inset-0"
+                  onClick={() => setShowShapeStrokePicker(false)}
+                />
                 <div className="relative bg-zinc-800 rounded-lg shadow-2xl p-2 border border-zinc-700">
                   <SketchPicker
                     color={shapeStrokeColor}
@@ -1741,56 +1917,28 @@ const Toolbox = ({
                 <div className="w-full h-[2px] bg-zinc-400 opacity-70" />
                 <div className="w-full h-[3px] bg-zinc-400" />
               </div>
-              <span className="text-zinc-200 font-mono text-sm">{shapeStrokeWeight}px</span>
+              <span className="text-zinc-200 font-mono text-sm">
+                {shapeStrokeWeight}px
+              </span>
             </div>
-            <span className="text-xs text-zinc-400 font-medium group-hover:text-zinc-200">Weight</span>
-            
+            <span className="text-xs text-zinc-400 font-medium group-hover:text-zinc-200">
+              Weight
+            </span>
+
             <div className="absolute inset-0 flex">
-              <button 
+              <button
                 className="flex-1 opacity-0"
                 onClick={() => handleWeightChange(1)}
               />
-              <button 
+              <button
                 className="flex-1 opacity-0"
                 onClick={() => handleWeightChange(-1)}
               />
             </div>
           </div>
         </div>
-        <Divider/>
-          <div className="flex items-center gap-1 p-1 rounded-lg border border-zinc-800/50">
-            <div className="flex flex-col items-center gap-1 group cursor-pointer w-10">
-              <Button 
-                size="icon" 
-                variant="ghost"
-                className="h-8 w-8 p-0 bg-transparent hover:bg-transparent"
-                onClick={() => {
-                  const undoTexts = undo?.();
-                  if (undoTexts) updatePageData?.(currentPageIndex, 'texts', undoTexts);
-                }}
-                disabled={!canUndo}
-              >
-                <Undo2 className="w-4 h-4 text-zinc-400 group-hover:text-white" />
-              </Button>
-              <span className="text-[10px] text-zinc-500 font-medium group-hover:text-zinc-300">Undo</span>
-            </div>
-            
-            <div className="flex flex-col items-center gap-1 group cursor-pointer w-10">
-              <Button 
-                size="icon" 
-                variant="ghost"
-                className="h-8 w-8 p-0 bg-transparent hover:bg-transparent"
-                onClick={() => {
-                  const redoTexts = redo?.();
-                  if (redoTexts) updatePageData?.(currentPageIndex, 'texts', redoTexts);
-                }}
-                disabled={!canRedo}
-              >
-                <Redo2 className="w-4 h-4 text-zinc-400 group-hover:text-white" />
-              </Button>
-              <span className="text-[10px] text-zinc-500 font-medium group-hover:text-zinc-300">Redo</span>
-            </div>
-          </div>
+        
+        <UndoRedoControls undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo} />
       </div>
     );
   };
@@ -1798,166 +1946,184 @@ const Toolbox = ({
   const renderPenPanel = () => {
     return (
       <div className="w-full flex items-center gap-4 px-2">
-        <div 
-            onClick={() => onToolChange?.('select')}
-            className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group border-r border-zinc-700 pr-4"
+        <div
+          onClick={() => onToolChange?.("select")}
+          className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group border-r border-zinc-700 pr-4"
         >
-            <ChevronLeft className="w-5 h-5 text-zinc-400 group-hover:text-white transition-all" />
-            <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">Back</span>
+          <ChevronLeft className="w-5 h-5 text-zinc-400 group-hover:text-white transition-all" />
+          <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">
+            Back
+          </span>
         </div>
 
         {/* Mode Selection */}
         <div className="flex items-center gap-2">
-            <span className="text-[10px] text-zinc-400">Mode:</span>
-            <div className="flex gap-1">
-            <ToolbarButton 
-                isActive={penMode === 'polygon'}
-                onClick={() => {
-                    setPenMode('polygon');
-                    onPenOptionChange?.('mode', 'polygon');
-                }}
-                className="text-[10px] px-2 h-7"
+          <span className="text-[10px] text-zinc-400">Mode:</span>
+          <div className="flex gap-1">
+            <ToolbarButton
+              isActive={penMode === "polygon"}
+              onClick={() => {
+                setPenMode("polygon");
+                onPenOptionChange?.("mode", "polygon");
+              }}
+              className="text-[10px] px-2 h-7"
             >
-                Polygon
+              Polygon
             </ToolbarButton>
-            <ToolbarButton 
-                isActive={penMode === 'freehand'}
-                onClick={() => {
-                    setPenMode('freehand');
-                    onPenOptionChange?.('mode', 'freehand');
-                }}
-                className="text-[10px] px-2 h-7"
+            <ToolbarButton
+              isActive={penMode === "freehand"}
+              onClick={() => {
+                setPenMode("freehand");
+                onPenOptionChange?.("mode", "freehand");
+              }}
+              className="text-[10px] px-2 h-7"
             >
-                Freehand
+              Freehand
             </ToolbarButton>
-            </div>
+          </div>
         </div>
 
         <Divider />
 
         {/* Stroke Settings */}
         <div className="flex items-center gap-3">
-            <div className="flex flex-col gap-1 w-24">
-                <div className="flex justify-between">
-                    <span className="text-[9px] text-zinc-400">Stroke</span>
-                    <span className="text-[9px] text-zinc-300">{strokeWidth}px</span>
-                </div>
-                <input
-                    type="range"
-                    min="1"
-                    max="20"
-                    value={strokeWidth}
-                    onChange={(e) => onStrokeWidthChange?.(parseInt(e.target.value))}
-                    className="w-full h-1 bg-zinc-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                />
+          <div className="flex flex-col gap-1 w-24">
+            <div className="flex justify-between">
+              <span className="text-[9px] text-zinc-400">Stroke</span>
+              <span className="text-[9px] text-zinc-300">{strokeWidth}px</span>
             </div>
-            
-            <div className="relative">
-                <div 
-                    onClick={() => setShowColorPicker(!showColorPicker)}
-                    className="w-7 h-7 rounded-full cursor-pointer border border-white/20 hover:scale-110 transition-transform"
-                    style={{ backgroundColor: strokeColor }}
-                    title="Stroke Color"
+            <input
+              type="range"
+              min="1"
+              max="20"
+              value={strokeWidth}
+              onChange={(e) => onStrokeWidthChange?.(parseInt(e.target.value))}
+              className="w-full h-1 bg-zinc-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+            />
+          </div>
+
+          <div className="relative">
+            <div
+              onClick={() => setShowColorPicker(!showColorPicker)}
+              className="w-7 h-7 rounded-full cursor-pointer border border-white/20 hover:scale-110 transition-transform"
+              style={{ backgroundColor: strokeColor }}
+              title="Stroke Color"
+            />
+            {showColorPicker && !showFillPicker && (
+              <div className="absolute top-10 left-0 z-50">
+                <div
+                  className="fixed inset-0"
+                  onClick={() => setShowColorPicker(false)}
                 />
-                {showColorPicker && !showFillPicker && (
-                    <div className="absolute top-10 left-0 z-50">
-                        <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
-                        <SketchPicker 
-                            color={strokeColor} 
-                            onChange={(color) => {
-                                const rgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${color.rgb.a ?? 1})`;
-                                onStrokeColorChange?.(rgba);
-                            }} 
-                        />
-                    </div>
-                )}
-            </div>
+                <SketchPicker
+                  color={strokeColor}
+                  onChange={(color) => {
+                    const rgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${color.rgb.a ?? 1})`;
+                    onStrokeColorChange?.(rgba);
+                  }}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <Divider />
 
         {/* Fill Settings */}
         <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="enableFill"
-                checked={penFillOpacity > 0}
-                onChange={(e) => {
-                  const newOpacity = e.target.checked ? 50 : 0;
-                  setPenFillOpacity(newOpacity);
-                  onPenOptionChange?.('fillOpacity', newOpacity);
-                  const match = penFillColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
-                  if (match) {
-                    const newFill = `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${newOpacity / 100})`;
-                    setPenFillColor(newFill);
-                    onPenOptionChange?.('fillColor', newFill);
-                  }
-                }}
-                className="w-4 h-4 rounded border-zinc-600 text-indigo-600 focus:ring-indigo-500"
-              />
-              <label htmlFor="enableFill" className="text-[10px] text-zinc-300 cursor-pointer">Fill</label>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-                <div 
-                    className="w-7 h-7 rounded border border-white/20 cursor-pointer hover:scale-110 transition-transform"
-                    style={{ backgroundColor: penFillColor }}
-                    onClick={() => {
-                        setShowFillPicker(!showFillPicker);
-                        setShowColorPicker(false);
-                    }}
-                    title="Fill Color"
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="enableFill"
+              checked={penFillOpacity > 0}
+              onChange={(e) => {
+                const newOpacity = e.target.checked ? 50 : 0;
+                setPenFillOpacity(newOpacity);
+                onPenOptionChange?.("fillOpacity", newOpacity);
+                const match = penFillColor.match(
+                  /rgba\((\d+),\s*(\d+),\s*(\d+)/,
+                );
+                if (match) {
+                  const newFill = `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${newOpacity / 100})`;
+                  setPenFillColor(newFill);
+                  onPenOptionChange?.("fillColor", newFill);
+                }
+              }}
+              className="w-4 h-4 rounded border-zinc-600 text-indigo-600 focus:ring-indigo-500"
+            />
+            <label
+              htmlFor="enableFill"
+              className="text-[10px] text-zinc-300 cursor-pointer"
+            >
+              Fill
+            </label>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div
+              className="w-7 h-7 rounded border border-white/20 cursor-pointer hover:scale-110 transition-transform"
+              style={{ backgroundColor: penFillColor }}
+              onClick={() => {
+                setShowFillPicker(!showFillPicker);
+                setShowColorPicker(false);
+              }}
+              title="Fill Color"
+            />
+            {showFillPicker && (
+              <div className="absolute top-full mt-2 z-50">
+                <div
+                  className="fixed inset-0"
+                  onClick={() => setShowFillPicker(false)}
                 />
-                {showFillPicker && (
-                    <div className="absolute top-full mt-2 z-50">
-                        <div className="fixed inset-0" onClick={() => setShowFillPicker(false)} />
-                        <SketchPicker 
-                            color={penFillColor} 
-                            onChange={(color) => {
-                                const rgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${penFillOpacity / 100})`;
-                                setPenFillColor(rgba);
-                                onPenOptionChange?.('fillColor', rgba);
-                            }} 
-                        />
-                    </div>
-                )}
-            </div>
-            <div className="flex flex-col gap-1 w-20">
-                 <div className="flex justify-between">
-                    <span className="text-[9px] text-zinc-400">Opacity</span>
-                    <span className="text-[9px] text-zinc-300">{penFillOpacity}%</span>
-                </div>
-                <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={penFillOpacity}
-                    onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setPenFillOpacity(val);
-                        onPenOptionChange?.('fillOpacity', val);
-                        const match = penFillColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
-                        if (match) {
-                          const newFill = `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${val / 100})`;
-                          setPenFillColor(newFill);
-                          onPenOptionChange?.('fillColor', newFill);
-                        }
-                    }}
-                    className="w-full h-1 bg-zinc-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                <SketchPicker
+                  color={penFillColor}
+                  onChange={(color) => {
+                    const rgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${penFillOpacity / 100})`;
+                    setPenFillColor(rgba);
+                    onPenOptionChange?.("fillColor", rgba);
+                  }}
                 />
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-1 w-20">
+            <div className="flex justify-between">
+              <span className="text-[9px] text-zinc-400">Opacity</span>
+              <span className="text-[9px] text-zinc-300">
+                {penFillOpacity}%
+              </span>
             </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={penFillOpacity}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                setPenFillOpacity(val);
+                onPenOptionChange?.("fillOpacity", val);
+                const match = penFillColor.match(
+                  /rgba\((\d+),\s*(\d+),\s*(\d+)/,
+                );
+                if (match) {
+                  const newFill = `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${val / 100})`;
+                  setPenFillColor(newFill);
+                  onPenOptionChange?.("fillColor", newFill);
+                }
+              }}
+              className="w-full h-1 bg-zinc-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+            />
+          </div>
         </div>
-
-        <Divider />
-
-      
 
         <Divider />
 
         {/* Instructions */}
         <div className="text-[10px] text-zinc-400 px-2 max-w-[200px]">
-          {penMode === 'polygon' ? (
-            <>Click to add points • Double-click or Enter to finish • Click near start to close • ESC to cancel • Backspace to undo point</>
+          {penMode === "polygon" ? (
+            <>
+              Click to add points • Double-click or Enter to finish • Click near
+              start to close • ESC to cancel • Backspace to undo point
+            </>
           ) : (
             <>Click and drag to draw • Release to finish • ESC to cancel</>
           )}
@@ -1965,26 +2131,27 @@ const Toolbox = ({
 
         <div className="flex-grow" />
 
+        <UndoRedoControls undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo} />
       </div>
     );
   };
 
   const renderContent = () => {
     switch (activeTool) {
-      case 'Book Size':
+      case "Book Size":
         return renderBookSizePanel();
-      case 'Text':
+      case "Text":
         return renderTextPanel();
-      case 'Color':
+      case "Color":
         return renderColorPanel();
-      case 'Brush':
+      case "Brush":
         return renderBrushPanel();
-      case 'Tool':
-        if (activeSubTool === 'pen') return renderPenPanel();
+      case "Tool":
+        if (activeSubTool === "pen") return renderPenPanel();
         return renderToolPanel();
-      case 'Shapes':
+      case "Shapes":
         return renderShapesPanel();
-      case 'Table':
+      case "Table":
         return renderTablePanel();
       default:
         return (

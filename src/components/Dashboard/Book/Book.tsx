@@ -928,12 +928,25 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   const isDrawing = useRef(false);
   const { addToHistory, undo, redo, canUndo, canRedo } = useBookHistory();
 
-  const saveCurrentPageState = useCallback((overridePageIndex?: number) => {
-    const idx = overridePageIndex !== undefined ? overridePageIndex : currentPageIndex;
-    if (pages[idx]) {
-      addToHistory(idx, pages[idx]);
+  const saveCurrentPageState = useCallback(() => {
+    addToHistory(pages);
+  }, [addToHistory, pages]);
+
+  const handleUndo = useCallback(() => {
+    const previousPages = undo(pages);
+    if (previousPages) {
+      setPages(previousPages);
+      setSelectedIds([]);
     }
-  }, [addToHistory, currentPageIndex, pages]);
+  }, [undo, pages]);
+
+  const handleRedo = useCallback(() => {
+    const nextPages = redo(pages);
+    if (nextPages) {
+      setPages(nextPages);
+      setSelectedIds([]);
+    }
+  }, [redo, pages]);
 
   const selectedTextId = selectedIds.length === 1 ? selectedIds[0] : null;
   const selectedShapeId = selectedIds.length === 1 ? selectedIds[0] : null;
@@ -1179,8 +1192,8 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
   }, [pages.length]);
 
   useImperativeHandle(ref, () => ({
-    undo,
-    redo,
+    undo: handleUndo,
+    redo: handleRedo,
     canUndo,
     canRedo,
     updatePageData,
@@ -1779,7 +1792,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     
     if (!imageUrl) return;
 
-    saveCurrentPageState(pageIndex);
+    saveCurrentPageState();
 
     const minZ = getMinZIndex(pages[pageIndex]);
 
@@ -1818,7 +1831,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       if (targetPageIndex >= pages.length) targetPageIndex = pages.length - 1;
       if (targetPageIndex < 0) targetPageIndex = currentPageIndex;
       
-      addToHistory(targetPageIndex, pages[targetPageIndex]);
+      saveCurrentPageState();
       
       const minZ = getMinZIndex(pages[targetPageIndex]);
       
@@ -1901,25 +1914,13 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
         if (e.key.toLowerCase() === 'z') {
           e.preventDefault();
           if (e.shiftKey) {
-            const result = redo(pages[currentPageIndex], currentPageIndex);
-            if (result) {
-              setPages(prev => prev.map((p, i) => i === result.pageIndex ? result.data : p));
-              setCurrentPageIndex(result.pageIndex);
-            }
+            handleRedo();
           } else {
-            const result = undo(pages[currentPageIndex], currentPageIndex);
-            if (result) {
-              setPages(prev => prev.map((p, i) => i === result.pageIndex ? result.data : p));
-              setCurrentPageIndex(result.pageIndex);
-            }
+            handleUndo();
           }
         } else if (e.key.toLowerCase() === 'y') {
           e.preventDefault();
-          const result = redo(pages[currentPageIndex], currentPageIndex);
-          if (result) {
-            setPages(prev => prev.map((p, i) => i === result.pageIndex ? result.data : p));
-            setCurrentPageIndex(result.pageIndex);
-          }
+          handleRedo();
         } else if (e.key.toLowerCase() === 'c') {
           e.preventDefault();
           handleCopy();
@@ -1952,7 +1953,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [selectedIds, currentPageIndex, pages, activeTool, activeSubTool, onToolChange, editingTextItem, editingStickyNote, editingTableCell, handleCopy, handleCut, handlePaste, handleDeleteSelected, undo, redo, updatePageData]);
+  }, [selectedIds, currentPageIndex, pages, activeTool, activeSubTool, onToolChange, editingTextItem, editingStickyNote, editingTableCell, handleCopy, handleCut, handlePaste, handleDeleteSelected, handleUndo, handleRedo, updatePageData]);
 
   // Fullscreen and zoom shortcuts
   useEffect(() => {
@@ -2147,7 +2148,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
       
-      saveCurrentPageState(pageIndex);
+      saveCurrentPageState();
       
       const newText: TextType = {
         id: Date.now().toString(),
@@ -2189,7 +2190,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
       
-      saveCurrentPageState(pageIndex);
+      saveCurrentPageState();
       
       const newShape = createShapeAtPosition(selectedShape, pos);
       const currentShapes = pages[pageIndex].shapes || [];
@@ -2208,7 +2209,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
 
       if (penMode === 'polygon') {
         if (points.length === 0) {
-          saveCurrentPageState(pageIndex);
+          saveCurrentPageState();
           setPenDrawingState(prev => ({
             ...prev,
             [pageIndex]: { points: [pos.x, pos.y], isDrawing: true, mode: 'polygon' }
@@ -2240,7 +2241,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       }
 
       if (penMode === 'freehand') {
-        saveCurrentPageState(pageIndex);
+        saveCurrentPageState();
         isDrawing.current = true;
         activeDrawingPage.current = pageIndex;
         setPenDrawingState(prev => ({
@@ -2256,7 +2257,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
       
-      saveCurrentPageState(pageIndex);
+      saveCurrentPageState();
       
       const newNote: StickyNoteType = {
         id: Date.now().toString(),
@@ -2288,7 +2289,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
       const pos = stage.getPointerPosition();
       if (!pos) return;
       
-      saveCurrentPageState(pageIndex);
+      saveCurrentPageState();
       
       const adjustedX = (pos.x - panPosition.x) / zoom;
       const adjustedY = (pos.y - panPosition.y) / zoom;
@@ -2301,7 +2302,7 @@ const BookComponent = ({ activeTool = 'Tool', activeSubTool = 'select', strokeCo
     }
 
     if (isDrawingMode) {
-      saveCurrentPageState(pageIndex);
+      saveCurrentPageState();
       isDrawing.current = true;
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
