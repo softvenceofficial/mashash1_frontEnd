@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Send, X, Check, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Mic, Send, X, Check, Image as ImageIcon, Loader2, Eye } from 'lucide-react';
 import { useGenerateImageMutation } from '@/redux/endpoints/bookApi';
 import { toast } from 'sonner';
 import { getImageUrl } from '@/lib/utils';
@@ -42,6 +42,7 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId, existingImages = 
   const [prompt, setPrompt] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [images, setImages] = useState<Array<{ url: string; prompt: string } | null>>(Array(50).fill(null));
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [generateImage, { isLoading }] = useGenerateImageMutation();
   const recognitionRef = useRef<any>(null);
   
@@ -265,8 +266,18 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId, existingImages = 
                     alt={img.prompt} 
                     draggable={true}
                     onDragStart={(e) => handleDragStart(e, img.url)}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-grab active:cursor-grabbing"
+                    onClick={() => setPreviewImage(img.url)}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer"
                   />
+                  <div 
+                    onClick={() => setPreviewImage(img.url)}
+                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center cursor-pointer"
+                  >
+                    <div className="bg-background/90 text-foreground px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg backdrop-blur-sm">
+                      <Eye size={16} />
+                      <span className="text-sm font-medium">Preview</span>
+                    </div>
+                  </div>
                 </>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
@@ -284,6 +295,31 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId, existingImages = 
             </div>
           ))}
         </div>
+
+        {previewImage && (
+          <div 
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+            onClick={() => setPreviewImage(null)}
+          >
+            <div 
+              className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img 
+                src={previewImage} 
+                alt="Full Preview" 
+                className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl border border-white/10"
+              />
+              <button 
+                onClick={() => setPreviewImage(null)}
+                className="absolute -top-4 -right-4 md:-top-6 md:-right-6 p-2 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors shadow-lg"
+                title="Close preview"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
