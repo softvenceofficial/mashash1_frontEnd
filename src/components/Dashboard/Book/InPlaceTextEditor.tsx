@@ -50,6 +50,7 @@ export const InPlaceTextEditor = ({ textItem, onUpdate, onBlur }: InPlaceTextEdi
     setText(e.target.value);
     e.target.style.height = 'auto';
     e.target.style.height = e.target.scrollHeight + 'px';
+    console.log(textItem);
   };
 
   return (
@@ -86,3 +87,5 @@ export const InPlaceTextEditor = ({ textItem, onUpdate, onBlur }: InPlaceTextEdi
     />
   );
 };
+
+
