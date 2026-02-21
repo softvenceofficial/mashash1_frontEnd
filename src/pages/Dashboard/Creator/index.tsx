@@ -94,22 +94,6 @@ export default function Creator() {
       const jsonString = JSON.stringify(processedPages);
       const jsonFile = new File([jsonString], "book_data.json", { type: "application/json" });
 
-      let coverBlob: Blob | null = null;
-      
-      try {
-        const stageElement = document.querySelector('.konvajs-content canvas');
-        if (stageElement) {
-          coverBlob = await new Promise<Blob>((resolve, reject) => {
-            (stageElement as HTMLCanvasElement).toBlob((blob) => {
-              if (blob) resolve(blob);
-              else reject(new Error('Could not generate cover'));
-            }, 'image/png');
-          });
-        }
-      } catch (err) {
-        console.warn("Could not generate cover image:", err);
-      }
-
       const formData = new FormData();
       const bookTitle = bookDetails?.data?.title || `Artbook ${new Date().toLocaleDateString()}`;
       const isUpdate = !!id;
@@ -117,8 +101,20 @@ export default function Creator() {
       formData.append("title", bookTitle);
       formData.append("file", jsonFile);
       
-      if (coverBlob && coverBlob.size > 0) {
-        formData.append("cover_image", coverBlob, "cover.png");
+      // Get cover image from the first page
+      if (bookRef.current.getCoverImage) {
+        const coverDataUrl = bookRef.current.getCoverImage();
+        
+        if (coverDataUrl) {
+          const res = await fetch(coverDataUrl);
+          const blob = await res.blob();
+          const coverFile = new File([blob], `cover_${id || Date.now()}.png`, { type: "image/png" });
+          formData.append("cover_image", coverFile);
+          console.log("✅ Successfully attached new cover image to the payload!");
+        } else {
+          console.warn("⚠️ Failed to grab coverDataUrl. The updated cover will not be sent.");
+          toast.warning("Make sure you are viewing the cover page (Page 1) to update the cover image.");
+        }
       }
 
       let response;
