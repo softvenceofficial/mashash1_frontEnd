@@ -4,17 +4,18 @@
 
 export const fetchBookContent = async (fileUrl: string): Promise<any> => {
   try {
-    // In development, use proxy by converting to relative URL
-    // In production, use full HTTPS URL
     let fetchUrl = fileUrl;
     
+    // Parse the URL to get just the pathname
+    const url = new URL(fileUrl.replace('http://', 'https://'));
+    
     if (import.meta.env.DEV) {
-      // Extract path from full URL for proxy
-      const url = new URL(fileUrl.replace('http://', 'https://'));
-      fetchUrl = url.pathname; // e.g., /media/artbook_file/book_data.json
+      // In local Dev, Vite proxy handles this
+      fetchUrl = url.pathname; 
     } else {
-      // Force HTTPS in production
-      fetchUrl = fileUrl.replace('http://', 'https://');
+      // IN PRODUCTION: Route through Netlify proxy
+      // Replace "/media/" with "/api-media/" to trigger the _redirects rule
+      fetchUrl = url.pathname.replace(/^\/media\//, '/api-media/');
     }
     
     console.log('Fetching book data from:', fetchUrl);
