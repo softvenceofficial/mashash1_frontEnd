@@ -1261,6 +1261,8 @@ const BookComponent = (
     const newZoom = 1;
     setCurrentZoom(newZoom);
     onZoomChange?.(newZoom);
+    setPanPosition({ x: 0, y: 0 });
+    setBookRotation({ x: 0, y: 0 });
   };
 
   const [editingTextItem, setEditingTextItem] = useState<TextType | null>(null);
@@ -1277,6 +1279,9 @@ const BookComponent = (
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [bookRotation, setBookRotation] = useState({ x: 0, y: 0 });
+  const [is3DDragging, setIs3DDragging] = useState(false);
+  const [drag3DStart, setDrag3DStart] = useState({ x: 0, y: 0, rotX: 0, rotY: 0 });
   const [penDrawingState, setPenDrawingState] = useState<{
     [pageIndex: number]: {
       points: number[];
@@ -2276,7 +2281,18 @@ const BookComponent = (
   ]);
 
   const handleContainerMouseDown = (e: React.MouseEvent) => {
-    if (isHandMode) {
+    if (e.button === 2) {
+      setIs3DDragging(true);
+      setDrag3DStart({
+        x: e.clientX,
+        y: e.clientY,
+        rotX: bookRotation.x,
+        rotY: bookRotation.y,
+      });
+      return;
+    }
+
+    if (isHandMode && e.button === 0) {
       setIsPanning(true);
       setDragStart({
         x: e.clientX - panPosition.x,
@@ -2286,6 +2302,17 @@ const BookComponent = (
   };
 
   const handleContainerMouseMove = (e: React.MouseEvent) => {
+    if (is3DDragging) {
+      const deltaX = e.clientX - drag3DStart.x;
+      const deltaY = e.clientY - drag3DStart.y;
+      
+      setBookRotation({
+        x: Math.max(-60, Math.min(60, drag3DStart.rotX - deltaY * 0.5)),
+        y: Math.max(-60, Math.min(60, drag3DStart.rotY + deltaX * 0.5)),
+      });
+      return;
+    }
+
     if (isPanning && isHandMode) {
       setPanPosition({
         x: e.clientX - dragStart.x,
@@ -2294,8 +2321,12 @@ const BookComponent = (
     }
   };
 
-  const handleContainerMouseUp = () => {
-    setIsPanning(false);
+  const handleContainerMouseUp = (e?: React.MouseEvent) => {
+    if (e && e.button === 2) {
+      setIs3DDragging(false);
+    } else {
+      setIsPanning(false);
+    }
   };
 
   const handlePageDrop = (
@@ -3107,7 +3138,10 @@ const BookComponent = (
             ? isPanning
               ? "grabbing"
               : "grab"
-            : "default",
+            : is3DDragging
+              ? "move"
+              : "default",
+        perspective: "2000px",
       }}
       className={`relative flex flex-col items-center justify-center transition-all duration-300 ${
         isFullscreen
@@ -3117,6 +3151,8 @@ const BookComponent = (
       onMouseDown={handleContainerMouseDown}
       onMouseMove={handleContainerMouseMove}
       onMouseUp={handleContainerMouseUp}
+      onMouseLeave={() => { setIs3DDragging(false); setIsPanning(false); }}
+      onContextMenu={(e) => e.preventDefault()}
     >
 
       {!isFullscreen && (
@@ -3226,21 +3262,22 @@ const BookComponent = (
 
       <div
         style={{
-          transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoom})`,
-          transition: isPanning ? "none" : "transform 0.2s",
+          transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoom}) rotateX(${bookRotation.x}deg) rotateY(${bookRotation.y}deg)`,
+          transition: isPanning || is3DDragging ? "none" : "transform 0.2s",
+          transformStyle: "preserve-3d",
         }}
         className="relative flex justify-center items-center"
       >
         {/* 3D Hardcover Backing */}
         <div
-          className="absolute bg-[#2d2a26] shadow-[15px_20px_30px_rgba(0,0,0,0.6)] transition-all delay-50 duration-300  pointer-events-none"
+          className="absolute bg-[#2d2a26] shadow-[15px_20px_30px_rgba(0,0,0,0.6)] transition-all delay-50 duration-300 pointer-events-none"
           style={{
             width: currentPageIndex === 0 ? WIDTH + 16 : (WIDTH * 2) + 32,
             height: HEIGHT + 24,
             borderRadius: currentPageIndex === 0 ? "4px 12px 12px 4px" : "12px",
             top: "50%",
-            left: currentPageIndex?.toString() === "0" ? "75%" : "50%",
-            transform: "translate(-50%, -50%)",
+            left: currentPageIndex === 0 ? "75%" : "50%",
+            transform: "translate(-50%, -50%) translateZ(-10px)",
             zIndex: -1,
             border: "1px solid #1f1d1a",
             backgroundImage: "linear-gradient(to right, #2d2a26, #3a3632, #2d2a26)",
