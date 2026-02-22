@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import Tools from "@/components/Dashboard/Tools/Tools";
@@ -17,6 +15,7 @@ import { toast } from "sonner";
 import { Save, Loader2 } from "lucide-react";
 import type { PageData } from "@/components/Dashboard/Book/types";
 import { fetchBookContent, processBookData } from "@/utils/bookDataLoader";
+import { dataUrlToFile } from "@/utils/imageUploadHelper";
 
 export default function Creator() {
   const { id } = useParams();
@@ -101,35 +100,27 @@ export default function Creator() {
       formData.append("title", bookTitle);
       formData.append("file", jsonFile);
       
-      // Get cover image from the first page
+      // Changed to async/await since html2canvas generation takes time
       if (bookRef.current.getCoverImage) {
-        const coverDataUrl = bookRef.current.getCoverImage();
+        const coverDataUrl = await bookRef.current.getCoverImage();
         
         if (coverDataUrl) {
-          const res = await fetch(coverDataUrl);
-          const blob = await res.blob();
-          const coverFile = new File([blob], `cover_${id || Date.now()}.png`, { type: "image/png" });
+          const coverFile = await dataUrlToFile(coverDataUrl, `cover_${Date.now()}.png`);
           formData.append("cover_image", coverFile);
-          console.log("✅ Successfully attached new cover image to the payload!");
-        } else {
-          console.warn("⚠️ Failed to grab coverDataUrl. The updated cover will not be sent.");
-          toast.warning("Make sure you are viewing the cover page (Page 1) to update the cover image.");
         }
       }
 
       let response;
       if (isUpdate) {
         response = await updateBook({ id: parseInt(id!), data: formData }).unwrap();
-        toast.success("Book updated successfully!");
+        toast.success("Book updated successfully with new cover image!");
       } else {
         response = await createBook(formData).unwrap();
         toast.success("Book saved successfully!");
       }
       
-      if (response?.data?.id) {
+      if (response?.data?.id && !isUpdate) {
         navigate(`/Creator/${response.data.id}`, { replace: true });
-      } else {
-        navigate("/Dashboard");
       }
     } catch (error) {
       console.error("Failed to save book:", error);
@@ -137,7 +128,6 @@ export default function Creator() {
     }
   };
 
-  // Restore tool color when switching tools
   useEffect(() => {
     const savedColor = getToolColor(activeTool);
     if (savedColor) {
@@ -145,13 +135,6 @@ export default function Creator() {
     }
   }, [activeTool, getToolColor]);
 
-  // Save color when it changes
-  // const handleStrokeColorChange = (color: string) => {
-  //   setStrokeColor(color);
-  //   updateToolColor(activeTool, color);
-  // };
-
-  // Setup keyboard shortcuts
   useEffect(() => {
     keyboardManager.register("ctrl+z", (e) => {
       e.preventDefault();
@@ -186,7 +169,6 @@ export default function Creator() {
     };
   }, []);
 
-  // Update table properties when table selection changes
   const updateTableProperties = () => {
     if (bookRef.current?.getSelectedTableProperties) {
       const props = bookRef.current.getSelectedTableProperties();
@@ -228,7 +210,6 @@ export default function Creator() {
   const handleTableChange = (property: string, value: any) => {
     if (bookRef.current?.handleTableChange) {
       bookRef.current.handleTableChange(property, value);
-      // Update local state after change
       setTimeout(updateTableProperties, 50);
     }
   };
@@ -237,24 +218,18 @@ export default function Creator() {
     setShapeProperties((prev) => ({ ...prev, ...properties }));
   };
   
-  // INDIVIDUAL PAGE COLOR HANDLER (Requirement 4)
   const handleTargetColorPageChange = (page: 'left' | 'right') => {
     setTargetColorPage(page);
   };
   
-  // Apply color to the correct page based on targetColorPage
   const handleStrokeColorChangeWithPage = (color: string) => {
     setStrokeColor(color);
     updateToolColor(activeTool, color);
     
-    // If Color tool is active, apply to the selected page
     if (activeTool === 'Color' && bookRef.current?.updatePageData) {
       const currentIdx = bookRef.current.currentPageIndex || 0;
-      
-      // Determine which page to color
       let targetPageIndex = currentIdx;
       if (targetColorPage === 'right' && currentIdx % 2 !== 0) {
-        // If we're on an odd page (left page of spread) and want to color right
         targetPageIndex = currentIdx + 1;
       }
       
@@ -361,10 +336,6 @@ export default function Creator() {
           />
         </div>
       </div>
-
-      {/* Global Controls - Always Visible */}
-
-      {/* Help Overlay */}
       <HelpOverlay />
     </div>
   );

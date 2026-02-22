@@ -24,6 +24,7 @@ import {
 } from "react-konva";
 import Konva from "konva";
 import HTMLFlipBook from "react-pageflip";
+import html2canvas from "html2canvas"; // Imported html2canvas
 import {
   Plus,
   X,
@@ -131,7 +132,7 @@ interface BookProps {
   isFillTransparent?: boolean;
   onToolChange?: (tool: string, subTool: string) => void;
   initialData?: PageData[] | null;
-  targetColorPage?: "left" | "right"; // NEW: For individual page coloring
+  targetColorPage?: "left" | "right"; 
 }
 
 // --- Constants ---
@@ -158,7 +159,6 @@ const INITIAL_PAGES: PageData[] = Array(10)
     tables: [],
   }));
 
-// Setup Cover
 INITIAL_PAGES[0].texts.push({
   id: "title",
   x: 50,
@@ -177,14 +177,23 @@ const useImage = (url: string) => {
   useEffect(() => {
     if (!url) return;
     const img = new window.Image();
-    // img.crossOrigin = "anonymous";
+    
+    // Fix for Tainted Canvas error. Require CORS.
+    img.crossOrigin = "anonymous";
     img.src = url;
+    
     img.onload = () => setImage(img);
+    
+    // Fallback if CORS is blocked by the server
+    img.onerror = () => {
+      const fallbackImg = new window.Image();
+      fallbackImg.onload = () => setImage(fallbackImg);
+      fallbackImg.src = url;
+    };
   }, [url]);
   return [image];
 };
 
-// --- Helper Components ---
 // --- Helper Components ---
 const renderShape = (
   shape: ShapeType,
@@ -398,7 +407,7 @@ const URLImage = ({
   );
 };
 
-// --- Page Component (Required for react-pageflip) ---
+// --- Page Component ---
 interface BookPageProps {
   pageIndex: number;
   data: PageData;
@@ -420,7 +429,7 @@ interface BookPageProps {
     index: number,
     item: TextType,
   ) => void;
-  onTextClick?: (index: number, item: TextType) => void; // NEW
+  onTextClick?: (index: number, item: TextType) => void;
   selectedTextId: string | null;
   onTextSelect: (id: string | null) => void;
   penState: {
@@ -589,14 +598,13 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
     return (
       <div
         ref={ref}
+        id={`book-page-${pageIndex}`} // Added unique ID for html2canvas extraction
         className="bg-white h-full w-full overflow-hidden shadow-sm relative border-r border-gray-200"
       >
-        {/* Page Content Container */}
         <div
           className="w-full h-full relative"
           style={{ background: data.background || "white" }}
         >
-          {/* If it's the cover, center the text manually or use Konva */}
           {pageIndex === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none"></div>
           )}
@@ -614,7 +622,6 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
             }
           >
             <Layer onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
-              {/* Lines and Custom Shapes */}
               {data.lines.map((line, i) => {
                 if (line.type === "custom-shape" && (line as any).draggable) {
                   return (
@@ -657,7 +664,6 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
                 );
               })}
 
-              {/* Render all elements sorted by zIndex */}
               {(() => {
                 const allElements: any[] = [
                   ...data.images.map((item) => ({
@@ -975,7 +981,6 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
                 });
               })()}
 
-              {/* Drawing Preview for Pen Tool */}
               {isPenMode && penState.points.length > 0 && (
                 <>
                   <Line
@@ -1042,7 +1047,6 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
                 </>
               )}
 
-              {/* Pen tool cursor indicator */}
               {isPenMode && mousePos && (
                 <Group>
                   <Circle
@@ -1100,7 +1104,6 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
             </Layer>
           </Stage>
 
-          {/* Page Number */}
           <span className="absolute bottom-4 right-4 text-gray-400 text-sm font-medium select-none">
             {pageIndex + 1}
           </span>
@@ -1144,7 +1147,6 @@ const BookComponent = (
   const coverSnapshotRef = useRef<string | null>(null);
   const { isFullscreen, toggleFullscreen } = useFullscreen(bookContainerRef);
 
-  // Update pages when initialData changes
   useEffect(() => {
     if (initialData) {
       setPages(initialData);
@@ -1200,30 +1202,33 @@ const BookComponent = (
     }
   }, [externalZoom]);
 
+  // Caching the snapshot using html2canvas 
   useEffect(() => {
     if (currentPageIndex === 0 || currentPageIndex === 1) {
-      const coverStage = stageRefs.current[0];
-      if (coverStage) {
-        const timer = setTimeout(() => {
-          try {
-            coverSnapshotRef.current = coverStage.toDataURL({ 
-              pixelRatio: 2, 
-              mimeType: "image/png" 
+      const timer = setTimeout(async () => {
+        try {
+          const coverElement = document.getElementById('book-page-0');
+          if (coverElement) {
+            const canvas = await html2canvas(coverElement, {
+              useCORS: true,
+              allowTaint: false,
+              scale: 2
             });
-          } catch (e) {
-            console.warn("Could not cache cover image. Canvas might be tainted.", e);
+            coverSnapshotRef.current = canvas.toDataURL("image/png");
           }
-        }, 800);
-        
-        return () => clearTimeout(timer);
-      }
+        } catch (e) {
+          console.warn("Could not cache cover image.", e);
+        }
+      }, 800);
+      
+      return () => clearTimeout(timer);
     }
   }, [pages[0], currentPageIndex]);
 
+  // Rest of state hooks and handlers...
   const handleZoomIn = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     e?.preventDefault();
-
     const newZoom = Math.min(currentZoom + 0.1, 3);
     setCurrentZoom(newZoom);
     onZoomChange?.(newZoom);
@@ -1232,7 +1237,6 @@ const BookComponent = (
   const handleZoomOut = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     e?.preventDefault();
-
     const newZoom = Math.max(currentZoom - 0.1, 0.1);
     setCurrentZoom(newZoom);
     onZoomChange?.(newZoom);
@@ -1241,13 +1245,11 @@ const BookComponent = (
   const handleZoomReset = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     e?.preventDefault();
-
     const newZoom = 1;
     setCurrentZoom(newZoom);
     onZoomChange?.(newZoom);
   };
 
-  // Text Editing State
   const [editingTextItem, setEditingTextItem] = useState<TextType | null>(null);
   const [editingStickyNote, setEditingStickyNote] =
     useState<StickyNoteType | null>(null);
@@ -1259,7 +1261,6 @@ const BookComponent = (
   } | null>(null);
   const [clipboard, setClipboard] = useState<any[]>([]);
 
-  // Hand Tool & Pen Tool State
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -1508,7 +1509,6 @@ const BookComponent = (
       setPages((prevPages) => {
         const newPages = [...prevPages];
 
-        // Find which page contains this object ID
         let targetPageIndex = -1;
         const pagesToCheck = [currentPageIndex];
         if (currentPageIndex + 1 < newPages.length) {
@@ -1605,21 +1605,29 @@ const BookComponent = (
     ) => handleImageUpload(file, targetPage),
     currentPageIndex,
     getPageData: () => pages,
-    getCoverImage: () => {
-      const coverStage = stageRefs.current[0];
-      
-      if (coverStage) {
+    
+    // Async getCoverImage replacing native Konva with html2canvas DOM capturing
+    getCoverImage: async () => {
+      if (currentPageIndex === 0 || currentPageIndex === 1) {
         try {
-          const url = coverStage.toDataURL({ pixelRatio: 2, mimeType: "image/png" });
-          coverSnapshotRef.current = url;
-          return url;
+          const coverElement = document.getElementById('book-page-0');
+          if (coverElement) {
+            const canvas = await html2canvas(coverElement, { 
+              useCORS: true, 
+              allowTaint: false, // Setting this to false bypasses tainted canvas errors when used with crossOrigin
+              scale: 2 
+            });
+            const url = canvas.toDataURL("image/png");
+            coverSnapshotRef.current = url;
+            return url;
+          }
         } catch (error) {
-          console.warn("Live snapshot failed, falling back to cache.", error);
+          console.warn("Live html2canvas snapshot failed, falling back to cache.", error);
         }
       }
-      
       return coverSnapshotRef.current;
     },
+    
     getSelectedTableProperties: () => {
       const targetPageIndex =
         selectedTablePageIndex !== -1
@@ -1857,12 +1865,11 @@ const BookComponent = (
     const cell = table.data[row]?.[col];
     if (!cell || cell.content === null) return;
 
-    // Add a small delay to ensure click events are processed
     setTimeout(() => {
-      const adjustedX = table.x + x + 5; // Add padding
-      const adjustedY = table.y + y + 5; // Add padding
-      const adjustedWidth = width - 10; // Account for padding
-      const adjustedHeight = height - 10; // Account for padding
+      const adjustedX = table.x + x + 5; 
+      const adjustedY = table.y + y + 5; 
+      const adjustedWidth = width - 10; 
+      const adjustedHeight = height - 10; 
 
       setEditingTableCell({
         tableId,
@@ -1887,7 +1894,6 @@ const BookComponent = (
     setSelectedTableId(tableId);
     setSelectedTablePageIndex(pageIndex);
 
-    // Update selected cell for the table
     setPages((prevPages) => {
       const updatedPages = [...prevPages];
       const page = updatedPages[pageIndex];
@@ -1961,7 +1967,6 @@ const BookComponent = (
         const insertIndex =
           position === "above" ? selectedRow : selectedRow + 1;
 
-        // Create new row with proper cell structure
         const newRow = Array(table.cols)
           .fill(null)
           .map((_, colIndex) => ({
@@ -1975,7 +1980,6 @@ const BookComponent = (
           ...table.data.slice(insertIndex),
         ];
 
-        // Update selected cell if needed
         let newSelectedCell = table.selectedCell;
         if (position === "below" && newSelectedCell) {
           newSelectedCell = {
@@ -2171,28 +2175,21 @@ const BookComponent = (
     [],
   );
 
-  // Update page background when color tool is active
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
 
     if (strokeColor && activeTool === "Color") {
       timeoutId = setTimeout(() => {
-        // INDIVIDUAL PAGE COLOR (Requirement 4)
-        // Apply color only to the selected page (left or right)
-        // The Toolbox now has a targetColorPage state that determines which page to color
-        // We apply to current page by default
         updatePageData(currentPageIndex, "background", strokeColor);
       }, 50);
     }
     return () => clearTimeout(timeoutId);
   }, [strokeColor, currentPageIndex, updatePageData, activeTool]);
 
-  // Handle advanced text changes from Toolbox
   useEffect(() => {
     if (onAdvancedTextChange && selectedTextId) {
       const handleAdvancedChange = (property: string, value: any) => {
         if (property === "importText") {
-          // Create new text element with imported text
           const newText: TextType = {
             id: Date.now().toString(),
             x: 50,
@@ -2234,7 +2231,6 @@ const BookComponent = (
         } else if (property === "listType") {
           const lines = textItem.text.split("\n");
           const newLines = lines.map((line, index) => {
-            // eslint-disable-next-line prefer-const
             let cleanLine = line
               .replace(/^[•\-*]\s+/, "")
               .replace(/^\d+\.\s+/, "");
@@ -2254,7 +2250,6 @@ const BookComponent = (
         handleTextUpdate(updatedText);
       };
 
-      // Store the handler so Toolbox can call it
       (window as any).__handleAdvancedTextChange = handleAdvancedChange;
     }
   }, [
@@ -2270,7 +2265,6 @@ const BookComponent = (
     updatePageData,
   ]);
 
-  // --- Hand Tool Logic ---
   const handleContainerMouseDown = (e: React.MouseEvent) => {
     if (isHandMode) {
       setIsPanning(true);
@@ -2294,7 +2288,6 @@ const BookComponent = (
     setIsPanning(false);
   };
 
-  // --- Drag and Drop Logic ---
   const handlePageDrop = (
     e: React.DragEvent<HTMLDivElement>,
     pageIndex: number,
@@ -2326,7 +2319,6 @@ const BookComponent = (
     updatePageData(pageIndex, "images", [...currentImages, newImage]);
   };
 
-  // --- Image Upload Logic ---
   const handleImageUpload = (
     file: File,
     targetPage?: "left" | "right" | "current",
@@ -2415,7 +2407,6 @@ const BookComponent = (
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isPenMode, penMode, penDrawingState]);
 
-  // Main keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === "Space" && !e.repeat && e.target === document.body) {
@@ -2502,7 +2493,6 @@ const BookComponent = (
     updatePageData,
   ]);
 
-  // Fullscreen and zoom shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "F11" || (e.ctrlKey && e.key === "f")) {
@@ -2560,46 +2550,6 @@ const BookComponent = (
     setSelectedIds([]);
   };
 
-  // const handleShapeDragEnd = useCallback((shapeId: string, x: number, y: number) => {
-  //   setPages(prevPages => {
-  //     const updatedPages = [...prevPages];
-  //     const page = updatedPages[currentPageIndex];
-  //     const shapeIndex = page.shapes.findIndex(s => s.id === shapeId);
-
-  //     if (shapeIndex !== -1) {
-  //       page.shapes[shapeIndex] = {
-  //         ...page.shapes[shapeIndex],
-  //         x,
-  //         y
-  //       };
-  //     }
-  //     return updatedPages;
-  //   });
-  // }, [currentPageIndex]);
-
-  // const handleShapeTransformEnd = useCallback((shapeId: string, node: any) => {
-  //   setPages(prevPages => {
-  //     const updatedPages = [...prevPages];
-  //     const page = updatedPages[currentPageIndex];
-  //     const shapeIndex = page.shapes.findIndex(s => s.id === shapeId);
-
-  //     if (shapeIndex !== -1) {
-  //       const shape = page.shapes[shapeIndex];
-  //       page.shapes[shapeIndex] = {
-  //         ...shape,
-  //         x: node.x(),
-  //         y: node.y(),
-  //         width: Math.max(5, node.width() * node.scaleX()),
-  //         height: Math.max(5, node.height() * node.scaleY()),
-  //         rotation: node.rotation(),
-  //         scaleX: 1,
-  //         scaleY: 1
-  //       };
-  //     }
-  //     return updatedPages;
-  //   });
-  // }, [currentPageIndex]);
-
   const handleStickyNoteDoubleClick = (
     pageIndex: number,
     note: StickyNoteType,
@@ -2622,7 +2572,6 @@ const BookComponent = (
     }
   }, [selectedShapeId, isSelectMode]);
 
-  // Disable all mouse-based page flipping - only arrow buttons allowed
   const isDrawingMode = ["Brush", "Eraser"].includes(activeTool);
 
   const createShapeAtPosition = (
@@ -2744,7 +2693,6 @@ const BookComponent = (
   ) => {
     const clickedOnEmpty = e.target === e.target.getStage();
 
-    // SINGLE-CLICK TEXT CREATION (Requirement 3)
     if (clickedOnEmpty && activeTool === "Text") {
       if (editingTextItem) return;
 
@@ -2788,7 +2736,6 @@ const BookComponent = (
       setContextMenu(null);
     }
 
-    // 1. SHAPES TOOL
     if (isShapesMode && clickedOnEmpty) {
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
@@ -2802,7 +2749,6 @@ const BookComponent = (
       return;
     }
 
-    // 1. PEN TOOL
     if (isPenMode) {
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
@@ -2863,7 +2809,6 @@ const BookComponent = (
       }
     }
 
-    // 2. STICKY NOTE TOOL
     if (isStickyNoteMode) {
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
@@ -2892,7 +2837,6 @@ const BookComponent = (
       return;
     }
 
-    // 3. TABLE TOOL
     if (isTableMode) {
       const stage = e.target.getStage();
       if (!stage) return;
@@ -2977,7 +2921,6 @@ const BookComponent = (
     const currentLines = [...pages[pageIndex].lines];
     const lastLine = currentLines[currentLines.length - 1];
 
-    // Check if line exists before adding points (safety check)
     if (lastLine) {
       lastLine.points = lastLine.points.concat([pos.x, pos.y]);
       currentLines.splice(currentLines.length - 1, 1, lastLine);
@@ -3010,7 +2953,6 @@ const BookComponent = (
     activeDrawingPage.current = null;
   };
 
-  // --- Text Editing ---
   const handleTextDblClick = (
     _e: Konva.KonvaEventObject<MouseEvent>,
     pageIndex: number,
@@ -3021,9 +2963,7 @@ const BookComponent = (
     setShowToolbar(false);
   };
 
-  // Double-click opens text editor
   const handleTextClick = (_pageIndex: number, _textItem: TextType) => {
-    // Intentionally empty - single click now only shows toolbar
   };
 
   const handleTextUpdate = useCallback(
@@ -3122,7 +3062,6 @@ const BookComponent = (
     }
   };
 
-  // --- Flip Controls ---
   const flipNext = useCallback(() => {
     if (bookRef.current) {
       bookRef.current.pageFlip().flipNext();
@@ -3169,9 +3108,7 @@ const BookComponent = (
       onMouseMove={handleContainerMouseMove}
       onMouseUp={handleContainerMouseUp}
     >
-      {/* Undo/Redo Controls */}
 
-      {/* Zoom / View Controls */}
       {!isFullscreen && (
         <div
           className="absolute right-4 bottom-32 flex flex-col items-center gap-2 z-[100] pointer-events-auto"
@@ -3234,7 +3171,6 @@ const BookComponent = (
         </div>
       )}
 
-      {/* Pagination Controls */}
       {!isFullscreen && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-[#2B2B2B] px-4 py-2 rounded-xl border border-white/10 shadow-lg animate-in slide-in-from-bottom-5">
           {currentPageIndex > 0 && (
@@ -3264,7 +3200,6 @@ const BookComponent = (
         </div>
       )}
 
-      {/* Navigation Buttons */}
       <button
         onClick={flipPrev}
         className="absolute left-4 z-50 p-3 bg-primary rounded-lg text-white shadow-lg hover:bg-primary/90 transition-all hover:scale-110 active:scale-95"
@@ -3367,7 +3302,6 @@ const BookComponent = (
         </HTMLFlipBook>
       </div>
 
-      {/* Add Pages Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-100 backdrop-blur-sm">
           <div className="bg-card rounded-xl p-6 w-80 shadow-2xl border border-white/10 animate-in zoom-in-95">
@@ -3413,7 +3347,6 @@ const BookComponent = (
         </div>
       )}
 
-      {/* Inline Sticky Note Editor */}
       {editingStickyNote && (
         <InlineStickyNoteEditor
           note={editingStickyNote}
@@ -3425,7 +3358,6 @@ const BookComponent = (
         />
       )}
 
-      {/* In-Place Text Editor */}
       {editingTextItem && (
         <InPlaceTextEditor
           key={editingTextItem.id}
@@ -3435,7 +3367,6 @@ const BookComponent = (
         />
       )}
 
-      {/* Floating Text Toolbar */}
       {showToolbar &&
         selectedTextId &&
         !editingTextItem &&
@@ -3452,7 +3383,6 @@ const BookComponent = (
           ) : null;
         })()}
 
-      {/* Context Menu */}
       {contextMenu && (
         <TextContextMenu
           x={contextMenu.x}
@@ -3467,14 +3397,12 @@ const BookComponent = (
         />
       )}
 
-      {/* Right-click handler */}
       <div
         onContextMenu={handleContextMenu}
         className="absolute inset-0 pointer-events-none"
         style={{ zIndex: 1 }}
       />
 
-      {/* Table Context Menu */}
       {tableContextMenu && (
         <>
           <div
@@ -3511,7 +3439,6 @@ const BookComponent = (
         </>
       )}
 
-      {/* Table Cell Editor */}
       {editingTableCell && (
         <TableCellEditor
           cell={(() => {
