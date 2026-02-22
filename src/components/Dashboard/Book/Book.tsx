@@ -24,7 +24,7 @@ import {
 } from "react-konva";
 import Konva from "konva";
 import HTMLFlipBook from "react-pageflip";
-import html2canvas from "html2canvas"; // Imported html2canvas
+import * as htmlToImage from "html-to-image";
 import {
   Plus,
   X,
@@ -174,23 +174,33 @@ INITIAL_PAGES[0].background =
 // --- Custom Hook for Images ---
 const useImage = (url: string) => {
   const [image, setImage] = useState<HTMLImageElement | undefined>(undefined);
+  
   useEffect(() => {
     if (!url) return;
+    
+    let isMounted = true;
     const img = new window.Image();
     
-    // Fix for Tainted Canvas error. Require CORS.
     img.crossOrigin = "anonymous";
-    img.src = url;
     
-    img.onload = () => setImage(img);
+    img.onload = () => {
+      if (isMounted) setImage(img);
+    };
     
-    // Fallback if CORS is blocked by the server
     img.onerror = () => {
+      console.warn(`CORS failed for ${url}. Loading without CORS (this taints the canvas).`);
       const fallbackImg = new window.Image();
-      fallbackImg.onload = () => setImage(fallbackImg);
+      fallbackImg.onload = () => {
+        if (isMounted) setImage(fallbackImg);
+      };
       fallbackImg.src = url;
     };
+    
+    img.src = url.startsWith('data:') ? url : `${url}?t=${new Date().getTime()}`;
+    
+    return () => { isMounted = false; };
   }, [url]);
+  
   return [image];
 };
 
@@ -598,16 +608,25 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
     return (
       <div
         ref={ref}
-        id={`book-page-${pageIndex}`} // Added unique ID for html2canvas extraction
-        className="bg-white h-full w-full overflow-hidden shadow-sm relative border-r border-gray-200"
+        id={`book-page-${pageIndex}`}
+        data-page-index={pageIndex}
+        className="bg-white h-full w-full relative group"
+        style={{
+          borderRight: pageIndex % 2 === 0 ? "4px solid #e5e7eb" : "none",
+          borderLeft: pageIndex % 2 !== 0 ? "4px solid #e5e7eb" : "none",
+          borderBottom: "4px solid #d1d5db",
+          borderTop: "1px solid #f3f4f6",
+          borderBottomRightRadius: pageIndex % 2 === 0 ? "4px" : "0",
+          borderBottomLeftRadius: pageIndex % 2 !== 0 ? "4px" : "0",
+        }}
       >
         <div
-          className="w-full h-full relative"
+          className="w-full h-full relative overflow-hidden"
           style={{ background: data.background || "white" }}
         >
-          {pageIndex === 0 && (
+          {/* {pageIndex === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none"></div>
-          )}
+          )} */}
 
           <Stage
             ref={stageRef}
@@ -1104,7 +1123,24 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
             </Layer>
           </Stage>
 
-          <span className="absolute bottom-4 right-4 text-gray-400 text-sm font-medium select-none">
+          {/* 3D Page Lighting Overlays */}
+          <div 
+            className={`pointer-events-none absolute inset-y-0 w-16 z-[100] mix-blend-multiply ${
+              pageIndex % 2 === 0 
+                ? 'left-0 bg-gradient-to-r from-black/25 via-black/5 to-transparent' 
+                : 'right-0 bg-gradient-to-l from-black/25 via-black/5 to-transparent'
+            }`} 
+          />
+          <div className="pointer-events-none absolute inset-0 z-[100] shadow-[inset_0_0_40px_rgba(0,0,0,0.04)]" />
+          <div 
+            className={`pointer-events-none absolute inset-y-0 w-[2px] z-[100] ${
+              pageIndex % 2 === 0 
+                ? 'right-0 bg-gradient-to-r from-transparent to-black/10' 
+                : 'left-0 bg-gradient-to-l from-transparent to-black/10'
+            }`} 
+          />
+
+          <span className="absolute bottom-4 right-4 text-gray-400 text-sm font-medium select-none z-[100]">
             {pageIndex + 1}
           </span>
         </div>
@@ -1201,29 +1237,6 @@ const BookComponent = (
       setCurrentZoom(externalZoom);
     }
   }, [externalZoom]);
-
-  // Caching the snapshot using html2canvas 
-  useEffect(() => {
-    if (currentPageIndex === 0 || currentPageIndex === 1) {
-      const timer = setTimeout(async () => {
-        try {
-          const coverElement = document.getElementById('book-page-0');
-          if (coverElement) {
-            const canvas = await html2canvas(coverElement, {
-              useCORS: true,
-              allowTaint: false,
-              scale: 2
-            });
-            coverSnapshotRef.current = canvas.toDataURL("image/png");
-          }
-        } catch (e) {
-          console.warn("Could not cache cover image.", e);
-        }
-      }, 800);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [pages[0], currentPageIndex]);
 
   // Rest of state hooks and handlers...
   const handleZoomIn = (e?: React.MouseEvent) => {
@@ -1605,26 +1618,23 @@ const BookComponent = (
     ) => handleImageUpload(file, targetPage),
     currentPageIndex,
     getPageData: () => pages,
-    
-    // Async getCoverImage replacing native Konva with html2canvas DOM capturing
     getCoverImage: async () => {
-      if (currentPageIndex === 0 || currentPageIndex === 1) {
+      const coverElement = document.querySelector('[data-page-index="0"]') as HTMLElement;
+      
+      if (coverElement) {
         try {
-          const coverElement = document.getElementById('book-page-0');
-          if (coverElement) {
-            const canvas = await html2canvas(coverElement, { 
-              useCORS: true, 
-              allowTaint: false, // Setting this to false bypasses tainted canvas errors when used with crossOrigin
-              scale: 2 
-            });
-            const url = canvas.toDataURL("image/png");
-            coverSnapshotRef.current = url;
-            return url;
-          }
+          const url = await htmlToImage.toPng(coverElement, { 
+            pixelRatio: 2,
+            skipFonts: true,
+            cacheBust: true
+          });
+          coverSnapshotRef.current = url;
+          return url;
         } catch (error) {
-          console.warn("Live html2canvas snapshot failed, falling back to cache.", error);
+          console.warn("Live html-to-image snapshot failed, falling back to cache.", error);
         }
       }
+      
       return coverSnapshotRef.current;
     },
     
@@ -3219,7 +3229,28 @@ const BookComponent = (
           transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoom})`,
           transition: isPanning ? "none" : "transform 0.2s",
         }}
+        className="relative flex justify-center items-center"
       >
+        {/* 3D Hardcover Backing */}
+        <div
+          className="absolute bg-[#2d2a26] shadow-[15px_20px_30px_rgba(0,0,0,0.6)] transition-all delay-50 duration-300  pointer-events-none"
+          style={{
+            width: currentPageIndex === 0 ? WIDTH + 16 : (WIDTH * 2) + 32,
+            height: HEIGHT + 24,
+            borderRadius: currentPageIndex === 0 ? "4px 12px 12px 4px" : "12px",
+            top: "50%",
+            left: currentPageIndex?.toString() === "0" ? "75%" : "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: -1,
+            border: "1px solid #1f1d1a",
+            backgroundImage: "linear-gradient(to right, #2d2a26, #3a3632, #2d2a26)",
+          }}
+        >
+          {currentPageIndex > 0 && (
+            <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-12 bg-gradient-to-r from-black/60 via-transparent to-black/60 border-x border-black/30 shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]" />
+          )}
+        </div>
+
         <HTMLFlipBook
           key={`${WIDTH}-${HEIGHT}`}
           width={WIDTH}
@@ -3229,10 +3260,10 @@ const BookComponent = (
           maxWidth={1000}
           minHeight={400}
           maxHeight={1533}
-          maxShadowOpacity={0.5}
+          maxShadowOpacity={0.8}
           showCover={true}
           mobileScrollSupport={true}
-          className="shadow-2xl"
+          className=""
           ref={bookRef}
           useMouseEvents={false}
           onFlip={onFlip}
@@ -3245,6 +3276,7 @@ const BookComponent = (
           clickEventForward={true}
           swipeDistance={30}
           showPageCorners={true}
+          
           disableFlipByClick={true}
           style={{}}
         >
