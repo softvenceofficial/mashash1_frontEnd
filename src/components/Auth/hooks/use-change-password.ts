@@ -29,7 +29,6 @@ export default function useChangePassword({ setLoading }: { setLoading: (loading
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
   const [resetPassword] = useResetPasswordMutation();
-  console.log("Reset Token from URL:", token);
 
   // 1. Form setup
   const form = useForm<z.infer<typeof formSchema>>({
@@ -42,23 +41,27 @@ export default function useChangePassword({ setLoading }: { setLoading: (loading
 
   // 2. Submit handler
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!token) {
+      toast.error("Invalid reset link.");
+      return;
+    }
     setLoading(true);
     toast.loading("Setting new password...");
     const formData = new FormData();
     formData.append("new_password", values.password);
     formData.append("confirm_password", values.confirmPassword);
-    formData.append("reset_token", token || "");
+    formData.append("reset_token", token);
 
     try {
       const res = await resetPassword(formData).unwrap();
       toast.dismiss();
-      toast.success(res.message || "Password set successfully!");
+      toast.success(res.message || "Password updated!");
       setLoading(false);
       navigate("/auth/signin", { replace: true });
     } catch (error) {
-      console.error("Reset Password Error:", error);
+      console.error("Error:", error);
       toast.dismiss();
-      toast.error("Failed to set password. Please try again.");
+      toast.error("Failed to set password.");
       setLoading(false);
     }
   }

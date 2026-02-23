@@ -46,7 +46,6 @@ export default function useLogin({setLoading}: {setLoading: (loading: boolean) =
 
     try {
       const response = await userLogin(formData).unwrap();
-      console.log("Login Response:", response);
 
       if (response.code === 200 || response.status === 'success') {
         toast.dismiss();
@@ -54,7 +53,7 @@ export default function useLogin({setLoading}: {setLoading: (loading: boolean) =
         navigate("/dashboard/home");
       }
     } catch (error: any) {
-      console.error("Login failed:", error);
+      console.error("Error:", error);
       toast.dismiss();
       const errorMessage = error?.data?.message || "Invalid email or password.";
       toast.error(errorMessage);

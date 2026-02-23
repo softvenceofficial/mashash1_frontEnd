@@ -52,7 +52,7 @@ export default function ViewProfile() {
           </Card>
 
           <img
-            src={assets.image.BannerOne}
+            src={assets.image.DefaultPlaceholder}
             alt="banner image"
             className="w-full h-[18rem] rounded-3xl object-cover"
           />
@@ -77,7 +77,7 @@ export default function ViewProfile() {
             </div>
 
             <img
-              src={assets.image.BannerTwo}
+              src={assets.image.DefaultPlaceholder}
               alt="banner image"
               className="w-full h-[18rem] rounded-3xl object-cover"
             />

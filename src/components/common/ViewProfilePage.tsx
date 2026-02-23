@@ -19,6 +19,7 @@ export default function ViewProfilePage() {
   const [imageError, setImageError] = useState(false);
   const { form, onSubmit, handleAvatarChange, avatarPreview } = useProfileSettings(setLoading);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { open } = useModal();
 console.log(imageError);
   const demo  = avatarPreview.replace('/api/', '/');  
   
@@ -205,10 +206,7 @@ console.log(imageError);
           {/* DELETE ACCOUNT */}
           <button
             type="button"
-            onClick={() => {
-              const { open } = useModal();
-              open([{ modalId: "modal", openId: "account-delete" }]);
-            }}
+            onClick={() => open([{ modalId: "modal", openId: "account-delete" }])}
             className="flex items-center gap-2 text-[#FF4842] mt-6 text-xl font-medium cursor-pointer"
           >
             <Trash2 className="size-5" />
