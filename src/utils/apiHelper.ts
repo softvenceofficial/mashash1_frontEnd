@@ -1,4 +1,16 @@
-import { IApiResponse } from "@/types/book.type";
+import type { IApiResponse } from "@/types/book.type";
+
+/**
+ * Get full API URL from relative path
+ */
+export const getFullApiUrl = (path: string | null | undefined): string => {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+  const baseUrl = import.meta.env.VITE_BASE_API_URL || "";
+  return path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+};
 
 /**
  * Handle API errors and extract error message
