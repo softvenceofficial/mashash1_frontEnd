@@ -2,8 +2,11 @@ import Icon from "@/components/common/Icon";
 import bg from "@/assets/svgs/dashboard-home-bg.svg";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router";
-import { useGetBooksQuery, useDeleteBookMutation } from "@/redux/endpoints/bookApi";
-import { Loader2, Trash2, Plus } from "lucide-react";
+import {
+  useGetBooksQuery,
+  useDeleteBookMutation,
+} from "@/redux/endpoints/bookApi";
+import { Loader2, Trash2, Plus,  ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
 export default function DashboardPage() {
@@ -11,12 +14,10 @@ export default function DashboardPage() {
   const [deleteBook] = useDeleteBookMutation();
 
   const getImageUrl = (path: string | null) => {
-  if (!path) return "";
-  
-  return path
-    .replace("https:/", "https://")  
-    .replace("/api/", "/");          
-};
+    if (!path)
+      return "https://images.unsplash.com/photo-1622308643382-706dbb20e0bf?q=80&w=1000&auto=format&fit=crop";
+    return path.replace("https:/", "https://").replace("/api/", "/");
+  };
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.preventDefault();
@@ -67,42 +68,63 @@ export default function DashboardPage() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-6 mt-6 ">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 mt-8">
           {books.map((book) => (
             <div
               key={book.id}
-              className="group relative border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white "
+              className="group relative w-full rounded-3xl bg-card/95 border border-border p-6 shadow-xl transition-all duration-500 hover:bg-card hover:-translate-y-2 [perspective:1500px]"
             >
-              <Link to={`/Creator/${book.id}`}>
-                <div className=" bg-gray-100 relative overflow-hidden ">
-                  {book.cover_image ? (
-                    <img
-                      src={getImageUrl(book.cover_image)}
-                      alt={book.title}
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      No Cover
-                    </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold truncate text-black" title={book.title}>
-                    {book.title || "Untitled Book"}
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Created: {new Date(book.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              </Link>
-
               <button
                 onClick={(e) => handleDelete(e, book.id)}
-                className="absolute top-2 right-2 p-2 bg-white/80 hover:bg-red-50 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute z-50 top-4 right-4 p-2.5 bg-destructive/10 hover:bg-destructive hover:text-white text-destructive rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300"
+                title="Delete Artbook"
               >
-                <Trash2 size={16} />
+                <Trash2 size={18} />
               </button>
+
+              <Link to={`/Creator/${book.id}`} className="block w-full">
+                <div className="relative w-[180px] sm:w-[200px] h-[280px] mx-auto mb-8 [perspective:1200px]">
+                  <div className="w-full h-full relative [transform-style:preserve-3d] transition-transform duration-700 ease-out group-hover:[transform:rotateY(-30deg)_translate(-15px,-20px)]">
+                    <div className="absolute inset-0 z-20 shadow-xl group-hover:shadow-2xl transition-shadow duration-700 rounded-r-md overflow-hidden bg-muted border-l-[3px] border-border">
+                      <img
+                        src={getImageUrl(book.cover_image)}
+                        alt={book.title || "Artbook Cover"}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-tr from-background/40 via-transparent to-foreground/20 opacity-60" />
+                    </div>
+                    <div className="absolute inset-0 bg-muted rounded-r-md [transform:translateZ(-40px)] shadow-none group-hover:shadow-[25px_25px_40px_rgba(0,0,0,0.6)] transition-all duration-700 border-l-[3px] border-border" />
+                  </div>
+                </div>
+
+                <div className="text-left mt-2">
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2
+                        className="text-xl font-bold text-card-foreground leading-tight mb-1 truncate"
+                        title={book.title || "Untitled Book"}
+                      >
+                        {book.title || "Untitled Artbook"}
+                      </h2>
+                      <p className="text-primary text-sm font-medium mb-5">
+                        Created:{" "}
+                        {new Date(book.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+
+                    <span className="text-xs font-bold px-2.5 py-1 bg-primary/20 text-primary rounded-md">
+                      Artbook
+                    </span>
+                  </div>
+                  <button className="w-full py-3 bg-accent hover:bg-accent/80 border border-border rounded-xl text-accent-foreground text-sm font-semibold transition-all flex items-center justify-center gap-2 group/btn">
+                    Open Artbook
+                    <ArrowRight
+                      size={16}
+                      className="group-hover/btn:translate-x-1.5 transition-transform"
+                    />
+                  </button>
+                </div>
+              </Link>
             </div>
           ))}
         </div>

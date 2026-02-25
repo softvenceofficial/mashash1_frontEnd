@@ -22,12 +22,13 @@ export default defineConfig({
   server: {
     proxy: {
       '/media': {
-        target: 'https://mashash.softvencealpha.com',
+        target: 'https://api.serverforaibook.com',
         changeOrigin: true,
         secure: false,
+        rewrite: (path) => path
       },
       '/api': {
-        target: 'https://mashash.softvencealpha.com',
+        target: 'https://api.serverforaibook.com',
         changeOrigin: true,
         secure: false,
       }

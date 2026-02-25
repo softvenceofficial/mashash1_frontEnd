@@ -16,6 +16,7 @@ import Creator from "@/pages/Dashboard/Creator";
 import DownloadPage from "@/pages/Dashboard/MyFile/DownloadPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 import ViewProfilePage from "@/components/common/ViewProfilePage";
+import { SharedBookViewer } from "@/components/Dashboard/SharedBookViewer";
 
 const router = createBrowserRouter([
   {
@@ -25,13 +26,11 @@ const router = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    // All dashboard routes are now protected
     element: <ProtectedRoute><DashboardLayout /></ProtectedRoute>,
     errorElement: <NotFoundPage />,
     children: [
       {
         index: true,
-        // Redirects /dashboard to /dashboard/home
         element: <Navigate to="/dashboard/home" replace />,
       },
       {
@@ -64,6 +63,11 @@ const router = createBrowserRouter([
   {
     path: "/Creator/:id",
     element: <ProtectedRoute><Creator /></ProtectedRoute>,
+    errorElement: <NotFoundPage />,
+  },
+  {
+    path: "/shared/:token",
+    element: <SharedBookViewer />,
     errorElement: <NotFoundPage />,
   },
   {

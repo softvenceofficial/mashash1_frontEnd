@@ -11,6 +11,7 @@ import assets from "@/assets";
 import { useNavigate } from "react-router";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useUserLogoutMutation } from "@/redux/endpoints/authApi";
+import { getImageUrl } from "@/lib/utils";
 
 export default function HeaderAvatar() {
   const userData = useCurrentUser();
@@ -34,7 +35,7 @@ export default function HeaderAvatar() {
           <Avatar className="size-8 rounded-full cursor-pointer">
             {/* <AvatarImage src='https://avatar.iran.liara.run/public' alt='user avatar' /> */}
             <AvatarImage
-              src={userData?.avatar ? `${import.meta.env.VITE_API_BASE_URL}${userData?.avatar}` : assets.image.DefaultPlaceholder}
+              src={userData?.avatar ? getImageUrl(userData.avatar) : assets.image.DefaultPlaceholder}
               alt="user avatar"
             />
             <AvatarFallback>CN</AvatarFallback>

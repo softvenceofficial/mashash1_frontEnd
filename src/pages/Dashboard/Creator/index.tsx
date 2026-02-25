@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import Tools from "@/components/Dashboard/Tools/Tools";
@@ -16,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Save, Loader2 } from "lucide-react";
 import type { PageData } from "@/components/Dashboard/Book/types";
-import { getImageUrl } from "@/lib/utils";
+import { fetchBookContent, processBookData } from "@/utils/bookDataLoader";
+import { dataUrlToFile } from "@/utils/imageUploadHelper";
 
 export default function Creator() {
   const { id } = useParams();
@@ -25,8 +24,8 @@ export default function Creator() {
   const [activeTool, setActiveTool] = useState("Book Size");
   const [activeSubTool, setActiveSubTool] = useState("select");
   const [selectedBookSize, setSelectedBookSize] = useState("6 x 4");
-  const [selectedStyleId, setSelectedStyleId] = useState(1);
-  const selectedSizeId = 6;
+  const [selectedStyleId, setSelectedStyleId] = useState(2);
+  const [selectedSizeId, setSelectedSizeId] = useState(6);
   const [strokeColor, setStrokeColor] = useState(getToolColor("Text"));
   const [strokeWidth, setStrokeWidth] = useState(5);
   const [fontSize, setFontSize] = useState(24);
@@ -45,6 +44,7 @@ export default function Creator() {
     isFillTransparent: false,
   });
   const [loadedPages, setLoadedPages] = useState<PageData[] | null>(null);
+  const [targetColorPage, setTargetColorPage] = useState<'left' | 'right'>('left');
   const bookRef = useRef<any>(null);
 
   const [createBook, { isLoading: isSaving }] = useCreateBookMutation();
@@ -55,42 +55,13 @@ export default function Creator() {
     const loadBookData = async () => {
       if (bookDetails?.data?.file) {
         try {
-          let fileUrl = bookDetails.data.file;
-          
-          if (!window.location.hostname.includes('localhost')) {
-            fileUrl = getImageUrl(bookDetails.data.file);
-          } else {
-            if (fileUrl && !fileUrl.startsWith('/')) {
-              fileUrl = `/${fileUrl}`;
-            }
-          }
-          
-          const response = await fetch(fileUrl);
-          
-          if (!response.ok) {
-            throw new Error('Failed to fetch book data');
-          }
-
-          const data = await response.json();
-          
-          const processedData = data.map((page: any) => ({
-            lines: page.lines || [],
-            texts: page.texts || [],
-            shapes: page.shapes || [],
-            images: (page.images || []).map((img: any) => ({
-              ...img,
-              type: 'image',
-              id: img.id || Date.now().toString() + Math.random().toString(36).substr(2, 9)
-            })),
-            stickyNotes: page.stickyNotes || [],
-            tables: page.tables || [],
-            background: page.background || null
-          }));
-          
+          const data = await fetchBookContent(bookDetails.data.file);
+          const processedData = processBookData(data);
           setLoadedPages(processedData);
+          toast.success("Book data loaded successfully!");
         } catch (err) {
           console.error("Error loading book JSON:", err);
-          toast.error("Failed to load saved book data");
+          toast.error(err instanceof Error ? err.message : "Failed to load saved book data");
         }
       }
     };
@@ -122,22 +93,6 @@ export default function Creator() {
       const jsonString = JSON.stringify(processedPages);
       const jsonFile = new File([jsonString], "book_data.json", { type: "application/json" });
 
-      let coverBlob: Blob | null = null;
-      
-      try {
-        const stageElement = document.querySelector('.konvajs-content canvas');
-        if (stageElement) {
-          coverBlob = await new Promise<Blob>((resolve, reject) => {
-            (stageElement as HTMLCanvasElement).toBlob((blob) => {
-              if (blob) resolve(blob);
-              else reject(new Error('Could not generate cover'));
-            }, 'image/png');
-          });
-        }
-      } catch (err) {
-        console.warn("Could not generate cover image:", err);
-      }
-
       const formData = new FormData();
       const bookTitle = bookDetails?.data?.title || `Artbook ${new Date().toLocaleDateString()}`;
       const isUpdate = !!id;
@@ -145,23 +100,27 @@ export default function Creator() {
       formData.append("title", bookTitle);
       formData.append("file", jsonFile);
       
-      if (coverBlob && coverBlob.size > 0) {
-        formData.append("cover_image", coverBlob, "cover.png");
+      // Changed to async/await since html2canvas generation takes time
+      if (bookRef.current.getCoverImage) {
+        const coverDataUrl = await bookRef.current.getCoverImage();
+        
+        if (coverDataUrl) {
+          const coverFile = await dataUrlToFile(coverDataUrl, `cover_${Date.now()}.png`);
+          formData.append("cover_image", coverFile);
+        }
       }
 
       let response;
       if (isUpdate) {
         response = await updateBook({ id: parseInt(id!), data: formData }).unwrap();
-        toast.success("Book updated successfully!");
+        toast.success("Book updated successfully with new cover image!");
       } else {
         response = await createBook(formData).unwrap();
         toast.success("Book saved successfully!");
       }
       
-      if (response?.data?.id) {
+      if (response?.data?.id && !isUpdate) {
         navigate(`/Creator/${response.data.id}`, { replace: true });
-      } else {
-        navigate("/Dashboard");
       }
     } catch (error) {
       console.error("Failed to save book:", error);
@@ -169,7 +128,6 @@ export default function Creator() {
     }
   };
 
-  // Restore tool color when switching tools
   useEffect(() => {
     const savedColor = getToolColor(activeTool);
     if (savedColor) {
@@ -177,13 +135,6 @@ export default function Creator() {
     }
   }, [activeTool, getToolColor]);
 
-  // Save color when it changes
-  const handleStrokeColorChange = (color: string) => {
-    setStrokeColor(color);
-    updateToolColor(activeTool, color);
-  };
-
-  // Setup keyboard shortcuts
   useEffect(() => {
     keyboardManager.register("ctrl+z", (e) => {
       e.preventDefault();
@@ -218,7 +169,6 @@ export default function Creator() {
     };
   }, []);
 
-  // Update table properties when table selection changes
   const updateTableProperties = () => {
     if (bookRef.current?.getSelectedTableProperties) {
       const props = bookRef.current.getSelectedTableProperties();
@@ -260,13 +210,33 @@ export default function Creator() {
   const handleTableChange = (property: string, value: any) => {
     if (bookRef.current?.handleTableChange) {
       bookRef.current.handleTableChange(property, value);
-      // Update local state after change
       setTimeout(updateTableProperties, 50);
     }
   };
 
   const handleShapePropertiesChange = (properties: any) => {
     setShapeProperties((prev) => ({ ...prev, ...properties }));
+  };
+  
+  const handleTargetColorPageChange = (page: 'left' | 'right') => {
+    setTargetColorPage(page);
+  };
+  
+  const handleStrokeColorChangeWithPage = (color: string) => {
+    setStrokeColor(color);
+    updateToolColor(activeTool, color);
+    
+    if (activeTool === 'Color' && bookRef.current?.updatePageData) {
+      const currentIdx = bookRef.current.currentPageIndex || 0;
+      let targetPageIndex = currentIdx;
+      if (targetColorPage === 'right' && currentIdx % 2 !== 0) {
+        targetPageIndex = currentIdx + 1;
+      }
+      
+      if (targetPageIndex < (bookRef.current.getPageData?.()?.length || 0)) {
+        bookRef.current.updatePageData(targetPageIndex, 'background', color);
+      }
+    }
   };
 
   return (
@@ -293,6 +263,7 @@ export default function Creator() {
             bookId={id ? parseInt(id) : null}
             selectedStyleId={selectedStyleId}
             selectedSizeId={selectedSizeId}
+            existingImages={bookDetails?.data?.images}
           />
         </div>
         <div className="w-[63.8%]">
@@ -301,7 +272,9 @@ export default function Creator() {
             activeSubTool={activeSubTool}
             onToolChange={setActiveSubTool}
             onBookSizeChange={setSelectedBookSize}
-            onStrokeColorChange={handleStrokeColorChange}
+            selectedSizeId={selectedSizeId}
+            onSizeSelect={setSelectedSizeId}
+            onStrokeColorChange={handleStrokeColorChangeWithPage}
             onStrokeWidthChange={setStrokeWidth}
             onFontSizeChange={setFontSize}
             onFontFamilyChange={setFontFamily}
@@ -326,6 +299,7 @@ export default function Creator() {
             tableProperties={tableProperties}
             selectedTableId={selectedTableId}
             onShapePropertiesChange={handleShapePropertiesChange}
+            onTargetColorPageChange={handleTargetColorPageChange}
           />
           <Book
             onToolChange={(tool, subTool) => {
@@ -349,6 +323,7 @@ export default function Creator() {
             shapeStrokeWidth={shapeProperties.strokeWidth}
             isFillTransparent={shapeProperties.isFillTransparent}
             initialData={loadedPages}
+            targetColorPage={targetColorPage}
           />
         </div>
         <div
@@ -361,10 +336,6 @@ export default function Creator() {
           />
         </div>
       </div>
-
-      {/* Global Controls - Always Visible */}
-
-      {/* Help Overlay */}
       <HelpOverlay />
     </div>
   );

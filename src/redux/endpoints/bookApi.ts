@@ -1,8 +1,9 @@
 import { baseApi } from "../api";
-import type { IBook, IBookDetails, IStyle, IGeneratedImage, IApiResponse } from "@/types/book.type";
+import type { IBook, IBookDetails, IStyle, IGeneratedImage, IApiResponse, IBookSize, IShareResponse } from "@/types/book.type";
 
 export const bookApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
+    // ---- BOOK MANAGEMENT ----
     getBooks: build.query<IApiResponse<IBook[]>, void>({
       query: () => ({
         url: "/books/",
@@ -45,6 +46,7 @@ export const bookApi = baseApi.injectEndpoints({
       providesTags: ["book"],
     }),
 
+    // ---- DASHBOARD CATEGORIES ----
     getRecentWorks: build.query<IApiResponse<IBook[]>, void>({
       query: () => ({
         url: "/recent-works/",
@@ -77,6 +79,15 @@ export const bookApi = baseApi.injectEndpoints({
       invalidatesTags: ["trash"],
     }),
 
+    restoreBook: build.mutation<IApiResponse<void>, number>({
+      query: (id) => ({
+        url: `/books/${id}/restore/`,
+        method: "PATCH",
+      }),
+      invalidatesTags: ["book", "trash", "previous-work"],
+    }),
+
+    // ---- GENERATION ----
     getStyles: build.query<IApiResponse<IStyle[]>, void>({
       query: () => ({
         url: "/styles/",
@@ -89,6 +100,29 @@ export const bookApi = baseApi.injectEndpoints({
         url: `/generate/${book_id}/`,
         method: "POST",
         body: data,
+      }),
+      invalidatesTags: ["book"],
+    }),
+
+    getBookSizes: build.query<IApiResponse<IBookSize[]>, void>({
+      query: () => ({
+        url: "/book-size/",
+        method: "GET",
+      }),
+    }),
+
+    // ---- SHARING ----
+    shareBook: build.mutation<IApiResponse<IShareResponse>, number>({
+      query: (id) => ({
+        url: `/v1/books/${id}/share/`,
+        method: "POST",
+      }),
+    }),
+
+    getSharedBook: build.query<IApiResponse<IBookDetails>, string>({
+      query: (token) => ({
+        url: `/v1/books/shared/${token}/`,
+        method: "GET",
       }),
     }),
   }),
@@ -104,6 +138,10 @@ export const {
   useGetPreviousWorksQuery,
   useGetTrashBooksQuery,
   useDeleteBookPermanentlyMutation,
+  useRestoreBookMutation,
   useGetStylesQuery,
   useGenerateImageMutation,
+  useGetBookSizesQuery,
+  useShareBookMutation,
+  useGetSharedBookQuery,
 } = bookApi;

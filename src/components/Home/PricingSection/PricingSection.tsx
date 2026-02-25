@@ -1,16 +1,10 @@
-import { Check, Zap, Trophy, Crown } from "lucide-react";
+import { Check, Zap, Trophy, Crown, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
-
-interface Plan {
-  name: string;
-  month?: string;
-  price: string;
-  icon: React.ReactNode;
-  yearly: string;
-}
+import { useGetAllPlansQuery, useCreateCheckoutSessionMutation } from "@/redux/endpoints/subscriptionApi";
+import { toast } from "sonner";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -27,7 +21,45 @@ const cardVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] } }
 };
 
+const getIcon = (name: string) => {
+  const lowerName = name.toLowerCase();
+  if (lowerName.includes("basic")) return <Zap className="h-5 w-5 text-white" />;
+  if (lowerName.includes("business")) return <Trophy className="h-5 w-5 text-white" />;
+  return <Crown className="h-5 w-5 text-white" />;
+};
+
 export default function PricingSection() {
+  const { data: plans, isLoading, isError } = useGetAllPlansQuery();
+  const [createCheckout, { isLoading: isCheckingOut }] = useCreateCheckoutSessionMutation();
+
+  const handleSubscribe = async (planId: number) => {
+    try {
+      const result = await createCheckout({ plan_id: planId }).unwrap();
+      if (result.checkout_url) {
+        window.location.href = result.checkout_url;
+      }
+    } catch (error) {
+      console.error("Checkout failed", error);
+      toast.error("Failed to initiate checkout. Please try again.");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <section id="pricing" className="mt-10">
+        <div className="text-center text-white py-20">Loading plans...</div>
+      </section>
+    );
+  }
+
+  if (isError || !plans) {
+    return (
+      <section id="pricing" className="mt-10">
+        <div className="text-center text-red-500 py-20">Failed to load plans</div>
+      </section>
+    );
+  }
+
   return (
     <section id="pricing" className="mt-10">
       <motion.h1 
@@ -48,50 +80,50 @@ export default function PricingSection() {
           viewport={{ once: true, margin: "-100px" }}
         >
           {plans.map((plan) => (
-            <motion.div key={plan.name} variants={cardVariants}>
+            <motion.div key={plan.id} variants={cardVariants}>
               <Card
-                className={`
-                bg-[#0F0F0F] border border-neutral-800 text-white rounded-2xl 
-                 flex flex-col justify-between relative transition-all duration-300 hover:shadow-[0_0_2px_#232323,0_0_5px_#635C5A,0_0_30px_#64607C] hover:scale-105 group
-              `}
+                className="bg-[#0F0F0F] border border-neutral-800 text-white rounded-2xl flex flex-col justify-between relative transition-all duration-300 hover:shadow-[0_0_2px_#232323,0_0_5px_#635C5A,0_0_30px_#64607C] hover:scale-105 group h-full"
               >
                 <div className="absolute top-6 right-6 bg-[#222222] p-2.5 rounded-full">
-                  {plan.icon}
+                  {getIcon(plan.name)}
                 </div>
 
                 <CardContent>
                   <div className="space-y-2">
                     <h2 className="text-xl font-bold">{plan.name}</h2>
                     <p className="text-[56px] font-bold">
-                      {plan.price}
-                      <span className="text-xl font-bold">{plan.month}</span>
+                      ${parseFloat(plan.price_usd).toFixed(0)}
+                      <span className="text-xl font-bold">/mo</span>
                     </p>
                     <p className="text-base font-normal text-[#6E6E6E]">
-                      {plan.yearly}
+                      {plan.image_limit} Images per month
                     </p>
                   </div>
 
                   <Separator className="my-8 bg-[#262626]" />
-                  <div className=" space-y-5">
-                    {Array(3)
-                      .fill(0)
-                      .map((_, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-white" />
-                          <span className="text-sm text-[#6E6E6E]">
-                            Feature text goes here
-                          </span>
-                        </div>
-                      ))}
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-white" />
+                      <span className="text-sm text-[#6E6E6E]">High Quality Generations</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-white" />
+                      <span className="text-sm text-[#6E6E6E]">Commercial Usage</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-white" />
+                      <span className="text-sm text-[#6E6E6E]">Priority Support</span>
+                    </div>
                   </div>
                 </CardContent>
 
                 <div className="px-5 pb-5">
                   <Button
-                    className={`
-                  mt-12 w-full h-11 rounded-full font-medium bg-[#171717] group-hover:bg-white! group-hover:text-black! transition-colors duration-300 ease-in-out cursor-pointer`}
+                    onClick={() => handleSubscribe(plan.id)}
+                    disabled={isCheckingOut}
+                    className="mt-12 w-full h-11 rounded-full font-medium bg-[#171717] group-hover:bg-white group-hover:text-black transition-colors duration-300 ease-in-out cursor-pointer"
                   >
-                    Get started
+                    {isCheckingOut ? <Loader2 className="animate-spin" /> : "Get Started"}
                   </Button>
                 </div>
               </Card>
@@ -102,27 +134,3 @@ export default function PricingSection() {
     </section>
   );
 }
-
-const plans: Plan[] = [
-  {
-    name: "Basic plan",
-    price: "$19",
-    month: "/mo",
-    yearly: "or $199 yearly",
-    icon: <Zap className="h-5 w-5 text-white" />,
-  },
-  {
-    name: "Business plan",
-    price: "$29",
-    month: "/mo",
-    yearly: "or $299 yearly",
-    icon: <Trophy className="h-5 w-5 text-white" />,
-  },
-  {
-    name: "Enterprise plan",
-    price: "$49",
-    month: "/mo",
-    yearly: "or $499 yearly",
-    icon: <Crown className="h-5 w-5 text-white" />,
-  },
-];

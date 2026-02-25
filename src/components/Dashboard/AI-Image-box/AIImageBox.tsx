@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Send, X, Check, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Mic, Send, X, Check, Image as ImageIcon, Loader2, Eye } from 'lucide-react';
 import { useGenerateImageMutation } from '@/redux/endpoints/bookApi';
 import { toast } from 'sonner';
 import { getImageUrl } from '@/lib/utils';
@@ -24,19 +24,45 @@ const VoiceVisualizer = ({ isActive }: { isActive: boolean }) => {
   );
 };
 
+interface ApiImage {
+  id: number;
+  image: string;
+  generated_at: string;
+  book?: number;
+}
+
 interface AIImageBoxProps {
   bookId: number | null;
   selectedStyleId: number;
   selectedSizeId: number;
+  existingImages?: ApiImage[];
 }
 
-const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps) => {
+const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId, existingImages = [] }: AIImageBoxProps) => {
   const [prompt, setPrompt] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [images, setImages] = useState<Array<{ url: string; prompt: string } | null>>(Array(50).fill(null));
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [generateImage, { isLoading }] = useGenerateImageMutation();
   const recognitionRef = useRef<any>(null);
   
+  useEffect(() => {
+    if (existingImages && existingImages.length > 0) {
+      setImages(() => {
+        const newImages = Array(50).fill(null);
+        existingImages.forEach((img, index) => {
+          if (index < 50) {
+            newImages[index] = {
+              url: getImageUrl(img.image),
+              prompt: `Generated on ${new Date(img.generated_at).toLocaleDateString()}`
+            };
+          }
+        });
+        return newImages;
+      });
+    }
+  }, [existingImages]);
+
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -90,10 +116,23 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps
   };
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim()) {
+      toast.error('Please enter a prompt');
+      return;
+    }
 
     if (!bookId) {
       toast.error('Please save your artbook before generating images.');
+      return;
+    }
+
+    if (!selectedStyleId) {
+      toast.error('Please select a style from the right panel');
+      return;
+    }
+
+    if (!selectedSizeId) {
+      toast.error('Please select a book size from the toolbox');
       return;
     }
 
@@ -114,10 +153,12 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps
           return newImages;
         });
         toast.success('Image generated successfully!');
+        setPrompt('');
       }
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to generate image');
+    } catch (err: any) {
+      console.error('Generation error:', err);
+      const errorMessage = err?.data?.message || err?.message || 'Failed to generate image';
+      toast.error(errorMessage);
     }
   };
 
@@ -131,7 +172,7 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps
   
 
   const handleDragStart = (e: React.DragEvent<HTMLImageElement>, url: string) => {
-    e.dataTransfer.setData('imageSrc', url);
+    e.dataTransfer.setData('image', url);
     e.dataTransfer.effectAllowed = 'copy';
   };
 
@@ -225,11 +266,13 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps
                     alt={img.prompt} 
                     draggable={true}
                     onDragStart={(e) => handleDragStart(e, img.url)}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-grab active:cursor-grabbing"
+                    onClick={() => setPreviewImage(img.url)}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer"
                   />
-                  <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3">
-                    <p className="text-xs text-foreground line-clamp-2">{img.prompt}</p>
-                  </div>
+                    <div className="bg-background/90 text-foreground px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg backdrop-blur-sm">
+                      <Eye size={16} />
+                      <span className="text-sm font-medium">Preview</span>
+                    </div>
                 </>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
@@ -247,6 +290,31 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId }: AIImageBoxProps
             </div>
           ))}
         </div>
+
+        {previewImage && (
+          <div 
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+            onClick={() => setPreviewImage(null)}
+          >
+            <div 
+              className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img 
+                src={previewImage} 
+                alt="Full Preview" 
+                className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl border border-white/10"
+              />
+              <button 
+                onClick={() => setPreviewImage(null)}
+                className="absolute -top-4 -right-4 md:-top-6 md:-right-6 p-2 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors shadow-lg"
+                title="Close preview"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

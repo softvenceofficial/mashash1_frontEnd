@@ -1,14 +1,36 @@
 export interface IApiResponse<T> {
   code: number;
-  success: boolean;
+  success?: boolean;
   message: string;
   data: T;
+}
+
+export interface IUserData {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  phone_number: string;
+  date_of_birth: string;
+  avatar: string;
+  has_subscription: boolean;
+}
+
+export interface IAuthResponse {
+  code: number;
+  message: string;
+  data: IUserData;
+  tokens: {
+    access: string;
+    refresh: string;
+  };
 }
 
 export interface IBook {
   id: number;
   title: string;
-  cover_image: string;
+  cover_image: string | null;
   file: string | null;
   created_at: string;
 }
@@ -36,4 +58,18 @@ export interface ISize {
   name: string;
   width: number;
   height: number;
+}
+
+export interface IBookSize {
+  id: number;
+  name: string;
+  size: string;
+  aspect_ratio: string;
+  description: string;
+  image: string;
+}
+
+export interface IShareResponse {
+  share_token: string;
+  share_url: string;
 }
