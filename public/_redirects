@@ -1,1 +1,2 @@
+/api-media/* https://api.serverforaibook.com/media/:splat 200
 /*    /index.html   200

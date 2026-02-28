@@ -48,6 +48,7 @@ const SigninForm = () => {
                   <Input
                     type="text"
                     placeholder="your@email.com"
+                    autoComplete="email"
                     className="rounded-[10px] h-12 placeholder:text-auth-foreground placeholder:text-base placeholder:font-normal text-base! font-normal border-[#E5E7EB] focus:ring-0! focus:ring-offset-0! focus:border-border! dark:bg-transparent text-black"
                     {...field}
                   />
@@ -70,6 +71,7 @@ const SigninForm = () => {
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Min. 8 characters"
+                      autoComplete="current-password"
                       {...field}
                       className="rounded-[10px] h-12 placeholder:text-auth-foreground placeholder:text-base placeholder:font-normal text-base! font-normal border-auth-border focus:ring-0! focus:ring-offset-0! focus:border-border! dark:bg-transparent text-black"
                     />

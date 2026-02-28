@@ -93,6 +93,7 @@ export default function SignUpForm() {
                 <FormControl>
                   <Input
                     placeholder="your@email.com"
+                    autoComplete="email"
                     className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 dark:bg-transparent dark:text-black"
                     {...field}
                   />
@@ -137,6 +138,7 @@ export default function SignUpForm() {
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Min. 8 characters"
+                      autoComplete="new-password"
                       {...field}
                       className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 dark:bg-transparent dark:text-black"
                     />
@@ -172,6 +174,7 @@ export default function SignUpForm() {
                     <Input
                       type={showConfirm ? "text" : "password"}
                       placeholder="Min. 6 characters"
+                      autoComplete="new-password"
                       {...field}
                       className="h-12 rounded-[10px] border-[#E5E7EB] placeholder:text-[#9CA3AF] text-base focus:ring-0 dark:bg-transparent dark:text-black focus:ring-offset-0 focus:outline-0"
                     />

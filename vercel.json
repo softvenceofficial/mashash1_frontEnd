@@ -1,3 +1,9 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/api-media/:path*",
+      "destination": "https://api.serverforaibook.com/media/:path*"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

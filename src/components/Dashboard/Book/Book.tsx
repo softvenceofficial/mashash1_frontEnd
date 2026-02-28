@@ -138,10 +138,10 @@ interface BookProps {
 // --- Constants ---
 const BOOK_SIZE_MAP: Record<string, { width: number; height: number }> = {
   "5 X 7": { width: 350, height: 490 },
-  "6 X 4": { width: 400, height: 550 },
+  "6 X 4": { width: 420, height: 550 },
   "6 X 8": { width: 420, height: 560 },
   "6 X 9": { width: 420, height: 630 },
-  "7 X 10": { width: 280, height: 700 },
+  "7 X 10": { width: 490, height: 700 },
   "8.5 X 11": { width: 476, height: 616 },
   "8 X 10": { width: 560, height: 700 },
   "12 X 9": { width: 672, height: 504 },
@@ -1262,7 +1262,6 @@ const BookComponent = (
     setCurrentZoom(newZoom);
     onZoomChange?.(newZoom);
     setPanPosition({ x: 0, y: 0 });
-    setBookRotation({ x: 0, y: 0 });
   };
 
   const [editingTextItem, setEditingTextItem] = useState<TextType | null>(null);
@@ -1279,9 +1278,6 @@ const BookComponent = (
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [bookRotation, setBookRotation] = useState({ x: 0, y: 0 });
-  const [is3DDragging, setIs3DDragging] = useState(false);
-  const [drag3DStart, setDrag3DStart] = useState({ x: 0, y: 0, rotX: 0, rotY: 0 });
   const [penDrawingState, setPenDrawingState] = useState<{
     [pageIndex: number]: {
       points: number[];
@@ -2281,17 +2277,6 @@ const BookComponent = (
   ]);
 
   const handleContainerMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 2) {
-      setIs3DDragging(true);
-      setDrag3DStart({
-        x: e.clientX,
-        y: e.clientY,
-        rotX: bookRotation.x,
-        rotY: bookRotation.y,
-      });
-      return;
-    }
-
     if (isHandMode && e.button === 0) {
       setIsPanning(true);
       setDragStart({
@@ -2302,17 +2287,6 @@ const BookComponent = (
   };
 
   const handleContainerMouseMove = (e: React.MouseEvent) => {
-    if (is3DDragging) {
-      const deltaX = e.clientX - drag3DStart.x;
-      const deltaY = e.clientY - drag3DStart.y;
-      
-      setBookRotation({
-        x: Math.max(-60, Math.min(60, drag3DStart.rotX - deltaY * 0.5)),
-        y: Math.max(-60, Math.min(60, drag3DStart.rotY + deltaX * 0.5)),
-      });
-      return;
-    }
-
     if (isPanning && isHandMode) {
       setPanPosition({
         x: e.clientX - dragStart.x,
@@ -2321,12 +2295,8 @@ const BookComponent = (
     }
   };
 
-  const handleContainerMouseUp = (e?: React.MouseEvent) => {
-    if (e && e.button === 2) {
-      setIs3DDragging(false);
-    } else {
-      setIsPanning(false);
-    }
+  const handleContainerMouseUp = () => {
+    setIsPanning(false);
   };
 
   const handlePageDrop = (
@@ -3138,10 +3108,7 @@ const BookComponent = (
             ? isPanning
               ? "grabbing"
               : "grab"
-            : is3DDragging
-              ? "move"
-              : "default",
-        perspective: "2000px",
+            : "default",
       }}
       className={`relative flex flex-col items-center justify-center transition-all duration-300 ${
         isFullscreen
@@ -3151,7 +3118,7 @@ const BookComponent = (
       onMouseDown={handleContainerMouseDown}
       onMouseMove={handleContainerMouseMove}
       onMouseUp={handleContainerMouseUp}
-      onMouseLeave={() => { setIs3DDragging(false); setIsPanning(false); }}
+      onMouseLeave={() => setIsPanning(false)}
       onContextMenu={(e) => e.preventDefault()}
     >
 
@@ -3262,9 +3229,8 @@ const BookComponent = (
 
       <div
         style={{
-          transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoom}) rotateX(${bookRotation.x}deg) rotateY(${bookRotation.y}deg)`,
-          transition: isPanning || is3DDragging ? "none" : "transform 0.2s",
-          transformStyle: "preserve-3d",
+          transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoom})`,
+          transition: isPanning ? "none" : "transform 0.2s",
         }}
         className="relative flex justify-center items-center"
       >
