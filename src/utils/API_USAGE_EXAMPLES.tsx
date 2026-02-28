@@ -5,12 +5,17 @@
  * Copy and adapt these patterns for your specific use cases.
  */
 
+import { useState } from "react";
+import { toast } from "sonner";
+import { useUserLoginMutation } from "@/redux/endpoints/authApi";
+import { useGetBooksQuery, useCreateBookMutation, useGenerateImageMutation, useGetStylesQuery, useGetBookSizesQuery, useGetTrashBooksQuery, useDeleteBookPermanentlyMutation, useGetBookDetailsQuery, useGetPreviousWorksQuery } from "@/redux/endpoints/bookApi";
+import { createFormData, handleApiError, isApiSuccess } from "@/utils/apiHelper";
+import { ShareModal } from "@/components/Modal/ShareModal";
+import { useBookOperations } from "@/hooks/useBookOperations";
+
 // ============================================================================
 // EXAMPLE 1: Login Component
 // ============================================================================
-import { useUserLoginMutation } from "@/redux/endpoints/authApi";
-import { toast } from "sonner";
-
 export const LoginExample = () => {
   const [login, { isLoading }] = useUserLoginMutation();
 
@@ -35,8 +40,6 @@ export const LoginExample = () => {
 // ============================================================================
 // EXAMPLE 2: Book List Component
 // ============================================================================
-import { useGetBooksQuery } from "@/redux/endpoints/bookApi";
-
 export const BookListExample = () => {
   const { data, isLoading, error } = useGetBooksQuery();
 
@@ -58,10 +61,6 @@ export const BookListExample = () => {
 // ============================================================================
 // EXAMPLE 3: Create Book Component
 // ============================================================================
-import { useCreateBookMutation } from "@/redux/endpoints/bookApi";
-import { createFormData } from "@/utils/apiHelper";
-import { useState } from "react";
-
 export const CreateBookExample = () => {
   const [createBook, { isLoading }] = useCreateBookMutation();
   const [title, setTitle] = useState("");
@@ -104,8 +103,6 @@ export const CreateBookExample = () => {
 // ============================================================================
 // EXAMPLE 4: Generate Image Component
 // ============================================================================
-import { useGenerateImageMutation, useGetStylesQuery, useGetBookSizesQuery } from "@/redux/endpoints/bookApi";
-
 export const GenerateImageExample = () => {
   const [generateImage, { isLoading }] = useGenerateImageMutation();
   const { data: styles } = useGetStylesQuery();
@@ -171,9 +168,6 @@ export const GenerateImageExample = () => {
 // ============================================================================
 // EXAMPLE 5: Share Book Component
 // ============================================================================
-import { useState } from "react";
-import { ShareModal } from "@/components/Modal/ShareModal";
-
 export const ShareBookExample = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const bookId = 1;
@@ -191,8 +185,6 @@ export const ShareBookExample = () => {
 // ============================================================================
 // EXAMPLE 6: Book Operations with Custom Hook
 // ============================================================================
-import { useBookOperations } from "@/hooks/useBookOperations";
-
 export const BookActionsExample = () => {
   const { handleDeleteBook, handleRestoreBook, handleShareBook } = useBookOperations();
 
@@ -229,8 +221,6 @@ export const BookActionsExample = () => {
 // ============================================================================
 // EXAMPLE 7: Trash Management Component
 // ============================================================================
-import { useGetTrashBooksQuery, useDeleteBookPermanentlyMutation } from "@/redux/endpoints/bookApi";
-
 export const TrashManagementExample = () => {
   const { data: trashBooks, isLoading } = useGetTrashBooksQuery();
   const [deleteBookPermanently] = useDeleteBookPermanentlyMutation();
@@ -265,8 +255,6 @@ export const TrashManagementExample = () => {
 // ============================================================================
 // EXAMPLE 8: Book Details with Images
 // ============================================================================
-import { useGetBookDetailsQuery } from "@/redux/endpoints/bookApi";
-
 export const BookDetailsExample = () => {
   const { data, isLoading } = useGetBookDetailsQuery("1");
 
@@ -294,8 +282,6 @@ export const BookDetailsExample = () => {
 // ============================================================================
 // EXAMPLE 9: Previous Works Component
 // ============================================================================
-import { useGetPreviousWorksQuery } from "@/redux/endpoints/bookApi";
-
 export const PreviousWorksExample = () => {
   const { data, isLoading } = useGetPreviousWorksQuery();
 
@@ -317,8 +303,6 @@ export const PreviousWorksExample = () => {
 // ============================================================================
 // EXAMPLE 10: Error Handling Pattern
 // ============================================================================
-import { handleApiError, isApiSuccess } from "@/utils/apiHelper";
-
 export const ErrorHandlingExample = () => {
   const [createBook] = useCreateBookMutation();
 
