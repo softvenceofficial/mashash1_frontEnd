@@ -611,14 +611,7 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
         id={`book-page-${pageIndex}`}
         data-page-index={pageIndex}
         className="bg-white h-full w-full relative group"
-        style={{
-          borderRight: pageIndex % 2 === 0 ? "4px solid #e5e7eb" : "none",
-          borderLeft: pageIndex % 2 !== 0 ? "4px solid #e5e7eb" : "none",
-          borderBottom: "4px solid #d1d5db",
-          borderTop: "1px solid #f3f4f6",
-          borderBottomRightRadius: pageIndex % 2 === 0 ? "4px" : "0",
-          borderBottomLeftRadius: pageIndex % 2 !== 0 ? "4px" : "0",
-        }}
+       
       >
         <div
           className="w-full h-full relative overflow-hidden"
@@ -3237,17 +3230,7 @@ const BookComponent = (
         {/* 3D Hardcover Backing */}
         <div
           className="absolute bg-[#2d2a26] shadow-[15px_20px_30px_rgba(0,0,0,0.6)] transition-all delay-50 duration-300 pointer-events-none"
-          style={{
-            width: currentPageIndex === 0 ? WIDTH + 16 : (WIDTH * 2) + 32,
-            height: HEIGHT + 24,
-            borderRadius: currentPageIndex === 0 ? "4px 12px 12px 4px" : "12px",
-            top: "50%",
-            left: currentPageIndex === 0 ? "75%" : "50%",
-            transform: "translate(-50%, -50%) translateZ(-10px)",
-            zIndex: -1,
-            border: "1px solid #1f1d1a",
-            backgroundImage: "linear-gradient(to right, #2d2a26, #3a3632, #2d2a26)",
-          }}
+          
         >
           {currentPageIndex > 0 && (
             <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-12 bg-gradient-to-r from-black/60 via-transparent to-black/60 border-x border-black/30 shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]" />
