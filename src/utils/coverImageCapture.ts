@@ -32,20 +32,26 @@ export const captureCoverImage = async (
  */
 export const createCoverFormData = async (
   getCoverImageFn: () => string | null | Promise<string | null>,
-  additionalData?: Record<string, string | number>
+  additionalData?: Record<string, string | number | Blob>
 ): Promise<FormData | null> => {
-  const coverFile = await captureCoverImage(getCoverImageFn);
-  
-  if (!coverFile) return null;
-
   const formData = new FormData();
-  formData.append("cover_image", coverFile);
+  
+  try {
+    const coverFile = await captureCoverImage(getCoverImageFn);
+    if (coverFile) {
+      formData.append("cover_image", coverFile);
+    }
+  } catch (err) {
+    console.warn("Could not capture cover image, skipping cover update.", err);
+  }
 
   if (additionalData) {
     Object.entries(additionalData).forEach(([key, value]) => {
-      formData.append(key, String(value));
+      formData.append(key, value instanceof Blob ? value : String(value));
     });
   }
+
+  if (Array.from(formData.keys()).length === 0) return null;
 
   return formData;
 };

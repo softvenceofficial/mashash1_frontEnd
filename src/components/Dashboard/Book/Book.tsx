@@ -182,21 +182,15 @@ const useImage = (url: string) => {
     const img = new window.Image();
     
     img.crossOrigin = "anonymous";
+    img.src = url;
     
     img.onload = () => {
       if (isMounted) setImage(img);
     };
     
     img.onerror = () => {
-      console.warn(`CORS failed for ${url}. Loading without CORS (this taints the canvas).`);
-      const fallbackImg = new window.Image();
-      fallbackImg.onload = () => {
-        if (isMounted) setImage(fallbackImg);
-      };
-      fallbackImg.src = url;
+      console.warn(`Failed to load image: ${url}`);
     };
-    
-    img.src = url.startsWith('data:') ? url : `${url}?t=${new Date().getTime()}`;
     
     return () => { isMounted = false; };
   }, [url]);

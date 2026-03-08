@@ -59,6 +59,7 @@ const AIImageType = ({ onStyleSelect, selectedStyleId }: AIImageTypeProps) => {
                   alt={style.name} 
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   loading="lazy"
+                  crossOrigin="anonymous"
                 />
 
                 <div className={`absolute left-0 right-0 bg-lime-400 py-1 px-1 transition-all duration-300 ${
