@@ -1,17 +1,26 @@
+import { useState } from "react";
 import Icon from "@/components/common/Icon";
 import bg from "@/assets/svgs/dashboard-home-bg.svg";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   useGetBooksQuery,
   useDeleteBookMutation,
+  useCreateBookMutation,
 } from "@/redux/endpoints/bookApi";
-import { Loader2, Trash2, Plus,  ArrowRight } from "lucide-react";
+import { Loader2, Trash2, Plus, ArrowRight, X } from "lucide-react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 
 export default function DashboardPage() {
   const { data: booksData, isLoading } = useGetBooksQuery();
   const [deleteBook] = useDeleteBookMutation();
+  const [createBook, { isLoading: isCreating }] = useCreateBookMutation();
+  const navigate = useNavigate();
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [bookTitle, setBookTitle] = useState("");
 
   const getImageUrl = (path: string | null) => {
     if (!path)
@@ -27,8 +36,36 @@ export default function DashboardPage() {
         await deleteBook(id).unwrap();
         toast.success("Book deleted successfully");
       } catch (error) {
+        console.error("Failed to delete book", error);
         toast.error("Failed to delete book");
       }
+    }
+  };
+
+  // Handle Book Creation
+  const handleCreateBook = async () => {
+    if (!bookTitle.trim()) {
+      toast.error("Please enter a title for your Artbook");
+      return;
+    }
+
+    try {
+      // API expects form-data
+      const formData = new FormData();
+      formData.append("title", bookTitle);
+      
+      // Hit the API
+      const res = await createBook(formData).unwrap();
+      
+      toast.success("Artbook created successfully!");
+      setIsModalOpen(false);
+      setBookTitle("");
+      
+      // Redirect to the Creator page with the new Book ID
+      navigate(`/Creator/${res.data.id}`);
+    } catch (error) {
+      console.error("Failed to create artbook", error);
+      toast.error("Failed to create artbook");
     }
   };
 
@@ -43,14 +80,12 @@ export default function DashboardPage() {
   const books = booksData?.data || [];
 
   return (
-    <section className="space-y-5 p-6">
+    <section className="space-y-5 p-6 relative">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">My Artbooks</h1>
-        <Link to="/Creator">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Create New Artbook
-          </Button>
-        </Link>
+        <Button onClick={() => setIsModalOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Create New Artbook
+        </Button>
       </div>
 
       {books.length === 0 ? (
@@ -60,11 +95,13 @@ export default function DashboardPage() {
             Nothing here yet. Bring your ideas to life with a new artbook.
           </p>
           <div className="flex justify-center mt-7">
-            <Link to="/Creator">
-              <Button variant="default" className="mt-4">
-                First New Artbook
-              </Button>
-            </Link>
+            <Button 
+              variant="default" 
+              className="mt-4" 
+              onClick={() => setIsModalOpen(true)}
+            >
+              First New Artbook
+            </Button>
           </div>
         </div>
       ) : (
@@ -101,7 +138,7 @@ export default function DashboardPage() {
                   <div className="flex justify-between items-center mb-6">
                     <div>
                       <h2
-                        className="text-xl font-bold text-card-foreground leading-tight mb-1 truncate"
+                        className="text-xl font-bold text-card-foreground leading-tight mb-1 truncate max-w-[120px]"
                         title={book.title || "Untitled Book"}
                       >
                         {book.title || "Untitled Artbook"}
@@ -127,6 +164,61 @@ export default function DashboardPage() {
               </Link>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* --- Create Book Modal --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
+          <div className="bg-card rounded-xl p-6 w-96 shadow-2xl border border-white/10 animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-foreground">Name Your Artbook</h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Artbook Title
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g. feed_fantastic.htm"
+                value={bookTitle}
+                onChange={(e) => setBookTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateBook()}
+                autoFocus
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setIsModalOpen(false)}
+                disabled={isCreating}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleCreateBook}
+                disabled={isCreating}
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
+                  </>
+                ) : (
+                  "Create Artbook"
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </section>

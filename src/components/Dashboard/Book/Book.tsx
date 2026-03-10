@@ -134,12 +134,13 @@ interface BookProps {
   initialData?: PageData[] | null;
   targetColorPage?: "left" | "right"; 
   isReadOnly?: boolean;
+  onDataChange?: () => void;
 }
 
 // --- Constants ---
 const BOOK_SIZE_MAP: Record<string, { width: number; height: number }> = {
   "5 X 7": { width: 350, height: 490 },
-  "6 X 4": { width: 420, height: 550 },
+  "6 X 4": { width: 550, height:420  },
   "6 X 8": { width: 420, height: 560 },
   "6 X 9": { width: 420, height: 630 },
   "7 X 10": { width: 490, height: 700 },
@@ -1147,7 +1148,7 @@ const BookComponent = (
     activeSubTool = "select",
     strokeColor = "#000000",
     strokeWidth = 5,
-    selectedBookSize = "6 X 4",
+    selectedBookSize = "5 X 7",
     fontSize = 16,
     fontFamily = "Roboto",
     onAdvancedTextChange,
@@ -1161,8 +1162,8 @@ const BookComponent = (
     isFillTransparent = false,
     onToolChange,
     initialData,
-    targetColorPage,
     isReadOnly = false,
+    onDataChange,
   }: BookProps,
   ref: any,
 ) => {
@@ -1178,6 +1179,13 @@ const BookComponent = (
       setPages(initialData);
     }
   }, [initialData]);
+
+  // Trigger onDataChange whenever pages change
+  useEffect(() => {
+    if (onDataChange) {
+      onDataChange();
+    }
+  }, [pages, onDataChange]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [pagesToAdd, setPagesToAdd] = useState("2");
@@ -1208,7 +1216,7 @@ const BookComponent = (
   } | null>(null);
 
   const bookDimensions =
-    BOOK_SIZE_MAP[selectedBookSize] || BOOK_SIZE_MAP["6 X 4"];
+    BOOK_SIZE_MAP[selectedBookSize] || BOOK_SIZE_MAP["5 X 7"];
   const WIDTH = bookDimensions.width;
   const HEIGHT = bookDimensions.height;
 
@@ -1230,30 +1238,30 @@ const BookComponent = (
   }, [externalZoom]);
 
   // Rest of state hooks and handlers...
-  const handleZoomIn = (e?: React.MouseEvent) => {
+  const handleZoomIn = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
     e?.preventDefault();
     const newZoom = Math.min(currentZoom + 0.1, 3);
     setCurrentZoom(newZoom);
     onZoomChange?.(newZoom);
-  };
+  }, [currentZoom, onZoomChange]);
 
-  const handleZoomOut = (e?: React.MouseEvent) => {
+  const handleZoomOut = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
     e?.preventDefault();
     const newZoom = Math.max(currentZoom - 0.1, 0.1);
     setCurrentZoom(newZoom);
     onZoomChange?.(newZoom);
-  };
+  }, [currentZoom, onZoomChange]);
 
-  const handleZoomReset = (e?: React.MouseEvent) => {
+  const handleZoomReset = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
     e?.preventDefault();
     const newZoom = 1;
     setCurrentZoom(newZoom);
     onZoomChange?.(newZoom);
     setPanPosition({ x: 0, y: 0 });
-  };
+  }, [onZoomChange]);
 
   const [editingTextItem, setEditingTextItem] = useState<TextType | null>(null);
   const [editingStickyNote, setEditingStickyNote] =
@@ -1618,6 +1626,16 @@ const BookComponent = (
     canUndo,
     canRedo,
     updatePageData,
+    goToCover: () => {
+      // Access the flipbook instance to force it to page 0
+      if (bookRef.current) {
+        const flip = bookRef.current.pageFlip();
+        // Only turn if it's not already on the cover
+        if (flip && flip.getCurrentPageIndex() !== 0) {
+          flip.turnToPage(0);
+        }
+      }
+    },
     handleImageUpload: (
       file: File,
       targetPage?: "left" | "right" | "current",
