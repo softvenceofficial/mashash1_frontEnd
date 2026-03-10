@@ -133,6 +133,7 @@ interface BookProps {
   onToolChange?: (tool: string, subTool: string) => void;
   initialData?: PageData[] | null;
   targetColorPage?: "left" | "right"; 
+  isReadOnly?: boolean;
 }
 
 // --- Constants ---
@@ -1160,6 +1161,8 @@ const BookComponent = (
     isFillTransparent = false,
     onToolChange,
     initialData,
+    targetColorPage,
+    isReadOnly = false,
   }: BookProps,
   ref: any,
 ) => {
@@ -1180,6 +1183,7 @@ const BookComponent = (
   const [pagesToAdd, setPagesToAdd] = useState("2");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [lastInteractedPageIndex, setLastInteractedPageIndex] = useState<number>(0);
   const [isSpacePanning, setIsSpacePanning] = useState(false);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedTablePageIndex, setSelectedTablePageIndex] =
@@ -1287,30 +1291,34 @@ const BookComponent = (
   const { addToHistory, undo, redo, canUndo, canRedo } = useBookHistory();
 
   const saveCurrentPageState = useCallback(() => {
+    if (isReadOnly) return;
     addToHistory(pages);
-  }, [addToHistory, pages]);
+  }, [addToHistory, pages, isReadOnly]);
 
   const handleUndo = useCallback(() => {
+    if (isReadOnly) return;
     const previousPages = undo(pages);
     if (previousPages) {
       setPages(previousPages);
       setSelectedIds([]);
     }
-  }, [undo, pages]);
+  }, [undo, pages, isReadOnly]);
 
   const handleRedo = useCallback(() => {
+    if (isReadOnly) return;
     const nextPages = redo(pages);
     if (nextPages) {
       setPages(nextPages);
       setSelectedIds([]);
     }
-  }, [redo, pages]);
+  }, [redo, pages, isReadOnly]);
 
   const selectedTextId = selectedIds.length === 1 ? selectedIds[0] : null;
   const selectedShapeId = selectedIds.length === 1 ? selectedIds[0] : null;
 
   const handleObjectSelect = useCallback(
     (id: string, e?: any) => {
+      if (isReadOnly) return;
       if (!isSelectMode && activeTool !== "Text") return;
 
       const isCtrlPressed = e?.evt?.ctrlKey || e?.evt?.metaKey;
@@ -1324,82 +1332,80 @@ const BookComponent = (
         return prev.includes(id) ? prev : [id];
       });
 
-      const isText = pages[currentPageIndex].texts.some((t) => t.id === id);
-      if (!isCtrlPressed && isText) {
-        const textItem = pages[currentPageIndex].texts.find((t) => t.id === id);
-        if (textItem) {
-          setToolbarPos({ x: textItem.x, y: textItem.y });
-          setShowToolbar(true);
-        }
+      let textItem: TextType | undefined;
+      pages.forEach((page) => {
+        const found = page.texts.find((t) => t.id === id);
+        if (found) textItem = found;
+      });
+
+      if (!isCtrlPressed && textItem) {
+        setToolbarPos({ x: textItem.x, y: textItem.y });
+        setShowToolbar(true);
       } else {
         setShowToolbar(false);
       }
     },
-    [isSelectMode, activeTool, pages, currentPageIndex],
+    [isSelectMode, activeTool, pages, isReadOnly],
   );
 
   const handleDeleteSelected = useCallback(() => {
+    if (isReadOnly) return;
     if (selectedIds.length === 0) return;
 
     saveCurrentPageState();
 
-    const page = pages[currentPageIndex];
-
-    const newTexts = page.texts.filter((t) => !selectedIds.includes(t.id));
-    const newShapes = page.shapes.filter((s) => !selectedIds.includes(s.id));
-    const newImages = page.images.filter((i) => !selectedIds.includes(i.id));
-    const newStickyNotes = page.stickyNotes.filter(
-      (n) => !selectedIds.includes(n.id),
-    );
-    const newTables = page.tables.filter((t) => !selectedIds.includes(t.id));
-
-    const newPageData = {
-      ...page,
-      texts: newTexts,
-      shapes: newShapes,
-      images: newImages,
-      stickyNotes: newStickyNotes,
-      tables: newTables,
-    };
-
     setPages((prev) =>
-      prev.map((p, i) => (i === currentPageIndex ? newPageData : p)),
+      prev.map((page) => ({
+        ...page,
+        texts: page.texts.filter((t) => !selectedIds.includes(t.id)),
+        shapes: page.shapes.filter((s) => !selectedIds.includes(s.id)),
+        images: page.images.filter((i) => !selectedIds.includes(i.id)),
+        stickyNotes: page.stickyNotes.filter(
+          (n) => !selectedIds.includes(n.id),
+        ),
+        tables: page.tables.filter((t) => !selectedIds.includes(t.id)),
+      }))
     );
     setSelectedIds([]);
     setShowToolbar(false);
-  }, [selectedIds, currentPageIndex, pages, saveCurrentPageState]);
+  }, [selectedIds, saveCurrentPageState, isReadOnly]);
 
   const handleCopy = useCallback(() => {
+    if (isReadOnly) return;
     if (selectedIds.length === 0) return;
-    const page = pages[currentPageIndex];
 
-    const selectedItems = [
-      ...page.texts
-        .filter((t) => selectedIds.includes(t.id))
-        .map((i) => ({ ...i, _type: "text" })),
-      ...page.shapes
-        .filter((s) => selectedIds.includes(s.id))
-        .map((i) => ({ ...i, _type: "shape" })),
-      ...page.images
-        .filter((i) => selectedIds.includes(i.id))
-        .map((i) => ({ ...i, _type: "image" })),
-      ...page.tables
-        .filter((t) => selectedIds.includes(t.id))
-        .map((i) => ({ ...i, _type: "table" })),
-    ];
+    const selectedItems: any[] = [];
+    pages.forEach((page) => {
+      selectedItems.push(
+        ...page.texts
+          .filter((t) => selectedIds.includes(t.id))
+          .map((i) => ({ ...i, _type: "text" })),
+        ...page.shapes
+          .filter((s) => selectedIds.includes(s.id))
+          .map((i) => ({ ...i, _type: "shape" })),
+        ...page.images
+          .filter((i) => selectedIds.includes(i.id))
+          .map((i) => ({ ...i, _type: "image" })),
+        ...page.tables
+          .filter((t) => selectedIds.includes(t.id))
+          .map((i) => ({ ...i, _type: "table" }))
+      );
+    });
 
     if (selectedItems.length > 0) {
       setClipboard(selectedItems);
     }
     setContextMenu(null);
-  }, [selectedIds, currentPageIndex, pages]);
+  }, [selectedIds, pages, isReadOnly]);
 
   const handleCut = useCallback(() => {
+    if (isReadOnly) return;
     handleCopy();
     handleDeleteSelected();
-  }, [handleCopy, handleDeleteSelected]);
+  }, [handleCopy, handleDeleteSelected, isReadOnly]);
 
   const handlePaste = useCallback(() => {
+    if (isReadOnly) return;
     if (!clipboard || clipboard.length === 0) return;
 
     saveCurrentPageState();
@@ -1411,29 +1417,37 @@ const BookComponent = (
       y: item.y + 20,
     }));
 
-    const page = pages[currentPageIndex];
-    const updatedPage = { ...page };
-
-    newItems.forEach((item: any) => {
-      if (item._type === "text")
-        updatedPage.texts = [...updatedPage.texts, item];
-      if (item._type === "shape")
-        updatedPage.shapes = [...updatedPage.shapes, item];
-      if (item._type === "image")
-        updatedPage.images = [...updatedPage.images, item];
-      if (item._type === "table")
-        updatedPage.tables = [...updatedPage.tables, item];
-    });
+    const targetPageIdx =
+      lastInteractedPageIndex !== undefined
+        ? lastInteractedPageIndex
+        : currentPageIndex;
 
     setPages((prev) =>
-      prev.map((p, i) => (i === currentPageIndex ? updatedPage : p)),
+      prev.map((page, i) => {
+        if (i === targetPageIdx) {
+          const updatedPage = { ...page };
+          newItems.forEach((item: any) => {
+            if (item._type === "text")
+              updatedPage.texts = [...updatedPage.texts, item];
+            if (item._type === "shape")
+              updatedPage.shapes = [...updatedPage.shapes, item];
+            if (item._type === "image")
+              updatedPage.images = [...updatedPage.images, item];
+            if (item._type === "table")
+              updatedPage.tables = [...updatedPage.tables, item];
+          });
+          return updatedPage;
+        }
+        return page;
+      })
     );
     setSelectedIds(newItems.map((i) => i.id));
     setContextMenu(null);
-  }, [clipboard, currentPageIndex, pages, saveCurrentPageState]);
+  }, [clipboard, lastInteractedPageIndex, currentPageIndex, saveCurrentPageState, isReadOnly]);
 
   const handleImageUpdate = useCallback(
     (pageIndex: number, newImageAttrs: ImageType) => {
+      if (isReadOnly) return;
       setPages((prev) => {
         const newPages = [...prev];
         const page = newPages[pageIndex];
@@ -1448,11 +1462,12 @@ const BookComponent = (
         return newPages;
       });
     },
-    [],
+    [isReadOnly],
   );
 
   const handleShapeUpdate = useCallback(
     (pageIndex: number, newShapeAttrs: ShapeType) => {
+      if (isReadOnly) return;
       setPages((prev) => {
         const newPages = [...prev];
         const page = newPages[pageIndex];
@@ -1465,11 +1480,12 @@ const BookComponent = (
         return newPages;
       });
     },
-    [],
+    [isReadOnly],
   );
 
   const handleTableUpdate = useCallback(
     (pageIndex: number, newTableAttrs: TableType) => {
+      if (isReadOnly) return;
       setPages((prev) => {
         const newPages = [...prev];
         const page = newPages[pageIndex];
@@ -1482,11 +1498,12 @@ const BookComponent = (
         return newPages;
       });
     },
-    [],
+    [isReadOnly],
   );
 
   const handleDirectTextUpdate = useCallback(
     (pageIndex: number, newTextAttrs: TextType) => {
+      if (isReadOnly) return;
       setPages((prev) => {
         const newPages = [...prev];
         const page = newPages[pageIndex];
@@ -1499,11 +1516,12 @@ const BookComponent = (
         return newPages;
       });
     },
-    [],
+    [isReadOnly],
   );
 
   const handleLayerAction = useCallback(
     (action: "front" | "back" | "forward" | "backward") => {
+      if (isReadOnly) return;
       if (selectedIds.length === 0) return;
       const idToMove = selectedIds[0];
 
@@ -1576,7 +1594,7 @@ const BookComponent = (
 
       saveCurrentPageState();
     },
-    [selectedIds, currentPageIndex, saveCurrentPageState],
+    [selectedIds, currentPageIndex, saveCurrentPageState, isReadOnly],
   );
 
   const handlePageChange = useCallback(
@@ -1646,12 +1664,14 @@ const BookComponent = (
     },
     getSelectedTableId: () => selectedTableId,
     handlePenOptionChange: (property: string, value: any) => {
+      if (isReadOnly) return;
       if (property === "mode") setPenMode(value);
       if (property === "fillColor") setPenFillColor(value);
       if (property === "fillOpacity") setPenFillOpacity(value);
       if (property === "snapDistance") setPenSnapDistance(value);
     },
     handleTableChange: (property: string, value: any) => {
+      if (isReadOnly) return;
       const targetPageIndex =
         selectedTablePageIndex !== -1
           ? selectedTablePageIndex
@@ -1814,6 +1834,7 @@ const BookComponent = (
 
   const handleTableCellClick = useCallback(
     (tableId: string, row: number, col: number, pageIndex: number) => {
+      if (isReadOnly) return;
       setSelectedTableId(tableId);
       setSelectedTablePageIndex(pageIndex);
       setSelectedIds([]);
@@ -1842,7 +1863,7 @@ const BookComponent = (
         return prevPages;
       });
     },
-    [],
+    [isReadOnly],
   );
 
   const handleTableCellDoubleClick = (
@@ -1855,6 +1876,7 @@ const BookComponent = (
     height: number,
     pageIndex: number,
   ) => {
+    if (isReadOnly) return;
     const page = pages[pageIndex];
     const table = page.tables.find((t) => t.id === tableId);
 
@@ -1888,6 +1910,7 @@ const BookComponent = (
     col: number,
     pageIndex: number,
   ) => {
+    if (isReadOnly) return;
     evt.preventDefault();
     setSelectedTableId(tableId);
     setSelectedTablePageIndex(pageIndex);
@@ -1916,6 +1939,7 @@ const BookComponent = (
   };
 
   const handleTableCellSave = (content: string) => {
+    if (isReadOnly) return;
     if (!editingTableCell) return;
 
     const { tableId, row, col } = editingTableCell;
@@ -1949,6 +1973,7 @@ const BookComponent = (
 
   const handleTableInsertRow = useCallback(
     (tableId: string, position: "above" | "below") => {
+      if (isReadOnly) return;
       const targetPageIndex =
         selectedTablePageIndex !== -1
           ? selectedTablePageIndex
@@ -1996,11 +2021,12 @@ const BookComponent = (
         return updatedPages;
       });
     },
-    [selectedTablePageIndex, currentPageIndex],
+    [selectedTablePageIndex, currentPageIndex, isReadOnly],
   );
 
   const handleTableInsertColumn = useCallback(
     (tableId: string, position: "left" | "right") => {
+      if (isReadOnly) return;
       const targetPageIndex =
         selectedTablePageIndex !== -1
           ? selectedTablePageIndex
@@ -2031,11 +2057,12 @@ const BookComponent = (
         return updatedPages;
       });
     },
-    [selectedTablePageIndex, currentPageIndex],
+    [selectedTablePageIndex, currentPageIndex, isReadOnly],
   );
 
   const handleTableDeleteRow = useCallback(
     (tableId: string) => {
+      if (isReadOnly) return;
       const targetPageIndex =
         selectedTablePageIndex !== -1
           ? selectedTablePageIndex
@@ -2064,11 +2091,12 @@ const BookComponent = (
         return updatedPages;
       });
     },
-    [selectedTablePageIndex, currentPageIndex],
+    [selectedTablePageIndex, currentPageIndex, isReadOnly],
   );
 
   const handleTableDeleteColumn = useCallback(
     (tableId: string) => {
+      if (isReadOnly) return;
       const targetPageIndex =
         selectedTablePageIndex !== -1
           ? selectedTablePageIndex
@@ -2100,10 +2128,11 @@ const BookComponent = (
         return updatedPages;
       });
     },
-    [selectedTablePageIndex, currentPageIndex],
+    [selectedTablePageIndex, currentPageIndex, isReadOnly],
   );
 
   const handleTableMergeCells = (tableId: string) => {
+    if (isReadOnly) return;
     const targetPageIndex =
       selectedTablePageIndex !== -1 ? selectedTablePageIndex : currentPageIndex;
     const updatedPages = [...pages];
@@ -2164,13 +2193,14 @@ const BookComponent = (
 
   const updatePageData = useCallback(
     (pageIndex: number, key: keyof PageData, data: any) => {
+      if (isReadOnly) return;
       setPages((prev) => {
         const newPages = [...prev];
         newPages[pageIndex] = { ...newPages[pageIndex], [key]: data };
         return newPages;
       });
     },
-    [],
+    [isReadOnly],
   );
 
   useEffect(() => {
@@ -2187,6 +2217,7 @@ const BookComponent = (
   useEffect(() => {
     if (onAdvancedTextChange && selectedTextId) {
       const handleAdvancedChange = (property: string, value: any) => {
+        if (isReadOnly) return;
         if (property === "importText") {
           const newText: TextType = {
             id: Date.now().toString(),
@@ -2261,9 +2292,11 @@ const BookComponent = (
     WIDTH,
     saveCurrentPageState,
     updatePageData,
+    isReadOnly,
   ]);
 
   const handleContainerMouseDown = (e: React.MouseEvent) => {
+    if (isReadOnly) return;
     if (isHandMode && e.button === 0) {
       setIsPanning(true);
       setDragStart({
@@ -2274,6 +2307,7 @@ const BookComponent = (
   };
 
   const handleContainerMouseMove = (e: React.MouseEvent) => {
+    if (isReadOnly) return;
     if (isPanning && isHandMode) {
       setPanPosition({
         x: e.clientX - dragStart.x,
@@ -2290,6 +2324,7 @@ const BookComponent = (
     e: React.DragEvent<HTMLDivElement>,
     pageIndex: number,
   ) => {
+    if (isReadOnly) return;
     e.preventDefault();
     e.stopPropagation();
 
@@ -2321,6 +2356,7 @@ const BookComponent = (
     file: File,
     targetPage?: "left" | "right" | "current",
   ) => {
+    if (isReadOnly) return;
     const reader = new FileReader();
     reader.onload = () => {
       let targetPageIndex = currentPageIndex;
@@ -2361,6 +2397,7 @@ const BookComponent = (
   };
 
   useEffect(() => {
+    if (isReadOnly) return;
     if (!isPenMode) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -2403,7 +2440,7 @@ const BookComponent = (
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPenMode, penMode, penDrawingState]);
+  }, [isPenMode, penMode, penDrawingState, isReadOnly]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -2425,6 +2462,8 @@ const BookComponent = (
       }
 
       if (editingTextItem || editingStickyNote || editingTableCell) return;
+
+      if (isReadOnly) return; // Disable editing shortcuts in read-only mode
 
       if (e.ctrlKey || e.metaKey) {
         if (e.key.toLowerCase() === "z") {
@@ -2489,6 +2528,7 @@ const BookComponent = (
     handleUndo,
     handleRedo,
     updatePageData,
+    isReadOnly,
   ]);
 
   useEffect(() => {
@@ -2527,6 +2567,7 @@ const BookComponent = (
     pageIndex: number,
     updatedNote: StickyNoteType,
   ) => {
+    if (isReadOnly) return;
     setPages((prev) => {
       const newPages = [...prev];
       const page = newPages[pageIndex];
@@ -2538,6 +2579,7 @@ const BookComponent = (
   };
 
   const handleStickyNoteDelete = (pageIndex: number, noteId: string) => {
+    if (isReadOnly) return;
     setPages((prev) => {
       const newPages = [...prev];
       newPages[pageIndex].stickyNotes = newPages[pageIndex].stickyNotes.filter(
@@ -2552,12 +2594,20 @@ const BookComponent = (
     pageIndex: number,
     note: StickyNoteType,
   ) => {
+    if (isReadOnly) return;
     setCurrentPageIndex(pageIndex);
     setSelectedIds([note.id]);
     setEditingStickyNote(note);
   };
 
   useEffect(() => {
+    if (isReadOnly) { // Disable transformer in read-only mode
+      if (shapeTransformerRef.current) {
+        shapeTransformerRef.current.nodes([]);
+        shapeTransformerRef.current.getLayer()?.batchDraw();
+      }
+      return;
+    }
     if (selectedShapeId && shapeTransformerRef.current && isSelectMode) {
       const node = shapeRefs.current[selectedShapeId];
       if (node) {
@@ -2568,7 +2618,7 @@ const BookComponent = (
       shapeTransformerRef.current.nodes([]);
       shapeTransformerRef.current.getLayer()?.batchDraw();
     }
-  }, [selectedShapeId, isSelectMode]);
+  }, [selectedShapeId, isSelectMode, isReadOnly]);
 
   const isDrawingMode = ["Brush", "Eraser"].includes(activeTool);
 
@@ -2643,6 +2693,7 @@ const BookComponent = (
     points: number[],
     closed: boolean,
   ) => {
+    if (isReadOnly) return;
     const fillMatch = penFillColor.match(
       /rgba\((\d+),\s*(\d+),\s*(\d+),\s*([0-9.]+)\)/,
     );
@@ -2677,6 +2728,7 @@ const BookComponent = (
     e: Konva.KonvaEventObject<MouseEvent>,
     pageIndex: number,
   ) => {
+    if (isReadOnly) return;
     if (!isPenMode) return;
     const penState = getCurrentPenState(pageIndex);
     if (penState.points.length >= 6) {
@@ -2689,6 +2741,8 @@ const BookComponent = (
     e: Konva.KonvaEventObject<MouseEvent>,
     pageIndex: number,
   ) => {
+    if (isReadOnly) return;
+    setLastInteractedPageIndex(pageIndex);
     const clickedOnEmpty = e.target === e.target.getStage();
 
     if (clickedOnEmpty && activeTool === "Text") {
@@ -2969,24 +3023,20 @@ const BookComponent = (
       saveCurrentPageState();
 
       setPages((prevPages) => {
-        return prevPages.map((page, idx) => {
-          if (idx === currentPageIndex) {
-            const textIndex = page.texts.findIndex(
-              (t) => t.id === updatedText.id,
-            );
-            if (textIndex !== -1) {
-              const newTexts = [...page.texts];
-              newTexts[textIndex] = updatedText;
-              return { ...page, texts: newTexts };
-            } else {
-              return { ...page, texts: [...page.texts, updatedText] };
-            }
+        return prevPages.map((page) => {
+          const textIndex = page.texts.findIndex(
+            (t) => t.id === updatedText.id,
+          );
+          if (textIndex !== -1) {
+            const newTexts = [...page.texts];
+            newTexts[textIndex] = updatedText;
+            return { ...page, texts: newTexts };
           }
           return page;
         });
       });
     },
-    [currentPageIndex, saveCurrentPageState],
+    [saveCurrentPageState],
   );
 
   const handleTextSelect = (id: string | null) => {
@@ -3012,9 +3062,12 @@ const BookComponent = (
 
   const handleFormat = (format: "bold" | "italic" | "underline") => {
     if (selectedIds.length !== 1) return;
-    const textItem = pages[currentPageIndex]?.texts.find(
-      (t) => t.id === selectedIds[0],
-    );
+    let textItem: TextType | undefined;
+    pages.forEach((p) => {
+      const found = p.texts.find((t) => t.id === selectedIds[0]);
+      if (found) textItem = found;
+    });
+
     if (textItem) {
       const updatedText = { ...textItem };
       if (format === "bold") {
@@ -3109,7 +3162,7 @@ const BookComponent = (
       onContextMenu={(e) => e.preventDefault()}
     >
 
-      {!isFullscreen && (
+      {!isFullscreen && !isReadOnly && (
         <div
           className="absolute right-4 bottom-32 flex flex-col items-center gap-2 z-[100] pointer-events-auto"
           onMouseDown={(e) => e.stopPropagation()}
@@ -3383,9 +3436,11 @@ const BookComponent = (
         selectedTextId &&
         !editingTextItem &&
         (() => {
-          const textItem = pages[currentPageIndex]?.texts.find(
-            (t) => t.id === selectedTextId,
-          );
+          let textItem: TextType | undefined;
+          pages.forEach((p) => {
+            const found = p.texts.find((t) => t.id === selectedTextId);
+            if (found) textItem = found;
+          });
           return textItem ? (
             <FloatingTextToolbar
               textItem={textItem}

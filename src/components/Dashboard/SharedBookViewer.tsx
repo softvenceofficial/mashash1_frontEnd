@@ -1,79 +1,59 @@
-import { useGetSharedBookQuery } from "@/redux/endpoints/bookApi";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { Loader } from "lucide-react";
+import { useGetSharedBookQuery } from "@/redux/endpoints/bookApi";
+import Book from "@/components/Dashboard/Book/Book";
+import { Loader2 } from "lucide-react";
 
 export const SharedBookViewer = () => {
   const { token } = useParams<{ token: string }>();
-  const { data, isLoading, error } = useGetSharedBookQuery(token || "", {
+  const { data: sharedRes, isLoading, error } = useGetSharedBookQuery(token as string, {
     skip: !token,
   });
 
-  if (!token) {
+  const [bookData, setBookData] = useState<any>(null);
+  const [isFetchingFile, setIsFetchingFile] = useState(false);
+
+  useEffect(() => {
+    // The API returns a URL to a JSON file. We need to fetch the actual JSON data.
+    const fetchBookJson = async () => {
+      if (sharedRes?.data?.file) {
+        setIsFetchingFile(true);
+        try {
+          // ensure https is used
+          const fileUrl = sharedRes.data.file.replace("http://", "https://");
+          const response = await fetch(fileUrl);
+          const jsonData = await response.json();
+          setBookData(jsonData);
+        } catch (err) {
+          console.error("Failed to load book data file:", err);
+        } finally {
+          setIsFetchingFile(false);
+        }
+      }
+    };
+
+    fetchBookJson();
+  }, [sharedRes]);
+
+  if (isLoading || isFetchingFile) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-red-600">Invalid share link</p>
+      <div className="h-screen w-screen flex items-center justify-center bg-black">
+        <Loader2 className="animate-spin text-white w-12 h-12" />
       </div>
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader className="animate-spin" size={40} />
-      </div>
-    );
+  if (error || !bookData) {
+    return <div className="text-white text-center p-10 bg-black min-h-screen">Failed to load shared book. Invalid or expired link.</div>;
   }
-
-  if (error || !data?.data) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-red-600">Failed to load shared book</p>
-      </div>
-    );
-  }
-
-  const book = data.data;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-3xl font-bold mb-2">{book.title}</h1>
-          <p className="text-gray-600">
-            Created on {new Date(book.created_at).toLocaleDateString()}
-          </p>
-        </div>
-
-        {book.cover_image && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <img
-              src={book.cover_image}
-              alt={book.title}
-              className="w-full max-h-96 object-cover rounded-lg"
-            />
-          </div>
-        )}
-
-        {book.images && book.images.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold mb-4">Book Pages</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {book.images.map((image) => (
-                <div key={image.id} className="rounded-lg overflow-hidden shadow">
-                  <img
-                    src={image.image}
-                    alt={`Page ${image.id}`}
-                    className="w-full h-64 object-cover hover:scale-105 transition-transform"
-                  />
-                  <p className="text-xs text-gray-500 p-2">
-                    {new Date(image.generated_at).toLocaleDateString()}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+    <div className="h-screen w-screen bg-black overflow-hidden flex items-center justify-center m-0 p-0">
+      <Book 
+        initialData={bookData} 
+        /* @ts-ignore */
+        isReadOnly={true} 
+      />
     </div>
   );
 };

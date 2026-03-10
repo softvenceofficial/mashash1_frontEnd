@@ -88,7 +88,7 @@ export default function ThreeDotButton({ bookId }: { bookId: number }) {
 
           <DropdownMenuItem 
             className="dark:hover:bg-[#212B36] hover:bg-primary/10 hover:text-black dark:hover:text-white py-0.5 p-0"
-            onClick={() => open([{ modalId: "modal", openId: "share" }])}
+            onClick={() => open([{ modalId: "modal", openId: "share" }, { modalId: "bookId", openId: bookId.toString() }])}
           >
             <Button
               variant="ghost"

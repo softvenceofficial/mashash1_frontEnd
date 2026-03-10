@@ -23,7 +23,7 @@ export const TextContextMenu = ({
       />
       <div 
         className="absolute bg-gray-800 border border-gray-700 rounded-lg shadow-2xl py-2 min-w-[180px] z-50"
-        style={{ left: `calc(${x}px - 150px)`, top: `calc(${y}px - 300px)` }}
+        style={{ left: `calc(${x}px - 30%)`, top: `calc(${y}px - 20%)` }}
       >
         <button onClick={onCopy} className="w-full px-4 py-2 text-left text-gray-300 hover:bg-gray-700">
           Copy (Ctrl+C)
