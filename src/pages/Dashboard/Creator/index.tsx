@@ -54,23 +54,28 @@ export default function Creator() {
 
   useEffect(() => {
     const loadBookData = async () => {
-      // Check if we already loaded the data to prevent the infinite loop
-      if (bookDetails?.data?.file && !isInitialLoadDone.current) {
-        try {
-          isInitialLoadDone.current = true; // Mark as loaded immediately
-          const data = await fetchBookContent(bookDetails.data.file);
-          const processedData = processBookData(data);
-          setLoadedPages(processedData);
-          
-          // Enable auto-save after a short delay so the canvas initialization doesn't trigger a save
-          setTimeout(() => {
-            disableAutoSaveRef.current = false;
-          }, 1500);
-        } catch (err) {
-          console.error("Error loading book JSON:", err);
-          isInitialLoadDone.current = false; // Reset on failure so it can try again
-          toast.error(err instanceof Error ? err.message : "Failed to load saved book data");
+      // Ensure bookDetails are fetched and we haven't initialized yet
+      if (bookDetails?.data && !isInitialLoadDone.current) {
+        isInitialLoadDone.current = true; // Mark as loaded immediately
+
+        // Only try to fetch the file if it actually exists (it won't for brand new books)
+        if (bookDetails.data.file) {
+          try {
+            const data = await fetchBookContent(bookDetails.data.file);
+            const processedData = processBookData(data);
+            setLoadedPages(processedData);
+          } catch (err) {
+            console.error("Error loading book JSON:", err);
+            isInitialLoadDone.current = false; // Reset on failure so it can try again
+            toast.error(err instanceof Error ? err.message : "Failed to load saved book data");
+            return; // Stop execution if loading fails
+          }
         }
+
+        // Enable tracking changes after a short delay for BOTH new and existing books
+        setTimeout(() => {
+          disableAutoSaveRef.current = false;
+        }, 1500);
       }
     };
 
@@ -105,7 +110,7 @@ export default function Creator() {
       }
 
       // 2. Gather data
-      const pagesData = bookRef.current.getPageData();
+      const pagesData = bookRef.current.getPageData() || [];
       const processedPages = pagesData.map((page: PageData) => ({
         lines: page.lines || [],
         texts: page.texts || [],

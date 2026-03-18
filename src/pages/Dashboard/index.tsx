@@ -122,7 +122,7 @@ export default function DashboardPage() {
               <Link to={`/Creator/${book.id}`} className="block w-full">
                 <div className="relative w-[180px] sm:w-[200px] h-[280px] mx-auto mb-8 [perspective:1200px]">
                   <div className="w-full h-full relative [transform-style:preserve-3d] transition-transform duration-700 ease-out group-hover:[transform:rotateY(-30deg)_translate(-15px,-20px)]">
-                    <div className="absolute inset-0 z-20 shadow-xl group-hover:shadow-2xl transition-shadow duration-700 rounded-r-md overflow-hidden bg-muted border-l-[3px] border-border">
+                    <div className="absolute inset-0 z-20 shadow-xl group-hover:shadow-2xl transition-shadow duration-700 rounded-r-md overflow-hidden bg-muted ">
                       <img
                         src={getImageUrl(book.cover_image)}
                         alt={book.title || "Artbook Cover"}
@@ -187,14 +187,13 @@ export default function DashboardPage() {
               </label>
               <Input
                 type="text"
-                placeholder="e.g. feed_fantastic.htm"
+                placeholder="Enter the title of your Artbook"
                 value={bookTitle}
                 onChange={(e) => setBookTitle(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreateBook()}
                 autoFocus
               />
             </div>
-
             <div className="flex gap-3">
               <Button
                 variant="outline"

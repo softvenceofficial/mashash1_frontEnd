@@ -2221,16 +2221,7 @@ const BookComponent = (
     [isReadOnly],
   );
 
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
 
-    if (strokeColor && activeTool === "Color") {
-      timeoutId = setTimeout(() => {
-        updatePageData(currentPageIndex, "background", strokeColor);
-      }, 50);
-    }
-    return () => clearTimeout(timeoutId);
-  }, [strokeColor, currentPageIndex, updatePageData, activeTool]);
 
   useEffect(() => {
     if (onAdvancedTextChange && selectedTextId) {
