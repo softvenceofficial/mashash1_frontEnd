@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   RotateCw,
   Undo2,
@@ -81,26 +82,39 @@ const ToolbarButton = ({
   isActive,
   onClick,
   className = "",
+  size = "md",
   ...props
 }: {
   children: React.ReactNode;
   isActive?: boolean;
   onClick?: () => void;
   className?: string;
+  size?: "sm" | "md" | "lg";
   [key: string]: any;
-} & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-  <button
-    onClick={onClick}
-    className={cn(
-      "h-9 min-w-[36px] px-2 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-white/10 active:scale-95",
-      isActive ? "bg-[#6366f1] text-white" : "text-gray-400 hover:text-white",
-      className,
-    )}
-    {...props}
-  >
-    {children}
-  </button>
-);
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
+  const sizeClasses = {
+    sm: "h-7 min-w-[28px] px-1.5",
+    md: "h-8 min-w-[32px] sm:h-9 sm:min-w-[36px] px-1.5 sm:px-2",
+    lg: "h-10 min-w-[40px] sm:h-11 sm:min-w-[44px] px-2 sm:px-3"
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        sizeClasses[size],
+        "rounded-lg flex items-center justify-center",
+        "transition-all duration-200 hover:bg-white/10 active:scale-95",
+        "touch-manipulation",
+        isActive ? "bg-[#6366f1] text-white" : "text-gray-400 hover:text-white",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
 
 // Helper function to convert rgba to hex
 const rgbaToHex = (rgba: string): string => {
@@ -129,33 +143,57 @@ const hexToRgba = (hex: string, opacity: number = 1): string => {
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 };
 
-const Divider = () => <div className="w-px h-6 bg-zinc-700 mx-2 self-center" />;
+const Divider = () => (
+  <div className={cn(
+    "w-px h-4 sm:h-5 md:h-6",
+    "bg-zinc-700",
+    "mx-1 sm:mx-1.5 md:mx-2",
+    "self-center",
+    "hidden sm:block"
+  )} />
+);
 
 const UndoRedoControls = ({ undo, redo, canUndo, canRedo }: { undo?: () => any; redo?: () => any; canUndo?: boolean; canRedo?: boolean }) => (
-  <div className="flex items-center gap-2 ml-auto px-4 border-l border-zinc-700">
+  <div className={cn(
+    "flex items-center gap-1 sm:gap-2",
+    "ml-auto",
+    "px-2 sm:px-3 md:px-4",
+    "border-l border-zinc-700",
+    "mt-2 sm:mt-0"
+  )}>
     <div className="flex flex-col items-center group cursor-pointer">
       <Button
         size="icon"
         variant="secondary"
-        className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
+        className={cn(
+          "h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10",
+          "rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
+        )}
         onClick={undo}
         disabled={!canUndo}
       >
-        <Undo2 className="w-5 h-5" />
+        <Undo2 className="w-4 h-4 sm:w-5 sm:h-5" />
       </Button>
-      <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Undo</span>
+      <span className="text-[8px] sm:text-[9px] md:text-[10px] text-zinc-500 mt-0.5 sm:mt-1 font-medium group-hover:text-zinc-300 hidden sm:block">
+        Undo
+      </span>
     </div>
     <div className="flex flex-col items-center group cursor-pointer">
       <Button
         size="icon"
         variant="secondary"
-        className="h-10 w-10 rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
+        className={cn(
+          "h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10",
+          "rounded-lg bg-[#2B2B2B] text-white hover:bg-[#333] border-none"
+        )}
         onClick={redo}
         disabled={!canRedo}
       >
-        <Redo2 className="w-5 h-5" />
+        <Redo2 className="w-4 h-4 sm:w-5 sm:h-5" />
       </Button>
-      <span className="text-[10px] text-zinc-500 mt-1 font-medium group-hover:text-zinc-300">Redo</span>
+      <span className="text-[8px] sm:text-[9px] md:text-[10px] text-zinc-500 mt-0.5 sm:mt-1 font-medium group-hover:text-zinc-300 hidden sm:block">
+        Redo
+      </span>
     </div>
   </div>
 );
@@ -302,6 +340,10 @@ const Toolbox = ({
     "left",
   );
   const [showPageSelection, setShowPageSelection] = useState(false);
+
+  // Media queries for responsive behavior
+  const isMobile = useMediaQuery("(max-width: 640px)");
+  const isTablet = useMediaQuery("(min-width: 641px) and (max-width: 1024px)");
 
   // INDIVIDUAL PAGE COLOR (Requirement 4)
   const [targetColorPage, setTargetColorPage] = useState<"left" | "right">(
@@ -565,7 +607,12 @@ const Toolbox = ({
   };
 
   const renderBookSizePanel = () => (
-    <div className="flex items-center justify-around w-full gap-4 px-2">
+    <div className={cn(
+      "flex items-center justify-around w-full gap-2 sm:gap-4 px-1 sm:px-2",
+      "overflow-x-auto",
+      "pb-2 sm:pb-0",
+      "toolbox-scroll"
+    )}>
       {isSizesLoading ? (
         <div className="w-full flex justify-center py-4">
           <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
@@ -577,6 +624,7 @@ const Toolbox = ({
             onClick={() => handleBookSelect(book.id, book.name)}
             className={cn(
               "cursor-pointer transition-all duration-300 relative group",
+              "flex-shrink-0",
               selectedBook === book.id
                 ? "scale-105"
                 : "opacity-70 hover:opacity-100 hover:scale-102",
@@ -584,7 +632,7 @@ const Toolbox = ({
           >
             <div
               className={cn(
-                "absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] rounded-lg border border-gray-500 bg-white/5 z-0 transition-opacity duration-300 w-full h-[90px] px-1.5 box-content",
+                "absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] rounded-lg border border-gray-500 bg-white/5 z-0 transition-opacity duration-300 w-full h-[70px] sm:h-[80px] md:h-[90px] px-1.5 box-content",
                 selectedBook === book.id
                   ? "opacity-100"
                   : "opacity-0 group-hover:opacity-100",
@@ -593,7 +641,7 @@ const Toolbox = ({
             <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
               <div className="w-full h-full">
                 <img
-                  className="w-auto h-[80px] object-cover"
+                  className="w-auto h-[50px] sm:h-[60px] md:h-[70px] lg:h-[80px] object-cover"
                   src={book.image}
                   alt={book.name}
                 />
@@ -601,12 +649,13 @@ const Toolbox = ({
               <div
                 className={cn(
                   "text-center absolute top-[50%] left-[50%] w-max translate-x-[-50%] translate-y-[-50%] transition-all duration-300",
+                  "whitespace-nowrap",
                   selectedBook === book.id
                     ? "opacity-100 scale-100"
                     : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100",
                 )}
               >
-                <p className="text-center text-indigo-50 text-2xl font-medium font-Inter [text-shadow:_0px_4px_4px_rgb(177_177_177_/_0.34)]">
+                <p className="text-center text-indigo-50 text-base sm:text-xl md:text-2xl font-medium font-Inter [text-shadow:_0px_4px_4px_rgb(177_177_177_/_0.34)]">
                   {book.name}
                 </p>
               </div>
@@ -621,10 +670,10 @@ const Toolbox = ({
     <>
       <div
         onClick={handleRefresh}
-        className="flex flex-col items-center justify-center px-2 mr-2 cursor-pointer group"
+        className="flex flex-col items-center justify-center px-1 sm:px-2 mr-1 sm:mr-2 cursor-pointer group flex-shrink-0"
       >
-        <RotateCw className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
-        <span className="text-[10px] text-zinc-500 mt-1 font-medium tracking-wide group-hover:text-zinc-300">
+        <RotateCw className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-400 group-hover:text-white group-hover:rotate-180 transition-all duration-500" />
+        <span className="text-[8px] sm:text-[9px] md:text-[10px] text-zinc-500 mt-0.5 sm:mt-1 font-medium tracking-wide group-hover:text-zinc-300 hidden sm:block">
           Refresh
         </span>
       </div>
@@ -632,9 +681,9 @@ const Toolbox = ({
       <Divider />
 
       <div className="relative group">
-        <button className="h-10 px-4 bg-white/5 rounded-lg flex items-center gap-3 text-zinc-200 hover:bg-white/10 transition-colors border border-transparent hover:border-zinc-700">
-          <span className="text-sm font-medium">{fontFamily}</span>
-          <ChevronDown className="w-4 h-4 text-zinc-500" />
+        <button className="h-8 sm:h-9 md:h-10 px-2 sm:px-3 md:px-4 bg-white/5 rounded-lg flex items-center gap-2 sm:gap-3 text-zinc-200 hover:bg-white/10 transition-colors border border-transparent hover:border-zinc-700">
+          <span className="text-xs sm:text-sm font-medium">{fontFamily}</span>
+          <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-500" />
         </button>
         <div className="absolute top-full left-0 mt-2 w-48 max-h-64 overflow-y-auto bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-left z-50">
           {[
@@ -675,121 +724,147 @@ const Toolbox = ({
         </div>
       </div>
 
-      <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700 mx-2">
+      <div className="flex items-center bg-white/5 rounded-lg border border-transparent hover:border-zinc-700 mx-1 sm:mx-2">
         <button
           onClick={() => handleFontSizeChange(-1)}
-          className="h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg"
+          className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-l-lg"
         >
-          <Minus className="w-4 h-4" />
+          <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
         </button>
-        <div className="w-10 text-center text-sm font-medium text-zinc-200 font-mono">
+        <div className="w-8 sm:w-9 md:w-10 text-center text-xs sm:text-sm font-medium text-zinc-200 font-mono">
           {fontSize}
         </div>
         <button
           onClick={() => handleFontSizeChange(1)}
-          className="h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg"
+          className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 rounded-r-lg"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
         </button>
       </div>
 
       <div className="relative">
         <div
           onClick={() => setShowColorPicker(!showColorPicker)}
-          className="w-9 h-9 rounded-full cursor-pointer hover:scale-110 transition-transform shadow-lg ring-2 ring-transparent hover:ring-white/20"
+          className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 rounded-full cursor-pointer hover:scale-110 transition-transform shadow-lg ring-2 ring-transparent hover:ring-white/20"
           style={{ backgroundColor: textColor }}
           title="Text Color"
         />
         {showColorPicker && (
-          <div className="absolute top-12 left-0 z-50">
+          <div className={cn(
+            "absolute z-50",
+            isMobile ? "fixed inset-x-0 bottom-0 top-auto" : "top-12 left-0"
+          )}>
             <div
-              className="fixed inset-0"
+              className={cn(
+                "fixed inset-0",
+                isMobile ? "bg-black/50" : ""
+              )}
               onClick={() => setShowColorPicker(false)}
             />
-            <SketchPicker color={textColor} onChange={handleColorChange} />
+            <div className={cn(
+              "relative bg-zinc-800 rounded-lg shadow-2xl p-2 border border-zinc-700",
+              isMobile ? "rounded-b-none rounded-t-xl w-full" : ""
+            )}>
+              <SketchPicker color={textColor} onChange={handleColorChange} />
+              {isMobile && (
+                <button
+                  onClick={() => setShowColorPicker(false)}
+                  className="mt-2 w-full py-2 bg-zinc-700 rounded-lg text-white text-sm"
+                >
+                  Close
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
 
       <Divider />
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5 sm:gap-1">
         <ToolbarButton
           isActive={activeFormats.includes("bold")}
           onClick={() => toggleFormat("bold")}
+          size="md"
         >
-          <Bold className="w-5 h-5" strokeWidth={2.5} />
+          <Bold className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
         </ToolbarButton>
         <ToolbarButton
           isActive={activeFormats.includes("italic")}
           onClick={() => toggleFormat("italic")}
+          size="md"
         >
-          <Italic className="w-5 h-5" />
+          <Italic className="w-4 h-4 sm:w-5 sm:h-5" />
         </ToolbarButton>
         <ToolbarButton
           isActive={activeFormats.includes("underline")}
           onClick={() => toggleFormat("underline")}
+          size="md"
         >
-          <Underline className="w-5 h-5" />
+          <Underline className="w-4 h-4 sm:w-5 sm:h-5" />
         </ToolbarButton>
         <ToolbarButton
           isActive={activeFormats.includes("strike")}
           onClick={() => toggleFormat("strike")}
+          size="md"
         >
-          <Strikethrough className="w-5 h-5" />
+          <Strikethrough className="w-4 h-4 sm:w-5 sm:h-5" />
         </ToolbarButton>
       </div>
 
       <Divider />
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5 sm:gap-1">
         <ToolbarButton
           isActive={textAlignment === "left"}
           onClick={() => handleAlignmentChange("left")}
+          size="md"
         >
-          <AlignLeft className="w-5 h-5" />
+          <AlignLeft className="w-4 h-4 sm:w-5 sm:h-5" />
         </ToolbarButton>
         <ToolbarButton
           isActive={textAlignment === "center"}
           onClick={() => handleAlignmentChange("center")}
+          size="md"
         >
-          <AlignCenter className="w-5 h-5" />
+          <AlignCenter className="w-4 h-4 sm:w-5 sm:h-5" />
         </ToolbarButton>
         <ToolbarButton
           isActive={textAlignment === "right"}
           onClick={() => handleAlignmentChange("right")}
+          size="md"
         >
-          <AlignRight className="w-5 h-5" />
+          <AlignRight className="w-4 h-4 sm:w-5 sm:h-5" />
         </ToolbarButton>
       </div>
 
       <Divider />
 
-      {/* Text Transform */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5 sm:gap-1">
         <ToolbarButton
           isActive={textTransform === "uppercase"}
           onClick={() => handleTextTransform("uppercase")}
+          size="md"
         >
-          <span className="text-xs font-bold">AA</span>
+          <span className="text-[10px] sm:text-xs font-bold">AA</span>
         </ToolbarButton>
         <ToolbarButton
           isActive={textTransform === "capitalize"}
           onClick={() => handleTextTransform("capitalize")}
+          size="md"
         >
-          <span className="text-xs font-bold">Aa</span>
+          <span className="text-[10px] sm:text-xs font-bold">Aa</span>
         </ToolbarButton>
       </div>
 
       <Divider />
 
-      {/* Lists */}
-      <div className="flex items-center gap-1">
-        <ToolbarButton onClick={() => handleListToggle("bullet")}>
-          <List className="w-5 h-5" />
+      <div className="flex items-center gap-0.5 sm:gap-1">
+        <ToolbarButton onClick={() => handleListToggle("bullet")} size="md">
+          <List className="w-4 h-4 sm:w-5 sm:h-5" />
         </ToolbarButton>
-        <ToolbarButton onClick={() => handleListToggle("number")}>
-          <ListOrdered className="w-5 h-5" />
+        <ToolbarButton onClick={() => handleListToggle("number")} size="md">
+          <ListOrdered className="w-4 h-4 sm:w-5 sm:h-5" />
         </ToolbarButton>
       </div>
 
@@ -2163,7 +2238,18 @@ const Toolbox = ({
   };
 
   return (
-    <div className="w-full h-[107px] bg-secondary  rounded-xl shadow-2xl  p-3 flex flex-wrap items-center gap-2 select-none relative z-10">
+    <div className={cn(
+      "w-full min-h-[80px] sm:min-h-[90px] md:min-h-[100px] lg:h-[107px]",
+      "bg-secondary rounded-xl shadow-2xl",
+      "p-2 sm:p-2.5 md:p-3",
+      "flex flex-col sm:flex-row flex-wrap items-center gap-1 sm:gap-2",
+      "select-none relative z-10",
+      "overflow-x-auto sm:overflow-x-visible",
+      "transition-all duration-200",
+      "touch-manipulation",
+      "[-webkit-tap-highlight-color:transparent]",
+      "toolbox-scroll"
+    )}>
       {renderContent()}
     </div>
   );

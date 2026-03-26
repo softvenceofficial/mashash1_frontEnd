@@ -1,7 +1,7 @@
 import { AppSidebar } from "@/components/Dashboard/AppSidebar";
 import { SiteHeader } from "@/components/Dashboard/DashboardHeader";
 import Modals from "@/components/Modal";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { useState } from "react";
 import { Outlet } from "react-router";
 
@@ -9,24 +9,24 @@ export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   return (
     <>
-      <div className="[--header-height:calc(--spacing(14))]">
-        <SidebarProvider className="flex flex-col">
+      <div className="flex h-screen w-full overflow-hidden bg-background">
+        <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:shrink-0 border-r border-border">
+          <SidebarProvider>
+            <AppSidebar
+              sidebarOpen={sidebarOpen}
+              setSidebarOpen={setSidebarOpen}
+            />
+          </SidebarProvider>
+        </aside>
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <SiteHeader
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
           />
-          <div className="flex flex-1">
-            <div>
-              <AppSidebar
-                sidebarOpen={sidebarOpen}
-                setSidebarOpen={setSidebarOpen}
-              />
-            </div>
-            <SidebarInset className="p-4 md:p-10 md:ml-26">
-              <Outlet />
-            </SidebarInset>
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+            <Outlet />
           </div>
-        </SidebarProvider>
+        </main>
         <Modals />
       </div>
     </>
