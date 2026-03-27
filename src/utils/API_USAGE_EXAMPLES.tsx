@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * EXAMPLE USAGE PATTERNS FOR API INTEGRATION
  * 

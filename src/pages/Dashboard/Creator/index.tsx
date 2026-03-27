@@ -12,7 +12,7 @@ import { keyboardManager } from "@/utils/KeyboardManager";
 import { HelpOverlay } from "@/components/Dashboard/HelpOverlay";
 import { useGetBookDetailsQuery, useUpdateBookMutation } from "@/redux/endpoints/bookApi";
 import { toast } from "sonner";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, Wand2, Palette, X } from "lucide-react";
 import type { PageData } from "@/components/Dashboard/Book/types";
 import { fetchBookContent, processBookData } from "@/utils/bookDataLoader";
 import { dataUrlToFile } from "@/utils/imageUploadHelper";
@@ -45,6 +45,8 @@ export default function Creator() {
   });
   const [loadedPages, setLoadedPages] = useState<PageData[] | null>(null);
   const [targetColorPage, setTargetColorPage] = useState<'left' | 'right'>('left');
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
+  const [isStylePanelOpen, setIsStylePanelOpen] = useState(false);
   const bookRef = useRef<any>(null);
   const isInitialLoadDone = useRef(false);
   const disableAutoSaveRef = useRef(true);
@@ -288,7 +290,7 @@ export default function Creator() {
   };
 
   return (
-    <div className="relative">
+    <div className="relative overflow-hidden">
       <SiteHeader>
         <div className="ml-auto flex items-center gap-3">
           <div className="text-sm font-medium text-muted-foreground flex items-center gap-2 mr-4">
@@ -315,16 +317,19 @@ export default function Creator() {
         </div>
       </SiteHeader>
       <div className="flex gap-4 mt-2" style={{ height: "calc(100vh - 80px)" }}>
-        <div className="w-[23.3%]">
+        <div className="w-[23.3%] max-[1415px]:w-auto flex flex-col gap-2">
           <Tools activeTool={activeTool} setActiveTool={setActiveTool} />
-          <AIImageBox 
-            bookId={id ? parseInt(id) : null}
-            selectedStyleId={selectedStyleId}
-            selectedSizeId={selectedSizeId}
-            existingImages={bookDetails?.data?.images}
-          />
+          
+          <div className="max-[1415px]:hidden flex-1 overflow-hidden">
+            <AIImageBox 
+              bookId={id ? parseInt(id) : null}
+              selectedStyleId={selectedStyleId}
+              selectedSizeId={selectedSizeId}
+              existingImages={bookDetails?.data?.images}
+            />
+          </div>
         </div>
-        <div className="w-[63.8%]">
+        <div className="w-[63.8%] max-[1415px]:flex-1 flex flex-col">
           <Toolbox
             activeTool={activeTool}
             activeSubTool={activeSubTool}
@@ -386,7 +391,7 @@ export default function Creator() {
           />
         </div>
         <div
-          className="w-[10.2%] bg-secondary px-3 py-4 rounded-lg overflow-hidden"
+          className="w-[10.2%] max-[1415px]:hidden bg-secondary px-3 py-4 rounded-lg overflow-hidden"
           style={{ height: "calc(100vh - 100px)" }}
         >
           <AIImageType 
@@ -395,7 +400,85 @@ export default function Creator() {
           />
         </div>
       </div>
+
       <HelpOverlay />
+
+      {/* Floating Action Buttons */}
+      <div className="min-[1416px]:hidden">
+        <button
+          onClick={() => setIsAIPanelOpen(true)}
+          className="fixed bottom-6 left-6 z-40 bg-lime-400 text-zinc-900 p-4 rounded-full shadow-[0_4px_20px_rgba(163,230,53,0.4)] flex items-center gap-2 hover:scale-105 hover:bg-lime-500 transition-all"
+        >
+          <Wand2 size={24} />
+          <span className="font-semibold tracking-tight">Generate</span>
+        </button>
+
+        <button
+          onClick={() => setIsStylePanelOpen(true)}
+          className="fixed bottom-6 left-40 z-40 bg-secondary text-white p-4 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:scale-105 hover:bg-secondary/90 transition-all"
+          title="Select AI Style"
+        >
+          <Palette size={24} />
+        </button>
+
+      </div>
+
+      {/* Backdrop */}
+      {(isAIPanelOpen || isStylePanelOpen) && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 min-[1416px]:hidden transition-opacity"
+          onClick={() => {
+            setIsAIPanelOpen(false);
+            setIsStylePanelOpen(false);
+          }}
+        />
+      )}
+
+      {/* AI Generator Drawer */}
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-[450px] max-w-[85vw] bg-background border-r border-border shadow-2xl transition-transform duration-300 ease-in-out min-[1416px]:hidden flex flex-col ${
+          isAIPanelOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="p-4 flex justify-between items-center border-b border-border">
+          <h3 className="font-semibold text-lg flex items-center gap-2">
+            <Wand2 size={20} className="text-lime-400" /> AI Generator
+          </h3>
+          <button onClick={() => setIsAIPanelOpen(false)} className="p-2 bg-secondary rounded-md hover:bg-secondary/80">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <AIImageBox 
+            bookId={id ? parseInt(id) : null}
+            selectedStyleId={selectedStyleId}
+            selectedSizeId={selectedSizeId}
+            existingImages={bookDetails?.data?.images}
+          />
+        </div>
+      </div>
+
+      {/* Style Selector Drawer */}
+      <div
+        className={`fixed inset-y-0 right-0 z-50 w-[300px] max-w-[75vw] bg-secondary border-l border-border shadow-2xl transition-transform duration-300 ease-in-out min-[1416px]:hidden flex flex-col ${
+          isStylePanelOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="p-4 flex justify-between items-center border-b border-white/10">
+          <h3 className="font-semibold text-white flex items-center gap-2">
+            <Palette size={20} /> Styles
+          </h3>
+          <button onClick={() => setIsStylePanelOpen(false)} className="p-2 text-white/70 hover:text-white bg-white/5 rounded-md hover:bg-white/10">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-hidden [&>div]:h-full [&>div]:py-0 [&>div>h4]:hidden">
+          <AIImageType 
+            onStyleSelect={setSelectedStyleId}
+            selectedStyleId={selectedStyleId}
+          />
+        </div>
+      </div>
     </div>
   );
 }
