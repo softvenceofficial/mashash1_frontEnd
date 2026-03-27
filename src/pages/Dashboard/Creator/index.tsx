@@ -320,11 +320,11 @@ export default function Creator() {
           </SiteHeader>
         </div>
 
-        <div className="min-[1416px]:col-[1/4] min-[1416px]:row-[2/3] max-[1415px]:col-[1/2] max-[1415px]:row-[2/13] flex flex-col gap-2">
+        <div className="min-[1416px]:col-[1/4] min-[1416px]:row-[2/3] max-[1415px]:col-[1/2] max-[1415px]:row-[3/13] flex flex-col gap-2">
           <Tools activeTool={activeTool} setActiveTool={setActiveTool} />
         </div>
 
-        <div className="min-[1416px]:col-[4/12] min-[1416px]:row-[2/3] max-[1415px]:col-[2/13] max-[1415px]:row-[2/3] flex flex-col">
+        <div className="min-[1416px]:col-[4/12] min-[1416px]:row-[2/3] max-[1415px]:col-[1/13] max-[1415px]:row-[2/3] flex flex-col">
           <Toolbox
             activeTool={activeTool}
             activeSubTool={activeSubTool}
@@ -377,7 +377,7 @@ export default function Creator() {
           />
         </div>
 
-        <div className="min-[1416px]:col-[4/12] min-[1416px]:row-[3/13] max-[1415px]:col-[2/13] max-[1415px]:row-[3/13] relative flex flex-col">
+        <div className="min-[1416px]:col-[4/12] min-[1416px]:row-[3/13] max-[1415px]:col-[2/13] max-[1415px]:row-[3/13] relative flex flex-col max-[1415px]:mt-10">
           <Book
             onToolChange={(tool, subTool) => {
               setActiveTool(tool);
@@ -413,15 +413,15 @@ export default function Creator() {
       <div className="min-[1416px]:hidden">
         <button
           onClick={() => setIsAIPanelOpen(true)}
-          className="fixed bottom-6 left-6 z-40 bg-lime-400 text-zinc-900 p-4 rounded-full shadow-[0_4px_20px_rgba(163,230,53,0.4)] flex items-center gap-2 hover:scale-105 hover:bg-lime-500 transition-all"
+          className="fixed bottom-6 left-6 z-40 bg-primary text-white p-4 rounded-full shadow-[0_4px_20px_rgba(163,230,53,0.4)] flex items-center gap-2 hover:scale-105 hover:bg-lime-500 transition-all"
         >
           <Wand2 size={24} />
-          <span className="font-semibold tracking-tight">Generate</span>
+          <span className="font-semibold tracking-tight text-white">Generate</span>
         </button>
 
         <button
           onClick={() => setIsStylePanelOpen(true)}
-          className="fixed bottom-6 left-40 z-40 bg-secondary text-white p-4 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:scale-105 hover:bg-secondary/90 transition-all"
+          className="fixed bottom-6 left-40 z-40 bg-secondary text-primary p-4 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:scale-105 hover:bg-secondary/90 transition-all"
           title="Select AI Style"
         >
           <Palette size={24} />
@@ -467,7 +467,7 @@ export default function Creator() {
           isStylePanelOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="p-4 flex justify-between items-center border-b border-white/10">
+        <div className="p-4 flex justify-between items-center max-[1415px]:flex-row-reverse">
           <h3 className="font-semibold text-white flex items-center gap-2">
             <Palette size={20} /> Styles
           </h3>

@@ -3173,7 +3173,7 @@ const BookComponent = (
 
       {!isFullscreen && !isReadOnly && (
         <div
-          className="absolute right-4 bottom-18 flex flex-col items-center gap-2 z-[100] pointer-events-auto"
+          className="absolute right-4 bottom-18 flex flex-col items-center gap-2 z-[100] pointer-events-auto max-[1415px]:bottom-10 max-[1415px]:right-20 max-[1173px]:right-10 max-[1173px]:bottom-20 max-[1050px]:right-2 "
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >

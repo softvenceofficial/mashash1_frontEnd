@@ -32,7 +32,7 @@ export function SiteHeader({
             />
           </Link>
         </div>
-        <div className="flex items-center gap-2 md:ml-5">
+        <div className="flex items-center gap-2 md:ml-5 max-[1426px]:hidden">
           <SearchForm className="w-96 hidden md:block" />
         </div>
         <div className="ml-auto flex items-center gap-24">
@@ -60,7 +60,7 @@ export function SiteHeader({
                   : undefined
               }
             />
-            <div className="md:flex items-center gap-3 hidden">
+            <div className="md:flex items-center gap-3 hidden max-[1050px]:hidden">
               <div className="text-right">
                 <p className="text-base font-medium dark:text-white">
                   {userData?.first_name} {userData?.last_name}

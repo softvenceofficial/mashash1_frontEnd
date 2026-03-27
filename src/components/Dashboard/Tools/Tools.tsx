@@ -21,7 +21,7 @@ const Tools = ({ activeTool, setActiveTool }: ToolsProps) => {
   ];
 
   return (
-    <div className="w-full h-[107px] opacity-100 rounded-tr-lg rounded-br-lg bg-secondary flex justify-start items-center gap-1.5 py-4 px-[11px]">
+    <div className="w-full h-[107px] opacity-100 rounded-tr-lg rounded-br-lg bg-secondary flex justify-start items-center gap-1.5 py-4 px-[11px] max-[1415px]:gap-1.5 max-[1415px]:py-3 max-[1415px]:flex-col max-[1415px]:mt-20 max-[1415px]:h-auto">
       {tools.map((tool, index) => {
         const Icon = tool.icon;
         const isActive = activeTool === tool.label;
