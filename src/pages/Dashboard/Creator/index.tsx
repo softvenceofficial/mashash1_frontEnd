@@ -290,46 +290,41 @@ export default function Creator() {
   };
 
   return (
-    <div className="relative overflow-hidden">
-      <SiteHeader>
-        <div className="ml-auto flex items-center gap-3">
-          <div className="text-sm font-medium text-muted-foreground flex items-center gap-2 mr-4">
-            {saveStatus === "Saving..." && <Loader2 className="w-4 h-4 animate-spin" />}
-            {saveStatus === "Saved" && <Check className="w-4 h-4 text-green-500" />}
-            {saveStatus === "Unsaved" && <span className="w-2 h-2 rounded-full bg-red-500" />}
-            {saveStatus}
-          </div>
-          
-          <button 
-            onClick={() => handleManualSave('/Dashboard')}
-            className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80 transition-colors"
-          >
-            Dashboard
-          </button>
+    <div className="relative overflow-hidden bg-background h-screen w-full p-2">
+      
+      <div className="grid grid-cols-12 grid-rows-12 gap-2.5 h-full w-full">
+        
+        <div className="col-[1/13] row-[1/2]">
+          <SiteHeader>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="text-sm font-medium text-muted-foreground flex items-center gap-2 mr-4">
+                {saveStatus === "Saving..." && <Loader2 className="w-4 h-4 animate-spin" />}
+                {saveStatus === "Saved" && <Check className="w-4 h-4 text-green-500" />}
+                {saveStatus === "Unsaved" && <span className="w-2 h-2 rounded-full bg-red-500" />}
+                {saveStatus}
+              </div>
+              <button 
+                onClick={() => handleManualSave('/Dashboard')}
+                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80 transition-colors"
+              >
+                Dashboard
+              </button>
+              <button 
+                onClick={() => handleManualSave()}
+                disabled={!hasUnsavedChanges || isSaving}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {isSaving ? "Saving..." : "Save Artbook"}
+              </button>
+            </div>
+          </SiteHeader>
+        </div>
 
-          <button 
-            onClick={() => handleManualSave()}
-            disabled={!hasUnsavedChanges || isSaving}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
-          >
-            {isSaving ? "Saving..." : "Save Artbook"}
-          </button>
-        </div>
-      </SiteHeader>
-      <div className="flex gap-4 mt-2" style={{ height: "calc(100vh - 80px)" }}>
-        <div className="w-[23.3%] max-[1415px]:w-auto flex flex-col gap-2">
+        <div className="min-[1416px]:col-[1/4] min-[1416px]:row-[2/3] max-[1415px]:col-[1/2] max-[1415px]:row-[2/13] flex flex-col gap-2">
           <Tools activeTool={activeTool} setActiveTool={setActiveTool} />
-          
-          <div className="max-[1415px]:hidden flex-1 overflow-hidden">
-            <AIImageBox 
-              bookId={id ? parseInt(id) : null}
-              selectedStyleId={selectedStyleId}
-              selectedSizeId={selectedSizeId}
-              existingImages={bookDetails?.data?.images}
-            />
-          </div>
         </div>
-        <div className="w-[63.8%] max-[1415px]:flex-1 flex flex-col">
+
+        <div className="min-[1416px]:col-[4/12] min-[1416px]:row-[2/3] max-[1415px]:col-[2/13] max-[1415px]:row-[2/3] flex flex-col">
           <Toolbox
             activeTool={activeTool}
             activeSubTool={activeSubTool}
@@ -364,6 +359,25 @@ export default function Creator() {
             onShapePropertiesChange={handleShapePropertiesChange}
             onTargetColorPageChange={handleTargetColorPageChange}
           />
+        </div>
+
+        <div className="min-[1416px]:col-[12/13] min-[1416px]:row-[2/13] max-[1415px]:hidden bg-secondary rounded-lg overflow-hidden flex flex-col">
+          <AIImageType 
+            onStyleSelect={setSelectedStyleId}
+            selectedStyleId={selectedStyleId}
+          />
+        </div>
+
+        <div className="min-[1416px]:col-[1/4] min-[1416px]:row-[3/13] max-[1415px]:hidden overflow-hidden flex flex-col">
+          <AIImageBox 
+            bookId={id ? parseInt(id) : null}
+            selectedStyleId={selectedStyleId}
+            selectedSizeId={selectedSizeId}
+            existingImages={bookDetails?.data?.images}
+          />
+        </div>
+
+        <div className="min-[1416px]:col-[4/12] min-[1416px]:row-[3/13] max-[1415px]:col-[2/13] max-[1415px]:row-[3/13] relative flex flex-col">
           <Book
             onToolChange={(tool, subTool) => {
               setActiveTool(tool);
@@ -390,15 +404,7 @@ export default function Creator() {
             onDataChange={handleDataChange}
           />
         </div>
-        <div
-          className="w-[10.2%] max-[1415px]:hidden bg-secondary px-3 py-4 rounded-lg overflow-hidden"
-          style={{ height: "calc(100vh - 100px)" }}
-        >
-          <AIImageType 
-            onStyleSelect={setSelectedStyleId}
-            selectedStyleId={selectedStyleId}
-          />
-        </div>
+
       </div>
 
       <HelpOverlay />
@@ -424,7 +430,7 @@ export default function Creator() {
       </div>
 
       {/* Backdrop */}
-      {(isAIPanelOpen || isStylePanelOpen) && (
+      {/* {(isAIPanelOpen || isStylePanelOpen) && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 min-[1416px]:hidden transition-opacity"
           onClick={() => {
@@ -432,7 +438,7 @@ export default function Creator() {
             setIsStylePanelOpen(false);
           }}
         />
-      )}
+      )} */}
 
       {/* AI Generator Drawer */}
       <div
@@ -440,10 +446,7 @@ export default function Creator() {
           isAIPanelOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="p-4 flex justify-between items-center border-b border-border">
-          <h3 className="font-semibold text-lg flex items-center gap-2">
-            <Wand2 size={20} className="text-lime-400" /> AI Generator
-          </h3>
+        <div className="p-4 flex justify-end items-center">
           <button onClick={() => setIsAIPanelOpen(false)} className="p-2 bg-secondary rounded-md hover:bg-secondary/80">
             <X size={18} />
           </button>

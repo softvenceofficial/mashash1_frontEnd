@@ -178,7 +178,7 @@ const AIImageBox = ({ bookId, selectedStyleId, selectedSizeId, existingImages = 
 
   
   return (
-    <div className="bg-background text-foreground p-4 pb-0 pt-2 font-sans selection:bg-primary selection:text-primary-foreground">
+    <div className="bg-background text-foreground p-4 pb-0 pt-2 font-sans selection:bg-primary selection:text-primary-foreground mt-4">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className={`relative rounded-xl transition-all duration-300 ${isListening ? 'bg-card' : 'bg-card'}`} style={{
           background: isListening ? '' : 'linear-gradient(160deg, rgba(255, 201, 9, 1) 0%, rgba(255, 93, 24, 1) 50%, rgba(255, 131, 39, 1) 100%)',
