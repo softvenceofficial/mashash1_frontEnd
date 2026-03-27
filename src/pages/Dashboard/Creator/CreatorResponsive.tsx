@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import AIImageBox from '@/components/Dashboard/AI-Image-box/AIImageBox';
 import AIImageType from '@/components/Dashboard/AI-Image-TypeBox/AIImageType';
 import { useState } from 'react';
@@ -7,7 +8,7 @@ import { useGetBookDetailsQuery } from '@/redux/endpoints/bookApi';
 export default function CreatorResponsive() {
   const { id } = useParams();
   const [selectedStyleId, setSelectedStyleId] = useState(2);
-  const [selectedSizeId, setSelectedSizeId] = useState(6);
+  const [selectedSizeId] = useState(6);
   const { data: bookDetails } = useGetBookDetailsQuery(id || "", { skip: !id });
 
   return (
