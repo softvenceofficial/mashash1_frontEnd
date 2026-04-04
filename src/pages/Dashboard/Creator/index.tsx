@@ -56,25 +56,28 @@ export default function Creator() {
 
   useEffect(() => {
     const loadBookData = async () => {
-      // Ensure bookDetails are fetched and we haven't initialized yet
       if (bookDetails?.data && !isInitialLoadDone.current) {
-        isInitialLoadDone.current = true; // Mark as loaded immediately
+        isInitialLoadDone.current = true;
 
-        // Only try to fetch the file if it actually exists (it won't for brand new books)
         if (bookDetails.data.file) {
           try {
-            const data = await fetchBookContent(bookDetails.data.file);
-            const processedData = processBookData(data);
+            const rawData = await fetchBookContent(bookDetails.data.file);
+            const { bookSize: savedSize, pages: processedData } = processBookData(rawData);
+            
+            // Restore the saved book size if it exists
+            if (savedSize) {
+              setSelectedBookSize(savedSize);
+            }
+            
             setLoadedPages(processedData);
           } catch (err) {
             console.error("Error loading book JSON:", err);
-            isInitialLoadDone.current = false; // Reset on failure so it can try again
+            isInitialLoadDone.current = false;
             toast.error(err instanceof Error ? err.message : "Failed to load saved book data");
-            return; // Stop execution if loading fails
+            return;
           }
         }
 
-        // Enable tracking changes after a short delay for BOTH new and existing books
         setTimeout(() => {
           disableAutoSaveRef.current = false;
         }, 1500);
@@ -111,7 +114,7 @@ export default function Creator() {
         await new Promise((resolve) => setTimeout(resolve, 800));
       }
 
-      // 2. Gather data
+      // 2. Gather data and wrap with book size
       const pagesData = bookRef.current.getPageData() || [];
       const processedPages = pagesData.map((page: PageData) => ({
         lines: page.lines || [],
@@ -127,7 +130,12 @@ export default function Creator() {
         background: page.background || null
       }));
 
-      const jsonString = JSON.stringify(processedPages);
+      const bookDataToSave = {
+        bookSize: selectedBookSize,
+        pages: processedPages
+      };
+
+      const jsonString = JSON.stringify(bookDataToSave);
       const jsonFile = new File([jsonString], "book_data.json", { type: "application/json" });
 
       const formData = new FormData();

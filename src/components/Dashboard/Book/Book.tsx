@@ -380,6 +380,7 @@ const URLImage = ({
         height={image.height}
         rotation={image.rotation}
         draggable={isSelectMode}
+        listening={isSelectMode}
         onClick={onSelect}
         onContextMenu={onContextMenu}
         onDragEnd={(e) => {
@@ -630,48 +631,7 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
             }
           >
             <Layer onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
-              {data.lines.map((line, i) => {
-                if (line.type === "custom-shape" && (line as any).draggable) {
-                  return (
-                    <Line
-                      key={i}
-                      points={line.points}
-                      stroke={line.color || (line as any).stroke}
-                      strokeWidth={line.width || (line as any).strokeWidth}
-                      fill={(line as any).fill}
-                      tension={(line as any).tension || 0}
-                      lineCap="round"
-                      lineJoin="round"
-                      closed={(line as any).closed}
-                      draggable={isSelectMode}
-                      onClick={() =>
-                        isSelectMode && onTextSelect((line as any).id)
-                      }
-                      globalCompositeOperation={
-                        line.tool === "Eraser"
-                          ? "destination-out"
-                          : "source-over"
-                      }
-                    />
-                  );
-                }
-                return (
-                  <Line
-                    key={i}
-                    points={line.points}
-                    stroke={line.color || (line as any).stroke}
-                    strokeWidth={line.width || (line as any).strokeWidth}
-                    tension={0.5}
-                    lineCap="round"
-                    lineJoin="round"
-                    closed={(line as any).closed}
-                    globalCompositeOperation={
-                      line.tool === "Eraser" ? "destination-out" : "source-over"
-                    }
-                  />
-                );
-              })}
-
+              {/* RENDER IMAGES, TEXTS, SHAPES, TABLES, AND STICKY NOTES FIRST (BOTTOM LAYER) */}
               {(() => {
                 const allElements: any[] = [
                   ...data.images.map((item) => ({
@@ -988,6 +948,49 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
                   return null;
                 });
               })()}
+
+              {/* RENDER DRAWING LINES AFTERWARD SO THEY ALWAYS APPEAR ON TOP */}
+              {data.lines.map((line, i) => {
+                if (line.type === "custom-shape" && (line as any).draggable) {
+                  return (
+                    <Line
+                      key={i}
+                      points={line.points}
+                      stroke={line.color || (line as any).stroke}
+                      strokeWidth={line.width || (line as any).strokeWidth}
+                      fill={(line as any).fill}
+                      tension={(line as any).tension || 0}
+                      lineCap="round"
+                      lineJoin="round"
+                      closed={(line as any).closed}
+                      draggable={isSelectMode}
+                      onClick={() =>
+                        isSelectMode && onTextSelect((line as any).id)
+                      }
+                      globalCompositeOperation={
+                        line.tool === "Eraser"
+                          ? "destination-out"
+                          : "source-over"
+                      }
+                    />
+                  );
+                }
+                return (
+                  <Line
+                    key={i}
+                    points={line.points}
+                    stroke={line.color || (line as any).stroke}
+                    strokeWidth={line.width || (line as any).strokeWidth}
+                    tension={0.5}
+                    lineCap="round"
+                    lineJoin="round"
+                    closed={(line as any).closed}
+                    globalCompositeOperation={
+                      line.tool === "Eraser" ? "destination-out" : "source-over"
+                    }
+                  />
+                );
+              })}
 
               {isPenMode && penState.points.length > 0 && (
                 <>
@@ -3264,14 +3267,14 @@ const BookComponent = (
 
       <button
         onClick={flipPrev}
-        className="absolute left-4 z-50 p-3 bg-primary rounded-lg text-white shadow-lg hover:bg-primary/90 transition-all hover:scale-110 active:scale-95"
+        className="absolute bottom-4 left-[38%] z-50 p-3 bg-primary rounded-lg text-white shadow-lg transition-all hover:scale-110 active:scale-95"
       >
         <ArrowLeft size={24} />
       </button>
-
+      
       <button
         onClick={flipNext}
-        className="absolute right-4 z-50 p-3 bg-primary rounded-lg text-white shadow-lg hover:bg-primary/90 transition-all hover:scale-110 active:scale-95"
+        className="absolute bottom-4 right-[38%] z-50 p-3 bg-primary rounded-lg text-white shadow-lg transition-all hover:scale-110 active:scale-95"
       >
         <ArrowRight size={24} />
       </button>
