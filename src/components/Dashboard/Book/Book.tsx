@@ -2364,28 +2364,55 @@ const BookComponent = (
     e.preventDefault();
     e.stopPropagation();
 
-    const imageUrl = e.dataTransfer.getData("image");
-
-    if (!imageUrl) return;
-
     saveCurrentPageState();
 
-    const minZ = getMinZIndex(pages[pageIndex]);
+    // 1. Handle physical files dragged from the user's computer
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const minZ = getMinZIndex(pages[pageIndex]);
+        const newImage: ImageType = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          type: "image",
+          x: WIDTH * 0.1, // Offset by 10% so it doesn't cover the whole page
+          y: HEIGHT * 0.1,
+          width: WIDTH * 0.8, // Set to 80% of page width
+          height: HEIGHT * 0.8,
+          rotation: 0,
+          src: reader.result as string, // Base64 Data URL (Persists across page flips)
+          zIndex: minZ - 1,
+        };
+        const currentImages = pages[pageIndex].images || [];
+        updatePageData(pageIndex, "images", [...currentImages, newImage]);
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
 
-    const newImage: ImageType = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      type: "image",
-      x: 0,
-      y: 0,
-      width: WIDTH,
-      height: HEIGHT,
-      rotation: 0,
-      src: imageUrl,
-      zIndex: minZ - 1,
-    };
+    // 2. Fallback: Handle images dragged from other browser tabs or sidebars
+    const imageUrl = 
+      e.dataTransfer.getData("image") || 
+      e.dataTransfer.getData("text/uri-list") || 
+      e.dataTransfer.getData("text/plain");
 
-    const currentImages = pages[pageIndex].images || [];
-    updatePageData(pageIndex, "images", [...currentImages, newImage]);
+    if (imageUrl && (imageUrl.startsWith("http") || imageUrl.startsWith("data:image"))) {
+      const minZ = getMinZIndex(pages[pageIndex]);
+      const newImage: ImageType = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        type: "image",
+        x: WIDTH * 0.1,
+        y: HEIGHT * 0.1,
+        width: WIDTH * 0.8,
+        height: HEIGHT * 0.8,
+        rotation: 0,
+        src: imageUrl,
+        zIndex: minZ - 1,
+      };
+
+      const currentImages = pages[pageIndex].images || [];
+      updatePageData(pageIndex, "images", [...currentImages, newImage]);
+    }
   };
 
   const handleImageUpload = (
@@ -3352,6 +3379,8 @@ const BookComponent = (
           {pages.map((pageData, index) => (
             <div
               key={index}
+              onDragEnter={(e) => e.preventDefault()}
+              onDragLeave={(e) => e.preventDefault()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => handlePageDrop(e, index)}
             >

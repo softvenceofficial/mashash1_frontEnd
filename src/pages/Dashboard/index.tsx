@@ -84,7 +84,7 @@ export default function DashboardPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">My Artbooks</h1>
         <Button onClick={() => setIsModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Create New Artbook
+          <Plus className="mr-2 h-4 w-4" /> Create New Project
         </Button>
       </div>
 
