@@ -630,8 +630,10 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
               activeTool !== "Book Size" ? "cursor-crosshair" : "cursor-default"
             }
           >
+            {/* ========================================== */}
+            {/* LAYER 1: BASE ELEMENTS (Images, Text, Shapes, Tables, Sticky Notes) */}
+            {/* ========================================== */}
             <Layer onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
-              {/* RENDER IMAGES, TEXTS, SHAPES, TABLES, AND STICKY NOTES FIRST (BOTTOM LAYER) */}
               {(() => {
                 const allElements: any[] = [
                   ...data.images.map((item) => ({
@@ -949,7 +951,48 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
                 });
               })()}
 
-              {/* RENDER DRAWING LINES AFTERWARD SO THEY ALWAYS APPEAR ON TOP */}
+              {/* Transformers stay on Layer 1 because they control text, shapes, and images */}
+              <Transformer
+                ref={transformerRef}
+                boundBoxFunc={(oldBox, newBox) => {
+                  if (newBox.width < 20 || newBox.height < 20) return oldBox;
+                  return newBox;
+                }}
+                enabledAnchors={[
+                  "top-left",
+                  "top-center",
+                  "top-right",
+                  "middle-right",
+                  "middle-left",
+                  "bottom-left",
+                  "bottom-center",
+                  "bottom-right",
+                ]}
+              />
+              {selectedTextId &&
+                data.shapes.some((s) => s.id === selectedTextId) && (
+                  <Transformer
+                    ref={shapeTransformerRef}
+                    boundBoxFunc={(oldBox, newBox) => {
+                      if (newBox.width < 5 || newBox.height < 5) return oldBox;
+                      return newBox;
+                    }}
+                    enabledAnchors={[
+                      "top-left",
+                      "top-right",
+                      "bottom-left",
+                      "bottom-right",
+                    ]}
+                  />
+                )}
+            </Layer>
+
+            {/* ========================================== */}
+            {/* LAYER 2: DRAWINGS (Brush and Eraser) */}
+            {/* ========================================== */}
+            {/* Because this is a separate layer, destination-out will ONLY carve through the brush strokes, revealing Layer 1 untouched beneath it. */}
+            <Layer>
+              {/* RENDER DRAWING LINES SO ERASER ONLY AFFECTS THIS LAYER */}
               {data.lines.map((line, i) => {
                 if (line.type === "custom-shape" && (line as any).draggable) {
                   return (
@@ -1079,39 +1122,6 @@ const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
                   )}
                 </Group>
               )}
-              <Transformer
-                ref={transformerRef}
-                boundBoxFunc={(oldBox, newBox) => {
-                  if (newBox.width < 20 || newBox.height < 20) return oldBox;
-                  return newBox;
-                }}
-                enabledAnchors={[
-                  "top-left",
-                  "top-center",
-                  "top-right",
-                  "middle-right",
-                  "middle-left",
-                  "bottom-left",
-                  "bottom-center",
-                  "bottom-right",
-                ]}
-              />
-              {selectedTextId &&
-                data.shapes.some((s) => s.id === selectedTextId) && (
-                  <Transformer
-                    ref={shapeTransformerRef}
-                    boundBoxFunc={(oldBox, newBox) => {
-                      if (newBox.width < 5 || newBox.height < 5) return oldBox;
-                      return newBox;
-                    }}
-                    enabledAnchors={[
-                      "top-left",
-                      "top-right",
-                      "bottom-left",
-                      "bottom-right",
-                    ]}
-                  />
-                )}
             </Layer>
           </Stage>
 
@@ -2936,7 +2946,7 @@ const BookComponent = (
         {
           tool: currentTool,
           points: [pos.x, pos.y],
-          color: currentTool === "Eraser" ? "#ffffff" : strokeColor,
+          color: strokeColor,
           width: strokeWidth,
         },
       ];
@@ -3165,7 +3175,7 @@ const BookComponent = (
       className={`relative flex flex-col items-center justify-center transition-all duration-300 ${
         isFullscreen
           ? "flex items-center justify-center w-full h-full"
-          : "h-[calc(100vh-210px)] w-full bg-transparent overflow-hidden"
+          : "h-[calc(100vh-210px)] w-full bg-transparent"
       }`}
       onMouseDown={handleContainerMouseDown}
       onMouseMove={handleContainerMouseMove}
