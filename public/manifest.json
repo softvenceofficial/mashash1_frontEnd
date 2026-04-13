@@ -1,0 +1,35 @@
+{
+  "short_name": "Mashash",
+  "name": "Mashash Artbook Creator",
+  "icons": [
+    {
+      "src": "/logo-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/logo-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff",
+  "file_handlers": [
+    {
+      "action": "/dashboard/creator",
+      "accept": {
+        "application/vnd.artbook": [".artbook"]
+      },
+      "icons": [
+        {
+          "src": "/logo-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

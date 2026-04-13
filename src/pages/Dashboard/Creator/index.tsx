@@ -326,10 +326,17 @@ export default function Creator() {
     toast.success("Digital version exported successfully!");
   };
 
-  // --- 2. Import Digital Version (JSON) ---
+  // --- 2. Import Digital Version (.artbook) ---
   const handleImportDigital = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // Strict validation: Only accept .artbook files
+    if (!file.name.toLowerCase().endsWith('.artbook')) {
+      toast.error("Invalid file format. Please select an .artbook file.");
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -344,10 +351,10 @@ export default function Creator() {
         setLoadedPages(processedData); 
         setHasUnsavedChanges(true);
         setSaveStatus("Unsaved");
-        toast.success("Digital version imported successfully!");
+        toast.success("Artbook imported successfully!");
       } catch (error) {
         console.error("Import error:", error);
-        toast.error("Invalid file format. Please upload a valid Artbook .artbook file.");
+        toast.error("The .artbook file is corrupted or invalid.");
       }
     };
     reader.readAsText(file);
@@ -424,7 +431,6 @@ export default function Creator() {
               {/* Hidden Input for Importing Digital File */}
               <input 
                 type="file" 
-                accept=".json" 
                 ref={fileInputRef} 
                 onChange={handleImportDigital} 
                 className="hidden" 
