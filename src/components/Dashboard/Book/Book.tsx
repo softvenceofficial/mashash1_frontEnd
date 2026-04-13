@@ -1649,6 +1649,20 @@ const BookComponent = (
         }
       }
     },
+    turnToPage: (pageIndex: number) => {
+      if (bookRef.current) {
+        const flip = bookRef.current.pageFlip();
+        if (flip && flip.getCurrentPageIndex() !== pageIndex) {
+          flip.turnToPage(pageIndex);
+        }
+      }
+    },
+    getCurrentPageIndex: () => {
+      if (bookRef.current) {
+        return bookRef.current.pageFlip().getCurrentPageIndex();
+      }
+      return 0;
+    },
     handleImageUpload: (
       file: File,
       targetPage?: "left" | "right" | "current",

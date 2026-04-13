@@ -32,9 +32,6 @@ export function SiteHeader({
             />
           </Link>
         </div>
-        <div className="flex items-center gap-2 md:ml-5 max-[1426px]:hidden">
-          <SearchForm className="w-96 hidden md:block" />
-        </div>
         <div className="ml-auto flex items-center gap-24">
           {children}
           <div className="flex items-center gap-2 md:gap-5">

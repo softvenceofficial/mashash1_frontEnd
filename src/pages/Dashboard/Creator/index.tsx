@@ -12,10 +12,12 @@ import { keyboardManager } from "@/utils/KeyboardManager";
 import { HelpOverlay } from "@/components/Dashboard/HelpOverlay";
 import { useGetBookDetailsQuery, useUpdateBookMutation } from "@/redux/endpoints/bookApi";
 import { toast } from "sonner";
-import { Loader2, Check, Wand2, Palette, X } from "lucide-react";
+import { Loader2, Check, Wand2, Palette, X, Download, Upload, FileText } from "lucide-react";
 import type { PageData } from "@/components/Dashboard/Book/types";
 import { fetchBookContent, processBookData } from "@/utils/bookDataLoader";
 import { dataUrlToFile } from "@/utils/imageUploadHelper";
+import { jsPDF } from "jspdf";
+import * as htmlToImage from "html-to-image";
 
 export default function Creator() {
   const { id } = useParams();
@@ -48,8 +50,10 @@ export default function Creator() {
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
   const [isStylePanelOpen, setIsStylePanelOpen] = useState(false);
   const bookRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isInitialLoadDone = useRef(false);
   const disableAutoSaveRef = useRef(true);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
 
   const [updateBook] = useUpdateBookMutation();
   const { data: bookDetails } = useGetBookDetailsQuery(id || "", { skip: !id });
@@ -297,6 +301,109 @@ export default function Creator() {
     }
   };
 
+  // --- 1. Export Digital Version (JSON) ---
+  const handleExportDigital = () => {
+    if (!bookRef.current) return;
+    const pagesData = bookRef.current.getPageData() || [];
+    
+    const bookDataToExport = {
+      bookSize: selectedBookSize,
+      pages: pagesData
+    };
+
+    const jsonString = JSON.stringify(bookDataToExport, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${bookDetails?.data?.title || "Artbook"}_Digital_Backup.artbook`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast.success("Digital version exported successfully!");
+  };
+
+  // --- 2. Import Digital Version (JSON) ---
+  const handleImportDigital = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const rawData = JSON.parse(e.target?.result as string);
+        const { bookSize: savedSize, pages: processedData } = processBookData(rawData);
+        
+        if (savedSize) {
+          setSelectedBookSize(savedSize);
+        }
+        
+        setLoadedPages(processedData); 
+        setHasUnsavedChanges(true);
+        setSaveStatus("Unsaved");
+        toast.success("Digital version imported successfully!");
+      } catch (error) {
+        console.error("Import error:", error);
+        toast.error("Invalid file format. Please upload a valid Artbook .artbook file.");
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // --- 3. Export PDF ---
+  const handleExportPDF = async () => {
+    if (!bookRef.current || isExportingPDF) return;
+    setIsExportingPDF(true);
+    toast.info("Preparing PDF... Please do not interact with the book.", { duration: 3000 });
+
+    try {
+      const pagesData = bookRef.current.getPageData();
+      const totalPages = pagesData.length;
+      
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [600, 800]
+      });
+
+      for (let i = 0; i < totalPages; i++) {
+        bookRef.current.turnToPage(i);
+        await new Promise(resolve => setTimeout(resolve, 1100));
+
+        const pageElement = document.querySelector(`[data-page-index="${i}"]`) as HTMLElement;
+        
+        if (pageElement) {
+          const imgData = await htmlToImage.toPng(pageElement, {
+            pixelRatio: 2,
+            skipFonts: true,
+            backgroundColor: "#FFFFFF"
+          });
+
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+
+          if (i > 0) pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        }
+      }
+
+      bookRef.current.turnToPage(0);
+      
+      pdf.save(`${bookDetails?.data?.title || "Artbook"}.pdf`);
+      toast.success("PDF exported successfully!");
+
+    } catch (error) {
+      console.error("PDF Export failed:", error);
+      toast.error("Failed to generate PDF.");
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
+
   return (
     <div className="relative overflow-hidden bg-background h-screen w-full p-2">
       
@@ -305,18 +412,60 @@ export default function Creator() {
         <div className="col-[1/13] row-[1/2]">
           <SiteHeader>
             <div className="ml-auto flex items-center gap-3">
-              <div className="text-sm font-medium text-muted-foreground flex items-center gap-2 mr-4">
+              
+              {/* Status Indicator */}
+              <div className="text-sm font-medium text-muted-foreground flex items-center gap-2 mr-2">
                 {saveStatus === "Saving..." && <Loader2 className="w-4 h-4 animate-spin" />}
                 {saveStatus === "Saved" && <Check className="w-4 h-4 text-green-500" />}
                 {saveStatus === "Unsaved" && <span className="w-2 h-2 rounded-full bg-red-500" />}
                 {saveStatus}
               </div>
+
+              {/* Hidden Input for Importing Digital File */}
+              <input 
+                type="file" 
+                accept=".json" 
+                ref={fileInputRef} 
+                onChange={handleImportDigital} 
+                className="hidden" 
+              />
+
+              {/* 1. Import Digital Version */}
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                title="Import Digital Artbook (.artbook)"
+                className="p-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+              </button>
+
+              {/* 2. Export Digital Version */}
+              <button 
+                onClick={handleExportDigital}
+                title="Export Digital Artbook (.json)"
+                className="p-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+
+              {/* 3. Export PDF */}
+              <button 
+                onClick={handleExportPDF}
+                disabled={isExportingPDF}
+                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {isExportingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                {isExportingPDF ? "Building PDF..." : "Export PDF"}
+              </button>
+
+              {/* Existing Dashboard & Save Buttons */}
               <button 
                 onClick={() => handleManualSave('/Dashboard')}
                 className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80 transition-colors"
               >
                 Dashboard
               </button>
+              
               <button 
                 onClick={() => handleManualSave()}
                 disabled={!hasUnsavedChanges || isSaving}
@@ -324,6 +473,7 @@ export default function Creator() {
               >
                 {isSaving ? "Saving..." : "Save Artbook"}
               </button>
+
             </div>
           </SiteHeader>
         </div>
