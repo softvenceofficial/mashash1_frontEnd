@@ -2706,11 +2706,20 @@ const BookComponent = (
     };
 
     switch (shapeType) {
-      case "rectangle":
       case "square":
         return {
           ...baseShape,
           type: "rectangle",
+          width: 100,
+          height: 100,
+          cornerRadius: 0,
+        } as ShapeType;
+      case "rectangle":
+        return {
+          ...baseShape,
+          type: "rectangle",
+          width: 180,
+          height: 100,
           cornerRadius: 0,
         } as ShapeType;
       case "ellipse":

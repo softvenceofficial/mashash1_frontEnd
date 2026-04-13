@@ -1725,7 +1725,7 @@ const Toolbox = ({
       <button
         onClick={onClick}
         className={cn(
-          "flex flex-col items-center justify-center gap-2 p-2 rounded-lg transition-all duration-200 relative group min-w-[64px]",
+          "flex flex-col items-center justify-center gap-2 p-2 rounded-lg transition-all duration-200 relative group w-[64px]",
           isActive
             ? "text-indigo-400"
             : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5",
