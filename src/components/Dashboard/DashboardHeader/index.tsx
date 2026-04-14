@@ -1,4 +1,3 @@
-import { SearchForm } from "./SearchForm";
 import HeaderAvatar from "./HeaderAvatar";
 import logo from "@/assets/svgs/logo.svg";
 import { ModeToggle } from "@/components/ThemeToggle";
