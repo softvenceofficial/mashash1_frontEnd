@@ -2371,20 +2371,31 @@ const BookComponent = (
     if (file && file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = () => {
-        const minZ = getMinZIndex(pages[pageIndex]);
-        const newImage: ImageType = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          type: "image",
-          x: WIDTH * 0.1, // Offset by 10% so it doesn't cover the whole page
-          y: HEIGHT * 0.1,
-          width: WIDTH * 0.8, // Set to 80% of page width
-          height: HEIGHT * 0.8,
-          rotation: 0,
-          src: reader.result as string, // Base64 Data URL (Persists across page flips)
-          zIndex: minZ - 1,
+        const src = reader.result as string;
+        const img = new window.Image();
+        img.src = src;
+
+        // Wait for image to load in memory to get real dimensions
+        img.onload = () => {
+          // Calculate aspect ratio to keep height auto/proportional
+          const aspectRatio = img.height / img.width;
+          const autoHeight = WIDTH * aspectRatio;
+
+          const minZ = getMinZIndex(pages[pageIndex]);
+          const newImage: ImageType = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            type: "image",
+            x: 0,
+            y: 0,
+            width: WIDTH,
+            height: autoHeight, // Use calculated proportional height
+            rotation: 0,
+            src: src,
+            zIndex: minZ - 1,
+          };
+          const currentImages = pages[pageIndex].images || [];
+          updatePageData(pageIndex, "images", [...currentImages, newImage]);
         };
-        const currentImages = pages[pageIndex].images || [];
-        updatePageData(pageIndex, "images", [...currentImages, newImage]);
       };
       reader.readAsDataURL(file);
       return;
@@ -2397,21 +2408,30 @@ const BookComponent = (
       e.dataTransfer.getData("text/plain");
 
     if (imageUrl && (imageUrl.startsWith("http") || imageUrl.startsWith("data:image"))) {
-      const minZ = getMinZIndex(pages[pageIndex]);
-      const newImage: ImageType = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        type: "image",
-        x: WIDTH * 0.1,
-        y: HEIGHT * 0.1,
-        width: WIDTH * 0.8,
-        height: HEIGHT * 0.8,
-        rotation: 0,
-        src: imageUrl,
-        zIndex: minZ - 1,
-      };
+      const img = new window.Image();
+      img.crossOrigin = "anonymous"; // Important for external URLs
+      img.src = imageUrl;
 
-      const currentImages = pages[pageIndex].images || [];
-      updatePageData(pageIndex, "images", [...currentImages, newImage]);
+      img.onload = () => {
+        const aspectRatio = img.height / img.width;
+        const autoHeight = WIDTH * aspectRatio;
+
+        const minZ = getMinZIndex(pages[pageIndex]);
+        const newImage: ImageType = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          type: "image",
+          x: 0,
+          y: 0,
+          width: WIDTH,
+          height: autoHeight, // Proportional height
+          rotation: 0,
+          src: imageUrl,
+          zIndex: minZ - 1,
+        };
+
+        const currentImages = pages[pageIndex].images || [];
+        updatePageData(pageIndex, "images", [...currentImages, newImage]);
+      };
     }
   };
 
@@ -2422,39 +2442,48 @@ const BookComponent = (
     if (isReadOnly) return;
     const reader = new FileReader();
     reader.onload = () => {
-      let targetPageIndex = currentPageIndex;
+      const src = reader.result as string;
+      const img = new window.Image();
+      img.src = src;
 
-      const isSpread = currentPageIndex !== 0 && currentPageIndex % 2 !== 0;
+      img.onload = () => {
+        let targetPageIndex = currentPageIndex;
+        const isSpread = currentPageIndex !== 0 && currentPageIndex % 2 !== 0;
 
-      if (isSpread) {
-        if (targetPage === "right") {
-          targetPageIndex = currentPageIndex + 1;
-        } else if (targetPage === "left") {
-          targetPageIndex = currentPageIndex;
+        if (isSpread) {
+          if (targetPage === "right") {
+            targetPageIndex = currentPageIndex + 1;
+          } else if (targetPage === "left") {
+            targetPageIndex = currentPageIndex;
+          }
         }
-      }
 
-      if (targetPageIndex >= pages.length) targetPageIndex = pages.length - 1;
-      if (targetPageIndex < 0) targetPageIndex = currentPageIndex;
+        if (targetPageIndex >= pages.length) targetPageIndex = pages.length - 1;
+        if (targetPageIndex < 0) targetPageIndex = currentPageIndex;
 
-      saveCurrentPageState();
+        saveCurrentPageState();
 
-      const minZ = getMinZIndex(pages[targetPageIndex]);
+        // Calculate proportional height
+        const aspectRatio = img.height / img.width;
+        const autoHeight = WIDTH * aspectRatio;
 
-      const newImage: ImageType = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        type: "image",
-        x: WIDTH * 0.1,
-        y: HEIGHT * 0.1,
-        width: WIDTH * 0.3,
-        height: HEIGHT * 0.3,
-        rotation: 0,
-        src: reader.result as string,
-        zIndex: minZ - 1,
+        const minZ = getMinZIndex(pages[targetPageIndex]);
+
+        const newImage: ImageType = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          type: "image",
+          x: 0,
+          y: 0,
+          width: WIDTH,
+          height: autoHeight, // Set height dynamically based on aspect ratio
+          rotation: 0,
+          src: src,
+          zIndex: minZ - 1,
+        };
+
+        const currentImages = pages[targetPageIndex].images || [];
+        updatePageData(targetPageIndex, "images", [...currentImages, newImage]);
       };
-
-      const currentImages = pages[targetPageIndex].images || [];
-      updatePageData(targetPageIndex, "images", [...currentImages, newImage]);
     };
     reader.readAsDataURL(file);
   };
