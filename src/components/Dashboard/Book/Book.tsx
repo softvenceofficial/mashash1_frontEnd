@@ -139,15 +139,15 @@ interface BookProps {
 
 // --- Constants ---
 const BOOK_SIZE_MAP: Record<string, { width: number; height: number }> = {
-  "5 X 7": { width: 350, height: 490 },
-  "6 X 4": { width: 550, height:420  },
-  "6 X 8": { width: 420, height: 560 },
-  "6 X 9": { width: 420, height: 630 },
-  "7 X 10": { width: 490, height: 700 },
-  "8.5 X 11": { width: 476, height: 616 },
-  "8 X 10": { width: 560, height: 700 },
-  "12 X 9": { width: 672, height: 504 },
-  Square: { width: 500, height: 500 },
+  "5 X 7": { width: 5 * 70, height: 7 * 70 },     // 350 x 490
+  "6 X 4": { width: 6 * 70, height: 4 * 70 },     // 420 x 280
+  "6 X 8": { width: 6 * 70, height: 8 * 70 },     // 420 x 560
+  "6 X 9": { width: 6 * 70, height: 9 * 70 },     // 420 x 630
+  "7 X 10": { width: 7 * 70, height: 10 * 70 },   // 490 x 700
+  "8.5 X 11": { width: 8.5 * 70, height: 11 * 70 }, // 595 x 770 (was 476 x 616)
+  "8 X 10": { width: 8 * 70, height: 10 * 70 },   // 560 x 700
+  "12 X 9": { width: 12 * 70, height: 9 * 70 },   // 840 x 630 (was 672 x 504)
+  "Square": { width: 500, height: 500 },          // Kept as is since it's square
 };
 
 const INITIAL_PAGES: PageData[] = Array(10)
